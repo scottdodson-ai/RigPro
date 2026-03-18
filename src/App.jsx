@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 
 // ── BASE DATA ─────────────────────────────────────────────────────────────────
 
@@ -343,22 +343,82 @@ function AutoInput({ val, on, list, ph }) {
 }
 
 // ── HEADER ────────────────────────────────────────────────────────────────────
-function Header({ view, setView, extra, crumb }) {
+function Header({ view, setView, extra, crumb, role, token, setToken, setRole }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const TABS = token ? [
+    ["dash","Dashboard"], ["customers","Customers"], ["requests","Requests"],
+    ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"]
+  ] : [["landing", "Home"]];
+  
+  if (token && role === "admin") TABS.push(["admin", "Admin Controls"]);
+
+  const handleLogout = () => { 
+    localStorage.removeItem("token"); 
+    localStorage.removeItem("role"); 
+    if (setToken) setToken("");
+    if (setRole) setRole("user");
+    setView("landing");
+  };
+
   return (
-    <div style={{ background:C.sur, borderBottom:`1px solid ${C.bdr}`, padding:"0 14px", display:"flex", alignItems:"center", gap:4, minHeight:54, flexWrap:"wrap", position:"sticky", top:0, zIndex:100, boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginRight:8 }}>
-        <div style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>⛓</div>
-        <div>
-          <div style={{ fontFamily:"Georgia,serif", fontSize:13, color:C.acc, fontWeight:700, lineHeight:1.1 }}>Shoemaker</div>
-          <div style={{ fontSize:9, color:C.txtS, letterSpacing:.5 }}>RIGGING & TRANSPORT</div>
+    <>
+      <style>{`
+        @media (max-width: 800px) {
+          .desktop-nav { display: none !important; }
+          .hamburger-btn { display: flex !important; margin-left: auto; }
+        }
+        @media (min-width: 801px) {
+          .hamburger-btn { display: none !important; }
+        }
+      `}</style>
+      <div style={{ background:C.sur, borderBottom:`1px solid ${C.bdr}`, padding:"0 14px", display:"flex", alignItems:"center", minHeight:54, position:"sticky", top:0, zIndex:100, boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginRight:16 }}>
+          <div style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>⛓</div>
+          <div>
+            <div style={{ fontFamily:"Georgia,serif", fontSize:13, color:C.acc, fontWeight:700, lineHeight:1.1 }}>Shoemaker</div>
+            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.5 }}>RIGGING & TRANSPORT</div>
+          </div>
+        </div>
+
+        {/* Desktop Nav */}
+        <div className="desktop-nav" style={{ display:"flex", alignItems:"center", flex:1, gap:4, overflowX:"auto" }}>
+          {TABS.map(([v,l]) => (
+            <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", color:view===v?C.acc:C.txtM, fontSize:12, cursor:"pointer", padding:"4px 8px", borderBottom:view===v?`2px solid ${C.acc}`:"2px solid transparent", fontFamily:"inherit", fontWeight:view===v?700:400, whiteSpace:"nowrap" }}>{l}</button>
+          ))}
+          {crumb && <><span style={{ color:C.bdr, margin:"0 2px" }}>›</span><span style={{ color:C.txtS, fontSize:12, whiteSpace:"nowrap" }}>{crumb}</span></>}
+        </div>
+
+        {/* Hamburger */}
+        <button className="hamburger-btn" onClick={() => setMenuOpen(!menuOpen)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtM, padding:"4px" }}>
+          ☰
+        </button>
+
+        {/* Desktop Extra & Logout */}
+        <div className="desktop-nav" style={{ marginLeft:"auto", paddingLeft:8, display:"flex", alignItems:"center", gap:10 }}>
+          {extra}
+          {token ? (
+            <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
+          ) : (
+            view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px" }} onClick={() => setView("login")}>Login</button>
+          )}
         </div>
       </div>
-      {[["dash","Dashboard"],["customers","Customers"],["requests","Requests"],["equipment","Equip Rates"],["labor","Labor Rates"],["calendar","Calendar"]].map(([v,l]) => (
-        <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", color:view===v?C.acc:C.txtM, fontSize:12, cursor:"pointer", padding:"4px 8px", borderBottom:view===v?`2px solid ${C.acc}`:"2px solid transparent", fontFamily:"inherit", fontWeight:view===v?700:400, whiteSpace:"nowrap" }}>{l}</button>
-      ))}
-      {crumb && <><span style={{ color:C.bdr, margin:"0 2px" }}>›</span><span style={{ color:C.txtS, fontSize:12, whiteSpace:"nowrap" }}>{crumb}</span></>}
-      {extra && <div style={{ marginLeft:"auto", paddingLeft:8 }}>{extra}</div>}
-    </div>
+
+      {menuOpen && (
+        <div style={{ background:C.sur, borderBottom:`1px solid ${C.bdr}`, display:"flex", flexDirection:"column", padding:"10px 14px", gap:5, position:"sticky", top:54, zIndex:99, boxShadow:"0 4px 6px rgba(0,0,0,.05)" }}>
+          {TABS.map(([v,l]) => (
+            <button key={v} onClick={() => { setView(v); setMenuOpen(false); }} style={{ background:view===v?C.accL:"transparent", border:"none", color:view===v?C.acc:C.txt, fontSize:14, cursor:"pointer", padding:"10px", borderRadius:6, textAlign:"left", fontWeight:view===v?700:500 }}>{l}</button>
+          ))}
+          <div style={{ height:1, background:C.bdr, margin:"5px 0" }} />
+          <div style={{ display:"flex", flexWrap:"wrap", gap:10, alignItems:"center", padding:"5px 0" }}>{extra}</div>
+          {token ? (
+            <button style={{ ...mkBtn("danger"), fontSize:13, padding:"10px", marginTop:5, justifyContent:"center" }} onClick={handleLogout}>Logout</button>
+          ) : (
+            view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:13, padding:"10px", marginTop:5, justifyContent:"center" }} onClick={() => { setView("login"); setMenuOpen(false); }}>Login</button>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -580,7 +640,7 @@ function SalesAdjustmentModal({ quote, onSave, onClose }) {
 }
 
 // ── EQUIPMENT RATES PAGE ──────────────────────────────────────────────────────
-function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv }) {
+function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, role }) {
   // ── Rate override state (unchanged) ───────────────────────────────────────
   const [ec, setEc]     = useState(null);    // code being rate-overridden
   const [ev, setEv]     = useState("");
@@ -658,9 +718,11 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv }
             Edit equipment details · Set daily rate overrides · Add new pieces of equipment
           </div>
         </div>
-        <button style={{ ...mkBtn("primary"), fontSize:12 }} onClick={() => { setShowAdd(!showAdd); setAddError(""); }}>
-          {showAdd ? "✕ Cancel" : "+ Add Equipment"}
-        </button>
+        {role === "admin" && (
+          <button style={{ ...mkBtn("primary"), fontSize:12 }} onClick={() => { setShowAdd(!showAdd); setAddError(""); }}>
+            {showAdd ? "✕ Cancel" : "+ Add Equipment"}
+          </button>
+        )}
       </div>
 
       {/* ── Add new equipment form ─────────────────────────────────────────── */}
@@ -802,18 +864,22 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv }
                         }
                       </td>
                       <td style={tdS}>
-                        {isOv ? (
-                          <div style={{ display:"flex", gap:5 }}>
-                            <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 9px" }} onClick={saveOv}>Save</button>
-                            <button style={{ ...mkBtn("ghost"),   fontSize:11, padding:"4px 9px" }} onClick={() => setEc(null)}>Cancel</button>
-                          </div>
+                        {role === "admin" ? (
+                          isOv ? (
+                            <div style={{ display:"flex", gap:5 }}>
+                              <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 9px" }} onClick={saveOv}>Save</button>
+                              <button style={{ ...mkBtn("ghost"),   fontSize:11, padding:"4px 9px" }} onClick={() => setEc(null)}>Cancel</button>
+                            </div>
+                          ) : (
+                            <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                              <button style={{ ...mkBtn("ghost"),   fontSize:11, padding:"3px 8px" }} onClick={() => startEdit(e)}>✏ Edit</button>
+                              <button style={{ ...mkBtn("outline"), fontSize:11, padding:"3px 8px" }} onClick={() => startOv(e.code)}>Override</button>
+                              {ov && <button style={{ ...mkBtn("danger"), fontSize:11, padding:"3px 8px" }} onClick={() => clearOv(e.code)}>Reset</button>}
+                              <button style={{ ...mkBtn("danger"),  fontSize:11, padding:"3px 8px" }} onClick={() => deleteEquip(e.code)}>Delete</button>
+                            </div>
+                          )
                         ) : (
-                          <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-                            <button style={{ ...mkBtn("ghost"),   fontSize:11, padding:"3px 8px" }} onClick={() => startEdit(e)}>✏ Edit</button>
-                            <button style={{ ...mkBtn("outline"), fontSize:11, padding:"3px 8px" }} onClick={() => startOv(e.code)}>Override</button>
-                            {ov && <button style={{ ...mkBtn("danger"), fontSize:11, padding:"3px 8px" }} onClick={() => clearOv(e.code)}>Reset</button>}
-                            <button style={{ ...mkBtn("danger"),  fontSize:11, padding:"3px 8px" }} onClick={() => deleteEquip(e.code)}>Delete</button>
-                          </div>
+                          <div style={{ fontSize:11, color:C.txtS, fontStyle:"italic" }}>Read-only access</div>
                         )}
                       </td>
                     </tr>
@@ -2238,9 +2304,192 @@ function CalendarPage({ quotes, setQuotes, eqMap, onOpenQuote }) {
 }
 
 
+// ── LOGIN FORM ───────────────────────────────────────────────────────────────
+function LoginForm({ setToken, setRole, onBack }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("http://localhost:3001/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Login Failed");
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.user.role);
+      setToken(data.token);
+      setRole(data.user.role);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:C.sur, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <form onSubmit={handleLogin} style={{ background:"#fff", border:`1px solid ${C.bdr}`, borderRadius:10, padding:30, width:"100%", maxWidth:400, boxShadow:"0 10px 30px rgba(0,0,0,.1)" }}>
+        <div style={{ textAlign:"center", marginBottom:20 }}>
+          <div style={{ fontSize:28, fontWeight:800, color:C.acc, letterSpacing:"-1px" }}>RigPro Login</div>
+        </div>
+        {error && <div style={{ background:C.redB, color:C.red, padding:10, borderRadius:5, marginBottom:15, fontSize:13 }}>{error}</div>}
+        <div style={{ marginBottom:14 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:C.txtM, marginBottom:6 }}>USERNAME</div>
+          <input style={{ ...inp, padding:"10px 12px", fontSize:14 }} value={username} onChange={e=>setUsername(e.target.value)} required />
+        </div>
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:C.txtM, marginBottom:6 }}>PASSWORD</div>
+          <input type="password" style={{ ...inp, padding:"10px 12px", fontSize:14 }} value={password} onChange={e=>setPassword(e.target.value)} required />
+        </div>
+        <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"12px", fontSize:14 }}>Login</button>
+        <button type="button" onClick={onBack} style={{ ...mkBtn("ghost"), width:"100%", justifyContent:"center", padding:"10px", marginTop:10, fontSize:14 }}>Cancel</button>
+      </form>
+    </div>
+  );
+}
+
+// ── ADMIN PAGE ───────────────────────────────────────────────────────────────
+function AdminPage({ token }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newUser, setNewUser] = useState({ username: "", password: "", role: "user" });
+  const [formErr, setFormErr] = useState("");
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch("http://localhost:3001/api/users", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setFormErr("");
+    try {
+      const res = await fetch("http://localhost:3001/api/users", {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(newUser)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create user");
+      setNewUser({ username: "", password: "", role: "user" });
+      fetchUsers();
+    } catch (err) { setFormErr(err.message); }
+  };
+
+  const updateUserRole = async (id, role) => {
+    try {
+      await fetch(`http://localhost:3001/api/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type":"application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ role })
+      });
+      fetchUsers();
+    } catch (err) { console.error(err); }
+  };
+
+  const deleteUser = async (id) => {
+    if (!window.confirm("Delete this user?")) return;
+    try {
+      await fetch(`http://localhost:3001/api/users/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      fetchUsers();
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  return (
+    <div style={{ padding:"24px", maxWidth:900, margin:"0 auto" }}>
+      <Card>
+        <div style={{ fontSize:22, fontWeight:800, color:C.acc, marginBottom:4 }}>Admin Control Panel</div>
+        <div style={{ fontSize:14, color:C.txtM, marginBottom:20 }}>System oversight and user management</div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:20, marginBottom:30 }}>
+          {/* USER LIST */}
+          <div style={{ flex:1 }}>
+            <Sec c="Active Accounts"/>
+            {loading ? <div style={{ padding:20, color:C.txtS }}>Loading accounts...</div> : (
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                {users.map(u => (
+                  <div key={u.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:C.sur, border:`1px solid ${C.bdr}`, padding:"12px 16px", borderRadius:8 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ width:28, height:28, background:C.accL, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, color:C.acc, fontSize:10 }}>{u.username?.[0].toUpperCase() || "?"}</div>
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:13 }}>{u.username}</div>
+                        <div style={{ fontSize:10, color:C.txtS }}>{u.role.toUpperCase()}</div>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <select
+                        style={{ ...sel, padding:"2px 4px", fontSize:11 }}
+                        value={u.role}
+                        onChange={(e) => updateUserRole(u.id, e.target.value)}
+                      >
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <button style={{ ...mkBtn("danger"), padding:"4px 8px", fontSize:10 }} onClick={() => deleteUser(u.id)}>Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* CREATE FORM */}
+          <div style={{ background:C.sur, border:`1.5px dashed ${C.bdr}`, borderRadius:10, padding:20 }}>
+            <Sec c="Add New Account"/>
+            <form onSubmit={handleCreateUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div>
+                <Lbl c="USERNAME"/>
+                <input style={inp} value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} required placeholder="Enter username..."/>
+              </div>
+              <div>
+                <Lbl c="PASSWORD"/>
+                <input style={inp} type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} required placeholder="Enter password..."/>
+              </div>
+              <div>
+                <Lbl c="ROLE"/>
+                <select style={{ ...sel, width:"100%" }} value={newUser.role} onChange={e=>setNewUser(p=>({...p,role:e.target.value}))}>
+                  <option value="user">Standard User</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+              {formErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {formErr}</div>}
+              <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:6 }}>Create User</button>
+            </form>
+          </div>
+        </div>
+
+        <div style={{ borderTop:`1px solid ${C.bdr}`, paddingTop:20, marginTop:10 }}>
+          <div style={{ background:C.accL, border:`1px solid ${C.accB}`, padding:16, borderRadius:8 }}>
+            <div style={{ fontWeight:700, marginBottom:8, color:C.acc }}>✓ Security Tip</div>
+            <div style={{ fontSize:13, color:C.txtM, lineHeight:1.5 }}>
+              Use strong passwords for all new accounts. Promoting a user to Admin grants full access to financial data and user settings.
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [view,       setView]       = useState("dash");
+  const [token,      setToken]      = useState(localStorage.getItem("token") || "");
+  const [role,       setRole]       = useState(localStorage.getItem("role") || "user");
+  const [view,       setView]       = useState("landing");
   const [quotes,     setQuotes]     = useState(SAMPLE_QUOTES);
   const [reqs,       setReqs]       = useState(SAMPLE_REQS);
   const [active,     setActive]     = useState(null);
@@ -2382,12 +2631,60 @@ export default function App() {
     </div>
   );
 
+  // Authentication Guard
+  useEffect(() => {
+    if (view!=="landing" && view!=="login" && !token) {
+      setView("login");
+    }
+  }, [view, token]);
+
+  // ── LANDING PAGE ───────────────────────────────────────────────────────────
+  if (view==="landing") return (
+    <div style={{ minHeight:"100vh", background:C.sur, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", display:"flex", flexDirection:"column" }}>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} />
+      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:"6rem", fontWeight:800, color:C.acc, letterSpacing:"-2px", lineHeight:1, marginBottom:10 }}>RigPro</div>
+          <div style={{ fontSize:"1.2rem", color:C.txtM, fontWeight:500, letterSpacing:"1px", marginBottom:40 }}>Shoemaker Rigging & Transport</div>
+          <button style={{ ...mkBtn("primary"), fontSize:"1.1rem", padding:"12px 24px", borderRadius:"8px", cursor:"pointer", boxShadow:"0 4px 14px rgba(0,0,0,.15)", transition:"transform 0.1s" }} onClick={() => token ? setView("dash") : setView("login")}>
+            {token ? "Enter Dashboard" : "Enter Application"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── LOGIN PAGE ─────────────────────────────────────────────────────────────
+  if (view==="login") {
+    if (token) {
+      setView("dash");
+      return null;
+    }
+    return (
+      <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
+        <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} />
+        <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── ADMIN ──────────────────────────────────────────────────────────────────
+  if (view==="admin" && role!=="admin") return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
+  if (view==="admin") return (
+    <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} />
+      <AdminPage token={token} />
+    </div>
+  );
+
   // ── DASHBOARD ──────────────────────────────────────────────────────────────
   if (view==="dash") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {showRM && <ReqModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showNotifs && <NotifPanel/>}
-      <Header view={view} setView={setView} extra={
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
           <button style={{ ...mkBtn("ghost"), padding:"5px 9px", position:"relative" }} onClick={()=>setShowNotifs(true)}>
             🔔{pendN>0&&<span style={{ position:"absolute", top:-3, right:-3, background:C.red, color:"#fff", borderRadius:"50%", width:15, height:15, fontSize:9, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>{pendN}</span>}
@@ -2462,7 +2759,7 @@ export default function App() {
       {adjModal&&<SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
       {showCustModal&&<CustomerModal custName={showCustModal} quotes={quotes.filter(q=>q.client===showCustModal)} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onClose={()=>setShowCustModal(false)}/>}
       {showRM && <ReqModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
-      <Header view={view} setView={setView} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
         {selC ? (() => {
           const cQuotes = quotes.filter(q=>q.client===selC&&(!wonOnly||q.status==="Won"));
@@ -2584,7 +2881,7 @@ export default function App() {
   if (view==="requests") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {showRM && <ReqModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
-      <Header view={view} setView={setView} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
         <div style={{ marginBottom:14 }}><div style={{ fontSize:20, fontWeight:700 }}>Quote Requests</div><div style={{ fontSize:12, color:C.txtS }}>Incoming requests waiting to be estimated</div></div>
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
@@ -2616,15 +2913,15 @@ export default function App() {
   // ── EQUIPMENT RATES ────────────────────────────────────────────────────────
   if (view==="equipment") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header view={view} setView={setView} extra={actBtns}/>
-      <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
+      <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv} role={role}/>
     </div>
   );
 
   // ── LABOR RATES ────────────────────────────────────────────────────────────
   if (view==="labor") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header view={view} setView={setView} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates}/>
     </div>
   );
@@ -2632,7 +2929,7 @@ export default function App() {
   // ── CALENDAR ──────────────────────────────────────────────────────────────
   if (view==="calendar") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header view={view} setView={setView} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <CalendarPage quotes={quotes} setQuotes={setQuotes} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
     </div>
   );
@@ -2720,7 +3017,7 @@ export default function App() {
       <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
         {adjModal&&<SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
         {showWM && <WonModal quote={active} onSave={markWon} onClose={()=>setShowWM(false)}/>}
-        <Header view={view} setView={setView} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
+        <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
           <div style={{ display:"flex", gap:5 }}>
             <button style={mkBtn("ghost")} onClick={()=>setView("customers")}>Cancel</button>
             {!active.locked && <button style={mkBtn("primary")} onClick={saveQuote}>Save Quote</button>}
