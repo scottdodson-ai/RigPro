@@ -22,6 +22,9 @@ services:
       DB_PASSWORD: password123
       DB_NAME: rigpro
       JWT_SECRET: supersecretkey_for_rigpro
+    volumes:
+      - ./server:/app
+      - /app/node_modules
     depends_on:
       - db
 

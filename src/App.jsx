@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, Fragment } from "react";
 
 // ── BASE DATA ─────────────────────────────────────────────────────────────────
 
@@ -243,7 +243,9 @@ function calcQuote(q, customerRates, eqOv, eqMapArg) {
   }, 0);
   const equipCost = (q.equipRows||[]).reduce((s,r) => {
     const e = _eqMap[r.code];
-    return s + (e?e.daily*r.days:0) + Number(r.ship||0);
+    // Use the specific daily_cost from the equipment definition, or default to 0
+    const ec = e ? (Number(e.daily_cost || e.daily * 0.6)) : 0;
+    return s + (ec * r.days) + Number(r.ship||0);
   }, 0);
   const hauling  = (q.haulingRows||[]).reduce((s,r) => s+Number(r.cost)*(1+Number(r.markup||0)), 0);
   const mats     = (q.matRows||[]).reduce((s,r) => s+Number(r.cost)*(1+Number(r.markup||0.15)), 0);
@@ -719,12 +721,12 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
   const [en, setEn]     = useState("");
 
   // ── Inline edit state for equipment records ────────────────────────────────
-  const [editRow, setEditRow] = useState(null); // { code, name, cap, daily, cat } — original
+  const [editRow, setEditRow] = useState(null); // { code, name, cap, daily, cost, cat } — original
   const [editVal, setEditVal] = useState({});    // live field values while editing
 
   // ── Add new equipment state ────────────────────────────────────────────────
   const [showAdd,  setShowAdd]  = useState(false);
-  const [newEquip, setNewEquip] = useState({ code:"", cat:"Forklift", name:"", cap:"—", daily:0 });
+  const [newEquip, setNewEquip] = useState({ code:"", cat:"Forklift", name:"", cap:"—", daily:0, daily_cost:0 });
   const [addError, setAddError] = useState("");
 
   const KNOWN_CATS = [...new Set([...eqCats, "Forklift","Aerial Lift","Crane","Misc","Tools","Truck"])];
@@ -737,14 +739,14 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
   // ── Equipment record edit helpers ─────────────────────────────────────────
   function startEdit(e) {
     setEditRow(e.code);
-    setEditVal({ code:e.code, cat:e.cat, name:e.name, cap:e.cap, daily:e.daily });
+    setEditVal({ code:e.code, cat:e.cat, name:e.name, cap:e.cap, daily:e.daily, daily_cost:e.daily_cost || (e.daily * 0.6) });
     setEc(null); // close any rate override
   }
   function saveEdit() {
     if (!editVal.name || !editVal.code) return;
     setEquipment(prev => prev.map(e =>
       e.code === editRow
-        ? { ...e, code:editVal.code, cat:editVal.cat, name:editVal.name, cap:editVal.cap, daily:Number(editVal.daily) }
+        ? { ...e, code:editVal.code, cat:editVal.cat, name:editVal.name, cap:editVal.cap, daily:Number(editVal.daily), daily_cost:Number(editVal.daily_cost) }
         : e
     ));
     // If code changed, migrate rate override
@@ -771,8 +773,9 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
       name: newEquip.name.trim(),
       cap:  newEquip.cap.trim() || "—",
       daily: Number(newEquip.daily) || 0,
+      daily_cost: Number(newEquip.daily_cost) || (newEquip.daily * 0.6),
     }]);
-    setNewEquip({ code:"", cat:"Forklift", name:"", cap:"—", daily:0 });
+    setNewEquip({ code:"", cat:"Forklift", name:"", cap:"—", daily:0, daily_cost:0 });
     setShowAdd(false);
   }
 
@@ -828,7 +831,15 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
             <div>
               <div style={{ fontSize:11, color:C.txtM, fontWeight:600, marginBottom:3 }}>DAILY RATE ($)</div>
               <input style={fi} type="number" min={0} value={newEquip.daily}
-                onChange={e => setNewEquip(x=>({...x, daily:e.target.value}))}/>
+                onChange={e => {
+                  const val = Number(e.target.value);
+                  setNewEquip(x => ({ ...x, daily: val, daily_cost: val * 0.6 }));
+                }}/>
+            </div>
+            <div>
+              <div style={{ fontSize:11, color:C.txtM, fontWeight:600, marginBottom:3 }}>DAILY COST ($)</div>
+              <input style={fi} type="number" min={0} value={newEquip.daily_cost}
+                onChange={e => setNewEquip(x => ({ ...x, daily_cost: e.target.value }))}/>
             </div>
           </div>
           {addError && (
@@ -852,7 +863,7 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
             <table style={{ width:"100%", borderCollapse:"collapse", minWidth:640 }}>
               <thead>
                 <tr>
-                  {["Code","Category","Equipment Name","Capacity","Base/Day","Override Rate","Override Note",""].map(h => (
+                  {["Code","Category","Equipment Name","Capacity","Base/Day", (role === "admin" ? "Cost/Day" : null), "Override Rate","Override Note",""].filter(Boolean).map(h => (
                     <th key={h} style={thS}>{h}</th>
                   ))}
                 </tr>
@@ -892,6 +903,13 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
                               onChange={x => setEditVal(v=>({...v, daily:x.target.value}))}/>
                           </div>
                         </td>
+                        <td style={tdS}>
+                          <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                            <span style={{ fontSize:13, color:C.txtS }}>$</span>
+                            <input style={{ ...fi, width:70 }} type="number" min={0} value={editVal.daily_cost}
+                              onChange={x => setEditVal(v=>({...v, daily_cost:x.target.value}))}/>
+                          </div>
+                        </td>
                         <td style={tdS} colSpan={2}>
                           <span style={{ fontSize:12, color:C.txtS, fontStyle:"italic" }}>
                             Save to keep current override
@@ -915,8 +933,13 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
                       <td style={{ ...tdS, fontWeight:500 }}>{e.name}</td>
                       <td style={{ ...tdS, color:C.txtS, fontSize:12 }}>{e.cap}</td>
                       <td style={{ ...tdS, color:ov?C.txtS:C.txt, textDecoration:ov?"line-through":"none", fontSize:13 }}>
-                        ${e.daily.toLocaleString()}/day
+                        ${Number(e.daily).toLocaleString()}/day
                       </td>
+                      {role === "admin" && (
+                        <td style={{ ...tdS, color:C.txtS, fontSize:13 }}>
+                          ${Number(e.daily_cost || (e.daily * 0.6)).toLocaleString()}
+                        </td>
+                      )}
                       <td style={tdS}>
                         {isOv ? (
                           <div style={{ display:"flex", alignItems:"center", gap:5 }}>
@@ -936,22 +959,22 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
                         }
                       </td>
                       <td style={tdS}>
-                        {role === "admin" ? (
-                          isOv ? (
-                            <div style={{ display:"flex", gap:5 }}>
-                              <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 9px" }} onClick={saveOv}>Save</button>
-                              <button style={{ ...mkBtn("ghost"),   fontSize:11, padding:"4px 9px" }} onClick={() => setEc(null)}>Cancel</button>
-                            </div>
-                          ) : (
-                            <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-                              <button style={{ ...mkBtn("ghost"),   fontSize:11, padding:"3px 8px" }} onClick={() => startEdit(e)}>✏ Edit</button>
-                              <button style={{ ...mkBtn("outline"), fontSize:11, padding:"3px 8px" }} onClick={() => startOv(e.code)}>Override</button>
-                              {ov && <button style={{ ...mkBtn("danger"), fontSize:11, padding:"3px 8px" }} onClick={() => clearOv(e.code)}>Reset</button>}
-                              <button style={{ ...mkBtn("danger"),  fontSize:11, padding:"3px 8px" }} onClick={() => deleteEquip(e.code)}>Delete</button>
-                            </div>
-                          )
+                        {isOv ? (
+                          <div style={{ display:"flex", gap:5 }}>
+                            <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 9px" }} onClick={saveOv}>Save</button>
+                            <button style={{ ...mkBtn("ghost"),   fontSize:11, padding:"4px 9px" }} onClick={() => setEc(null)}>Cancel</button>
+                          </div>
                         ) : (
-                          <div style={{ fontSize:11, color:C.txtS, fontStyle:"italic" }}>Read-only access</div>
+                          <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                            {role === "admin" && <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 8px" }} onClick={() => startEdit(e)}>✏ Edit</button>}
+                            <button style={{ ...mkBtn("outline"), fontSize:11, padding:"3px 8px" }} onClick={() => startOv(e.code)}>Override</button>
+                            {role === "admin" && (
+                              <>
+                                {ov && <button style={{ ...mkBtn("danger"), fontSize:11, padding:"3px 8px" }} onClick={() => clearOv(e.code)}>Reset</button>}
+                                <button style={{ ...mkBtn("danger"),  fontSize:11, padding:"3px 8px" }} onClick={() => deleteEquip(e.code)}>Delete</button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -968,7 +991,7 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
 
 
 // ── LABOR RATES PAGE ────────────────────────────────────────────────────────
-function LaborRatesPage({ customerRates, setCustomerRates }) {
+function LaborRatesPage({ customerRates, setCustomerRates, role }) {
   const [editing, setEditing] = useState(null); // customer name
   const [vals,    setVals]    = useState({});    // local edits
   const [search,  setSearch]  = useState("");
@@ -1148,7 +1171,7 @@ function LaborRatesPage({ customerRates, setCustomerRates }) {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }} onClick={e => e.stopPropagation()}>
                      <span style={{ border: `1px solid ${C.grnBdr}`, background: C.grnB, color: C.grn, padding: "3px 12px", borderRadius: 5, fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: .5 }}>Active</span>
-                     <button style={{ background: C.redB, border: `1px solid ${C.redBdr}`, color: C.red, borderRadius: 6, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, fontWeight: 700 }} onClick={() => clear(c)}>✕</button>
+                     {role === "admin" && <button style={{ background: C.redB, border: `1px solid ${C.redBdr}`, color: C.red, borderRadius: 6, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, fontWeight: 700 }} onClick={() => clear(c)}>✕</button>}
                   </div>
                </Card>
             ))}
@@ -2417,7 +2440,7 @@ function CalendarPage({ quotes, setQuotes, eqMap, onOpenQuote }) {
         </div>
         {/* Cells */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
-          {cells.map((d, i) => <React.Fragment key={i}>{renderCell(d)}</React.Fragment>)}
+          {cells.map((d, i) => <Fragment key={i}>{renderCell(d)}</Fragment>)}
         </div>
       </div>
 
@@ -2620,6 +2643,116 @@ function LoginForm({ setToken, setRole, onBack }) {
 }
 
 // ── ADMIN PAGE ───────────────────────────────────────────────────────────────
+function DatabaseBrowser({ token }) {
+  const [tables, setTables] = useState([]);
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [dbLoading, setDbLoading] = useState(false);
+  const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    const fetchTables = async () => {
+      try {
+        const res = await fetch("/api/admin/tables", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        const data = await res.json();
+        if (Array.isArray(data)) setTables(data);
+        else setErr("Invalid data format received");
+      } catch (err) { 
+        console.error("fetchTables error:", err); 
+        setErr("Could not load database tables.");
+      }
+    };
+    fetchTables();
+  }, [token]);
+
+  const fetchTableData = async (table) => {
+    setSelectedTable(table);
+    setDbLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/tables/${table}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setRows(data);
+    } catch (err) { 
+      console.error("fetchTableData error:", err); 
+      setErr(`Failed to load data for ${table}`);
+    }
+    finally { setDbLoading(false); }
+  };
+
+  return (
+    <div style={{ marginTop: 40, borderTop: `1px solid ${C.bdr}`, paddingTop: 30 }}>
+      <div style={{ fontSize: 20, fontWeight: 800, color: C.acc, marginBottom: 16 }}>🗄 MySQL Data Browser</div>
+      
+      {err && <div style={{ background: C.redB, color: C.red, padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: 13, border: `1px solid ${C.redBdr}` }}>⚠ {err}</div>}
+
+      <div style={{ display: "flex", gap: 20, alignItems: "start" }}>
+        {/* Tables List */}
+        <div style={{ width: 180, flexShrink: 0 }}>
+          <Lbl c="TABLES" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {tables.length === 0 && !err && <div style={{ fontSize: 12, color: C.txtS, padding: 10 }}>No tables found.</div>}
+            {tables.map(t => (
+              <button key={t} 
+                style={{ ...mkBtn(selectedTable === t ? "primary" : "ghost"), justifyContent: "start", fontSize: 12, padding: "6px 14px", border: selectedTable===t?'none':`1px solid ${C.bdr}` }}
+                onClick={() => fetchTableData(t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Table Data */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {selectedTable ? (
+            <Card style={{ padding: 16, margin: 0, background: "#fff", border: `1.5px solid ${C.accB}`, borderRadius: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: C.acc }}>Table: {selectedTable}</div>
+                <div style={{ fontSize: 11, color: C.txtS }}>Showing {rows.length} rows</div>
+              </div>
+              {dbLoading ? <div style={{ padding: 40, textAlign: "center", color: C.txtS }}>Fetching database records...</div> : (
+                <div style={{ overflowX: "auto", maxHeight: 450, borderRadius: 6, border: `1px solid ${C.bdr}` }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                    <thead>
+                      <tr>
+                        {rows.length > 0 && Object.keys(rows[0]).map(h => (
+                          <th key={h} style={{ ...thS, background: C.bg, position: "sticky", top: 0, zIndex: 1, whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r, i) => (
+                        <tr key={i} style={{ background: i % 2 === 1 ? "transparent" : "#fbfbfc" }}>
+                          {Object.values(r).map((v, j) => (
+                            <td key={j} style={{ ...tdS, whiteSpace: "nowrap", borderBottom: `1px solid #f0f0f0` }}>
+                              {v === null ? <span style={{ fontStyle: "italic", color: C.txtS }}>NULL</span> : String(v)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          ) : (
+            <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", background: "#fafafa", borderRadius: 10, border: `2px dashed ${C.bdr}`, color: C.txtS, fontSize: 13 }}>
+              Select a table from the left to browse MySQL data
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminPage({ token }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2678,7 +2811,7 @@ function AdminPage({ token }) {
   useEffect(() => { fetchUsers(); }, []);
 
   return (
-    <div style={{ padding:"24px", maxWidth:900, margin:"0 auto" }}>
+    <div style={{ padding:"24px", maxWidth:1100, margin:"0 auto" }}>
       <Card>
         <div style={{ fontSize:22, fontWeight:800, color:C.acc, marginBottom:4 }}>Admin Control Panel</div>
         <div style={{ fontSize:14, color:C.txtM, marginBottom:20 }}>System oversight and user management</div>
@@ -2740,11 +2873,14 @@ function AdminPage({ token }) {
           </div>
         </div>
 
+        {/* DATA BROWSER SECTION */}
+        <DatabaseBrowser token={token} />
+
         <div style={{ borderTop:`1px solid ${C.bdr}`, paddingTop:20, marginTop:10 }}>
           <div style={{ background:C.accL, border:`1px solid ${C.accB}`, padding:16, borderRadius:8 }}>
             <div style={{ fontWeight:700, marginBottom:8, color:C.acc }}>✓ Security Tip</div>
             <div style={{ fontSize:13, color:C.txtM, lineHeight:1.5 }}>
-              Use strong passwords for all new accounts. Promoting a user to Admin grants full access to financial data and user settings.
+              Use strong passwords for all new accounts. Promoting a user to Admin grants full access to internal database tables and user settings.
             </div>
           </div>
         </div>
@@ -3190,7 +3326,7 @@ export default function App() {
   if (view==="labor") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
-      <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates}/>
+      <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates} role={role}/>
     </div>
   );
 
@@ -3401,14 +3537,14 @@ export default function App() {
                 <thead><tr>{["Equipment","Cap.","Rate/Day","Days","Shipping","Subtotal","Override?",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
                 <tbody>
                   {(active.equipRows||[]).map(row => {
-                    const eq    = eqLookup[row.code] || EQUIPMENT[0];
+                    const eq    = eqMap[row.code] || EQUIPMENT[0];
                     const gOv   = eqOv[row.code];
                     const bd    = gOv ? gOv.daily : eq.daily;
                     const daily = row.overRate ? Number(row.overDaily) : bd;
                     const sub   = daily*row.days + Number(row.ship||0);
                     return (
                       <tr key={row.id}>
-                        <td style={tdS}><select style={{ ...sel, maxWidth:210 }} value={row.code} onChange={e=>{ const ne=eqLookup[e.target.value]||EQUIPMENT[0]; const go=eqOv[e.target.value]; updR("equipRows",row.id,"code",e.target.value); updR("equipRows",row.id,"overDaily",go?go.daily:ne.daily); }} disabled={active.locked}>{eqCats.map(cat=><optgroup key={cat} label={cat}>{equipment.filter(e=>e.cat===cat).map(e=><option key={e.code} value={e.code}>{e.name}</option>)}</optgroup>)}</select></td>
+                        <td style={tdS}><select style={{ ...sel, maxWidth:210 }} value={row.code} onChange={e=>{ const ne=eqMap[e.target.value]||EQUIPMENT[0]; const go=eqOv[e.target.value]; updR("equipRows",row.id,"code",e.target.value); updR("equipRows",row.id,"overDaily",go?go.daily:ne.daily); }} disabled={active.locked}>{eqCats.map(cat=><optgroup key={cat} label={cat}>{equipment.filter(e=>e.cat===cat).map(e=><option key={e.code} value={e.code}>{e.name}</option>)}</optgroup>)}</select></td>
                         <td style={{ ...tdS, fontSize:11, color:C.txtS }}>{eq.cap}</td>
                         <td style={tdS}>{row.overRate ? <DollarInput val={row.overDaily} on={e=>updR("equipRows",row.id,"overDaily",Number(e.target.value))} w={65}/> : <span style={{ fontSize:13, color:gOv?C.yel:C.txtM }}>${daily.toLocaleString()}/day{gOv?" ⚡":""}</span>}</td>
                         <td style={tdS}><input style={{ ...inp, width:50 }} type="number" min={0} value={row.days} onChange={e=>updR("equipRows",row.id,"days",Number(e.target.value))} disabled={active.locked}/></td>

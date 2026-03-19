@@ -38,10 +38,11 @@ CREATE TABLE IF NOT EXISTS equipment (
     category VARCHAR(50) NOT NULL,
     name VARCHAR(100) NOT NULL,
     capacity VARCHAR(50),
-    daily_rate DECIMAL(10, 2) NOT NULL
+    daily_rate DECIMAL(10, 2) NOT NULL,
+    daily_cost DECIMAL(10, 2) NOT NULL DEFAULT 0.00
 );
 
-INSERT INTO equipment (code, category, name, capacity, daily_rate) VALUES
+INSERT INTO equipment (code, category, name, capacity, daily_rate, daily_cost) VALUES
 ('242', 'Forklift', '2000 Gradall 534D-9', '9,000 lb', 790.00),
 ('300', 'Forklift', 'Caterpillar GC35K', '15,500 lb', 840.00),
 ('301', 'Forklift', 'HysterS80XLBCS', '8,000 lb', 530.00),

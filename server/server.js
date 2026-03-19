@@ -124,6 +124,32 @@ app.delete('/api/users/:id', authenticateToken, authenticateAdmin, async (req, r
   }
 });
 
+// DATABASE BROWSER ENDPOINTS (Admin Only)
+app.get('/api/admin/tables', authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.query('SHOW TABLES');
+    console.log('[API] SHOW TABLES result:', rows);
+    const tables = rows.map(r => Object.values(r)[0]);
+    res.json(tables);
+  } catch (error) {
+    console.error('[API] SHOW TABLES error:', error);
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
+  const table = req.params.table;
+  // Simple check to prevent basic SQL injection on table name
+  if (!/^[a-zA-Z0-9_]+$/.test(table)) return res.status(400).json({ error: 'Invalid table name' });
+
+  try {
+    const [rows] = await db.query(`SELECT * FROM ${table} LIMIT 500`);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch table data' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 // Ensure admin account exists and has known password (dev/seed behavior).
