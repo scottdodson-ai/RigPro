@@ -967,7 +967,203 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
 }
 
 
-// ── PROFILE TEMPLATE MODAL ────────────────────────────────────────────────────
+// ── LABOR RATES PAGE ────────────────────────────────────────────────────────
+function LaborRatesPage({ customerRates, setCustomerRates }) {
+  const [editing, setEditing] = useState(null); // customer name
+  const [vals,    setVals]    = useState({});    // local edits
+  const [search,  setSearch]  = useState("");
+  const [adding,  setAdding]  = useState(false);
+
+  function startEdit(c) {
+    setEditing(c);
+    const existing = customerRates[c] || {};
+    const init = {};
+    BASE_LABOR.forEach(r => {
+      init[r.role] = existing[r.role] || { reg: r.reg, ot: r.ot };
+    });
+    setVals(init);
+    setAdding(false);
+  }
+
+  function save() {
+    setCustomerRates(prev => ({ ...prev, [editing]: vals }));
+    setEditing(null);
+  }
+
+  function clear(c) {
+    if (confirm(`Remove custom labor rates for ${c}?`)) {
+      const copy = { ...customerRates };
+      delete copy[c];
+      setCustomerRates(copy);
+    }
+  }
+
+  function update(role, field, val) {
+    setVals(prev => ({
+      ...prev,
+      [role]: { ...prev[role], [field]: Number(val) }
+    }));
+  }
+
+  const clientsWithRates = Object.keys(customerRates).filter(c => 
+    c.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div style={{ padding: "0 24px 40px", maxWidth: 1000, margin: "0 auto" }}>
+      <h1 style={{ fontSize: 28, fontWeight: 700, margin: "24px 0 8px" }}>Labor Rates</h1>
+      <p style={{ color: C.txtS, fontSize: 13, marginBottom: 24 }}>
+        Standard billing and cost rates used in all estimates. Create customer-specific rates that override the standard rates for that client.
+      </p>
+
+      {/* Standard Rates Section */}
+      <Card style={{ padding: 20, marginBottom: 24, background: "#fff" }}>
+         <div style={{ color: C.acc, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>
+            Standard Rates
+         </div>
+         <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+               <thead>
+                  <tr>
+                     <th style={{ ...thS, paddingLeft: 0 }}>ROLE</th>
+                     <th style={{ ...thS, textAlign: "right" }}>BILL REGULAR</th>
+                     <th style={{ ...thS, textAlign: "right" }}>BILL OT</th>
+                     <th style={{ ...thS, textAlign: "right" }}>COST REGULAR</th>
+                     <th style={{ ...thS, textAlign: "right" }}>COST OT</th>
+                     <th style={{ ...thS, textAlign: "right", paddingRight: 0 }}>BURDEN %</th>
+                  </tr>
+               </thead>
+               <tbody>
+                  {BASE_LABOR.map((r, i) => {
+                     const margin = Math.round(((r.reg - r.costReg) / r.reg) * 100);
+                     return (
+                        <tr key={r.role} style={{ background: i % 2 === 1 ? "transparent" : "#fbfbfc" }}>
+                           <td style={{ ...tdS, fontWeight: 700, color: C.txt, paddingLeft: 8 }}>{r.role}</td>
+                           <td style={{ ...tdS, color: C.acc, fontWeight: 800, textAlign: "right" }}>${r.reg.toFixed(2)}/hr</td>
+                           <td style={{ ...tdS, color: C.ora, fontWeight: 800, textAlign: "right" }}>${r.ot.toFixed(2)}/hr</td>
+                           <td style={{ ...tdS, color: C.teal, fontWeight: 700, textAlign: "right" }}>${r.costReg % 1 === 0 ? r.costReg : r.costReg.toFixed(2)}/hr</td>
+                           <td style={{ ...tdS, color: C.teal, fontWeight: 700, textAlign: "right" }}>${r.costOT % 1 === 0 ? r.costOT : r.costOT.toFixed(2)}/hr</td>
+                           <td style={{ ...tdS, textAlign: "right", paddingRight: 8 }}>
+                              <span style={{ background: C.bluB, color: C.blue, border: `1px solid ${C.bluBdr}`, padding: "2px 10px", borderRadius: 4, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
+                                 {margin}% margin
+                              </span>
+                           </td>
+                        </tr>
+                     );
+                  })}
+               </tbody>
+            </table>
+         </div>
+         <div style={{ background: C.bg, padding: "12px 16px", borderRadius: 8, marginTop: 18, fontSize: 12, color: C.txtS, textAlign: "center", lineHeight: 1.5 }}>
+            OT rate = 1.5× regular · Cost rates include wages, burden, and overhead · These rates apply to all estimates unless a customer special rate is set
+         </div>
+      </Card>
+
+      {/* Customer Special Rates Section */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+         <div style={{ color: C.acc, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
+            Customer Special Rates
+         </div>
+         <button style={{ ...mkBtn("primary"), padding: "6px 16px", fontSize: 12 }} onClick={() => setAdding(true)}>+ Add</button>
+      </div>
+
+      {adding && !editing && (
+         <Card style={{ marginBottom: 16, border: `2.5px solid ${C.accB}`, padding: 20 }}>
+            <Lbl c="SELECT CUSTOMER TO CUSTOMIZE"/>
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+               <select style={{ ...sel, flex: 1, padding: "8px 12px" }} onChange={e => startEdit(e.target.value)} defaultValue="">
+                  <option value="" disabled>Choose a customer...</option>
+                  {CUSTOMERS.filter(c => !customerRates[c]).map(c => <option key={c} value={c}>{c}</option>)}
+               </select>
+               <button style={mkBtn("ghost")} onClick={() => setAdding(false)}>Cancel</button>
+            </div>
+         </Card>
+      )}
+
+      {editing ? (
+         <Card style={{ marginBottom: 16, border: `2.5px solid ${C.accB}`, padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+               <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: C.txt }}>{editing}</div>
+                  <div style={{ fontSize: 12, color: C.txtS, marginTop: 2 }}>Setting Custom Labor Rate Overrides</div>
+               </div>
+               <button onClick={() => setEditing(null)} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: C.txtS }}>✕</button>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+               <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                     <tr>
+                        <th style={{ ...thS, fontSize: 10, paddingLeft: 0 }}>ROLE</th>
+                        <th style={{ ...thS, fontSize: 10, textAlign: "right" }}>REGULAR RATE</th>
+                        <th style={{ ...thS, fontSize: 10, textAlign: "right", paddingRight: 0 }}>OT RATE</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     {BASE_LABOR.map(r => (
+                        <tr key={r.role}>
+                           <td style={{ ...tdS, fontSize: 13, fontWeight: 700, border: "none", paddingLeft: 0 }}>{r.role}</td>
+                           <td style={{ ...tdS, border: "none", textAlign: "right" }}>
+                              <div style={{ display: "flex", alignItems: "center", border: `1px solid ${C.bdrM}`, borderRadius: 5, overflow: "hidden", marginLeft: "auto", width: 110 }}>
+                                 <span style={{ padding: "0 8px", color: C.txtS, fontSize: 12, background: C.bg, height: 32, display: "flex", alignItems: "center" }}>$</span>
+                                 <input style={{ border: "none", outline: "none", padding: "6px 8px", width: "100%", textAlign: "right", fontSize: 13, fontWeight: 700 }} type="number" 
+                                    value={vals[r.role].reg} 
+                                    onChange={e => update(r.role, "reg", e.target.value)}/>
+                              </div>
+                           </td>
+                           <td style={{ ...tdS, border: "none", textAlign: "right", paddingRight: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", border: `1px solid ${C.bdrM}`, borderRadius: 5, overflow: "hidden", marginLeft: "auto", width: 110 }}>
+                                 <span style={{ padding: "0 8px", color: C.txtS, fontSize: 12, background: C.bg, height: 32, display: "flex", alignItems: "center" }}>$</span>
+                                 <input style={{ border: "none", outline: "none", padding: "6px 8px", width: "100%", textAlign: "right", fontSize: 13, fontWeight: 700 }} type="number" 
+                                    value={vals[r.role].ot} 
+                                    onChange={e => update(r.role, "ot", e.target.value)}/>
+                              </div>
+                           </td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+               <button style={{ ...mkBtn("primary"), flex: 2, justifyContent: "center", padding: "10px" }} onClick={save}>Save Custom Rates</button>
+               <button style={{ ...mkBtn("ghost"), flex: 1, justifyContent: "center", padding: "10px" }} onClick={() => setEditing(null)}>Cancel</button>
+            </div>
+         </Card>
+      ) : (
+         <>
+            <div style={{ position: "relative", marginBottom: 16 }}>
+               <span style={{ position: "absolute", left: 14, top: 11, color: C.txtS }}>🔍</span>
+               <input 
+                  style={{ ...inp, padding: "11px 14px 11px 38px", border: `1px solid ${C.bdrM}`, borderRadius: 8 }} 
+                  placeholder="Search customers..." 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)}
+               />
+            </div>
+
+            {clientsWithRates.map(c => (
+               <Card key={c} style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, cursor: "pointer", transition: "transform .1s", ":hover": { transform: "translateY(-1px)" } }} onClick={() => startEdit(c)}>
+                  <div>
+                     <div style={{ fontWeight: 800, fontSize: 16, color: C.txt }}>{c}</div>
+                     <div style={{ fontSize: 12, color: C.txtS, marginTop: 3 }}>{Object.keys(customerRates[c]).length} roles customized</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }} onClick={e => e.stopPropagation()}>
+                     <span style={{ border: `1px solid ${C.grnBdr}`, background: C.grnB, color: C.grn, padding: "3px 12px", borderRadius: 5, fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: .5 }}>Active</span>
+                     <button style={{ background: C.redB, border: `1px solid ${C.redBdr}`, color: C.red, borderRadius: 6, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, fontWeight: 700 }} onClick={() => clear(c)}>✕</button>
+                  </div>
+               </Card>
+            ))}
+            {clientsWithRates.length === 0 && search && (
+               <div style={{ textAlign: "center", padding: 40, color: C.txtS, fontSize: 14 }}>
+                  No customized customers matching "{search}"
+               </div>
+            )}
+         </>
+      )}
+    </div>
+  );
+}
+
+
 function ProfileTemplateModal({ template, setTemplate, onClose }) {
   const [fields, setFields] = useState(template.map(f => ({...f})));
   const [newField, setNewField] = useState({ key:"", label:"", type:"text", enabled:true });

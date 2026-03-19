@@ -1,0 +1,117 @@
+
+// ── LABOR RATES PAGE ────────────────────────────────────────────────────────
+function LaborRatesPage({ customerRates, setCustomerRates }) {
+  const [editing, setEditing] = useState(null); // customer name
+  const [vals,    setVals]    = useState({});    // local edits
+
+  const clients = CUSTOMERS;
+
+  function startEdit(c) {
+    setEditing(c);
+    setVals(customerRates[c] || {});
+  }
+
+  function save() {
+    setCustomerRates(prev => ({ ...prev, [editing]: vals }));
+    setEditing(null);
+  }
+
+  function clear(c) {
+    if (confirm(`Remove custom labor rates for ${c}?`)) {
+      const copy = { ...customerRates };
+      delete copy[c];
+      setCustomerRates(copy);
+    }
+  }
+
+  function update(role, field, val) {
+    setVals(prev => ({
+      ...prev,
+      [role]: { ...(prev[role] || { reg:0, ot:0 }), [field]: Number(val) }
+    }));
+  }
+
+  return (
+    <div style={{ padding:20, maxWidth:1000, margin:"0 auto" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+        <div>
+          <h1 style={{ margin:0, fontSize:24, fontWeight:700 }}>Labor Rate Overrides</h1>
+          <p style={{ margin:"5px 0 0", color:C.txtS, fontSize:14 }}>Set client-specific labor rates that override global defaults.</p>
+        </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:20 }}>
+        {clients.map(c => {
+          const rates = customerRates[c];
+          const isEditing = editing === c;
+
+          return (
+            <Card key={c} style={{ border: rates ? `1.5px solid ${C.accB}` : `1px solid ${C.bdr}` }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:16, color:C.txt }}>{c}</div>
+                  <div style={{ fontSize:11, color:C.txtS, marginTop:2 }}>{rates ? "⚡ Custom Overrides" : "Global Default Rates"}</div>
+                </div>
+                {!isEditing && (
+                  <div style={{ display:"flex", gap:5 }}>
+                    <button style={{ ...mkBtn("outline"), fontSize:11, padding:"3px 8px" }} onClick={() => startEdit(c)}>✏ Edit</button>
+                    {rates && <button style={{ ...mkBtn("danger"), fontSize:11, padding:"3px 8px" }} onClick={() => clear(c)}>Reset</button>}
+                  </div>
+                )}
+              </div>
+
+              {isEditing ? (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ ...thS, textAlign:"left" }}>Role</th>
+                        <th style={thS}>Reg</th>
+                        <th style={thS}>OT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {BASE_LABOR.map(r => (
+                        <tr key={r.role}>
+                          <td style={{ ...tdS, fontSize:12, fontWeight:600 }}>{r.role}</td>
+                          <td style={tdS}>
+                            <input style={{ ...inp, width:60, textAlign:"right" }} type="number" 
+                              value={vals[r.role]?.reg ?? r.reg} 
+                              onChange={e => update(r.role, "reg", e.target.value)}/>
+                          </td>
+                          <td style={tdS}>
+                            <input style={{ ...inp, width:60, textAlign:"right" }} type="number" 
+                              value={vals[r.role]?.ot ?? r.ot} 
+                              onChange={e => update(r.role, "ot", e.target.value)}/>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div style={{ display:"flex", gap:8, marginTop:10 }}>
+                    <button style={{ ...mkBtn("primary"), flex:1 }} onClick={save}>Save Rates</button>
+                    <button style={{ ...mkBtn("ghost"), flex:1 }} onClick={() => setEditing(null)}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  {BASE_LABOR.map(r => {
+                    const row = rates?.[r.role];
+                    return (
+                      <div key={r.role} style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:row ? C.txt : C.txtS }}>
+                        <span>{r.role}</span>
+                        <span style={{ fontWeight:row ? 700 : 400 }}>
+                          ${(row?.reg ?? r.reg).toFixed(2)} / ${(row?.ot ?? r.ot).toFixed(2)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
