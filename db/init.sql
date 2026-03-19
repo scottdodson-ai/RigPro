@@ -10,10 +10,10 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Note: The hash below is for the password: 'password123'
+-- Note: The hashes below are for the password: 'pass'
 INSERT INTO users (username, password_hash, role) VALUES 
-('scott', '$2b$10$EP036Bf3FHzqQ2z8B1ZtO.QoV4I4I3B1M6b622K9bL0W2l/S5M2c6', 'admin'),
-('admin', '$2b$10$EP036Bf3FHzqQ2z8B1ZtO.QoV4I4I3B1M6b622K9bL0W2l/S5M2c6', 'admin');
+('scott', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
+('admin', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin');
 
 -- 2. Base Labor Rates
 CREATE TABLE IF NOT EXISTS base_labor (

@@ -352,6 +352,25 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
   
   if (token && role === "admin") TABS.push(["admin", "Admin Controls"]);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 801px)");
+    const closeIfDesktop = () => {
+      if (mq.matches || window.innerWidth >= 801) setMenuOpen(false);
+    };
+    closeIfDesktop();
+
+    // MediaQueryList events are inconsistent across browsers.
+    if (typeof mq.addEventListener === "function") mq.addEventListener("change", closeIfDesktop);
+    else if (typeof mq.addListener === "function") mq.addListener(closeIfDesktop);
+
+    window.addEventListener("resize", closeIfDesktop);
+    return () => {
+      if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", closeIfDesktop);
+      else if (typeof mq.removeListener === "function") mq.removeListener(closeIfDesktop);
+      window.removeEventListener("resize", closeIfDesktop);
+    };
+  }, []);
+
   const handleLogout = () => { 
     localStorage.removeItem("token"); 
     localStorage.removeItem("role"); 
@@ -366,35 +385,71 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
         @media (max-width: 800px) {
           .desktop-nav { display: none !important; }
           .hamburger-btn { display: flex !important; margin-left: auto; }
+          .mobile-inline { display: flex !important; }
         }
         @media (min-width: 801px) {
           .hamburger-btn { display: none !important; }
+          .mobile-inline { display: none !important; }
         }
       `}</style>
-      <div style={{ background:C.sur, borderBottom:`1px solid ${C.bdr}`, padding:"0 14px", display:"flex", alignItems:"center", minHeight:54, position:"sticky", top:0, zIndex:100, boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8, marginRight:16 }}>
-          <div style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>⛓</div>
-          <div>
-            <div style={{ fontFamily:"Georgia,serif", fontSize:13, color:C.acc, fontWeight:700, lineHeight:1.1 }}>Shoemaker</div>
-            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.5 }}>RIGGING & TRANSPORT</div>
+      <div
+        style={{
+          background: C.sur,
+          borderBottom: `1px solid ${C.bdr}`,
+          padding: "6px 14px 10px",
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+        }}
+      >
+        {/* Top row: logo + nav */}
+        <div style={{ display:"flex", alignItems:"center", minHeight:54 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginRight:16 }}>
+            <div style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>⛓</div>
+            <div>
+              <div style={{ fontFamily:"Georgia,serif", fontSize:13, color:C.acc, fontWeight:700, lineHeight:1.1 }}>Shoemaker</div>
+              <div style={{ fontSize:9, color:C.txtS, letterSpacing:.5 }}>RIGGING & TRANSPORT</div>
+            </div>
           </div>
+
+          {/* Desktop Nav */}
+          <div className="desktop-nav" style={{ display:"flex", alignItems:"center", flex:1, gap:4, overflowX:"auto" }}>
+            {TABS.map(([v,l]) => (
+              <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", color:view===v?C.acc:C.txtM, fontSize:12, cursor:"pointer", padding:"4px 8px", borderBottom:view===v?`2px solid ${C.acc}`:"2px solid transparent", fontFamily:"inherit", fontWeight:view===v?700:400, whiteSpace:"nowrap" }}>{l}</button>
+            ))}
+            {crumb && <><span style={{ color:C.bdr, margin:"0 2px" }}>›</span><span style={{ color:C.txtS, fontSize:12, whiteSpace:"nowrap" }}>{crumb}</span></>}
+          </div>
+
+          {/* Mobile inline actions (same top line as logo + hamburger) */}
+          <div
+            className="mobile-inline"
+            style={{
+              display: "none",
+              marginLeft: "auto",
+              alignItems: "center",
+              gap: 6,
+              overflowX: "auto",
+              maxWidth: "60vw",
+              paddingLeft: 8,
+            }}
+          >
+            {extra}
+            {token ? (
+              <button style={{ ...mkBtn("danger"), fontSize:10, padding:"5px 8px" }} onClick={handleLogout}>Logout</button>
+            ) : (
+              view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:10, padding:"5px 10px" }} onClick={() => setView("login")}>Login</button>
+            )}
+          </div>
+
+          {/* Hamburger (mobile) */}
+          <button className="hamburger-btn" onClick={() => setMenuOpen(!menuOpen)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtM, padding:"4px" }}>
+            ☰
+          </button>
         </div>
 
-        {/* Desktop Nav */}
-        <div className="desktop-nav" style={{ display:"flex", alignItems:"center", flex:1, gap:4, overflowX:"auto" }}>
-          {TABS.map(([v,l]) => (
-            <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", color:view===v?C.acc:C.txtM, fontSize:12, cursor:"pointer", padding:"4px 8px", borderBottom:view===v?`2px solid ${C.acc}`:"2px solid transparent", fontFamily:"inherit", fontWeight:view===v?700:400, whiteSpace:"nowrap" }}>{l}</button>
-          ))}
-          {crumb && <><span style={{ color:C.bdr, margin:"0 2px" }}>›</span><span style={{ color:C.txtS, fontSize:12, whiteSpace:"nowrap" }}>{crumb}</span></>}
-        </div>
-
-        {/* Hamburger */}
-        <button className="hamburger-btn" onClick={() => setMenuOpen(!menuOpen)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtM, padding:"4px" }}>
-          ☰
-        </button>
-
-        {/* Desktop Extra & Logout */}
-        <div className="desktop-nav" style={{ marginLeft:"auto", paddingLeft:8, display:"flex", alignItems:"center", gap:10 }}>
+        {/* Second row: actions far-right (desktop) */}
+        <div className="desktop-nav" style={{ display:"flex", justifyContent:"flex-end", gap:10, flexWrap:"wrap" }}>
           {extra}
           {token ? (
             <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
@@ -423,11 +478,28 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
 }
 
 function ActionBtns({ onReq, onFromReq, onNew }) {
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 800px)");
+    const sync = () => setCompact(!!mq.matches);
+    sync();
+    if (typeof mq.addEventListener === "function") mq.addEventListener("change", sync);
+    else if (typeof mq.addListener === "function") mq.addListener(sync);
+    window.addEventListener("resize", sync);
+    return () => {
+      if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", sync);
+      else if (typeof mq.removeListener === "function") mq.removeListener(sync);
+      window.removeEventListener("resize", sync);
+    };
+  }, []);
+
+  const s = compact ? { fontSize:10, padding:"5px 8px", gap:3 } : {};
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
-      <button style={mkBtn("outline")} onClick={onReq}>📋 Quote Request</button>
-      <button style={mkBtn("blue")}    onClick={onFromReq}>📄 From Request</button>
-      <button style={mkBtn("primary")} onClick={onNew}>+ New Estimate</button>
+      <button style={{ ...mkBtn("outline"), ...s }} onClick={onReq}>{compact ? "📋 Request" : "📋 Quote Request"}</button>
+      <button style={{ ...mkBtn("blue"), ...s }}    onClick={onFromReq}>{compact ? "📄 From" : "📄 From Request"}</button>
+      <button style={{ ...mkBtn("primary"), ...s }} onClick={onNew}>{compact ? "+ New" : "+ New Estimate"}</button>
     </div>
   );
 }
@@ -2313,7 +2385,7 @@ function LoginForm({ setToken, setRole, onBack }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:3001/api/login", {
+      const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
@@ -2360,7 +2432,7 @@ function AdminPage({ token }) {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:3001/api/users", {
+      const res = await fetch("/api/users", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
@@ -2373,7 +2445,7 @@ function AdminPage({ token }) {
     e.preventDefault();
     setFormErr("");
     try {
-      const res = await fetch("http://localhost:3001/api/users", {
+      const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type":"application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(newUser)
@@ -2387,7 +2459,7 @@ function AdminPage({ token }) {
 
   const updateUserRole = async (id, role) => {
     try {
-      await fetch(`http://localhost:3001/api/users/${id}`, {
+      await fetch(`/api/users/${id}`, {
         method: "PUT",
         headers: { "Content-Type":"application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ role })
@@ -2399,7 +2471,7 @@ function AdminPage({ token }) {
   const deleteUser = async (id) => {
     if (!window.confirm("Delete this user?")) return;
     try {
-      await fetch(`http://localhost:3001/api/users/${id}`, {
+      await fetch(`/api/users/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });

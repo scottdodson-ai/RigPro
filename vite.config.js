@@ -4,4 +4,15 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    host: true,
+    port: 3000,
+    allowedHosts: ['www.srestimator.com', 'srestimator.com'],
+    proxy: {
+      '/api': {
+        target: 'http://api:3001',
+        changeOrigin: true,
+      },
+    },
+  },
 })

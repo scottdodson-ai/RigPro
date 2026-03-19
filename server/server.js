@@ -126,12 +126,17 @@ app.delete('/api/users/:id', authenticateToken, authenticateAdmin, async (req, r
 
 const PORT = process.env.PORT || 3001;
 
-// Setup admin account password as ' pass' per user request
+// Ensure admin account exists and has known password (dev/seed behavior).
 const initAdmin = async () => {
   try {
     const hash = await bcrypt.hash('pass', 10);
-    await db.query(`UPDATE users SET password_hash = ? WHERE username = 'scott'`, [hash]);
-    console.log('Admin account (scott) password initialized.');
+    await db.query(
+      `INSERT INTO users (username, password_hash, role)
+       VALUES (?, ?, 'admin')
+       ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), role = 'admin'`,
+      ['scott', hash]
+    );
+    console.log('Admin account (scott) ensured.');
   } catch (error) {
     console.error('Failed to initialize admin account', error);
   }
