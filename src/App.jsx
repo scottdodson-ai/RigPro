@@ -1,4 +1,6 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
+import InvestorDashboard from "./RigPro3InvestorDashboard";
+
 
 // ── BASE DATA ─────────────────────────────────────────────────────────────────
 
@@ -709,6 +711,130 @@ function SalesAdjustmentModal({ quote, onSave, onClose }) {
                                             borderRadius:6, padding:"7px 18px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
             Submit Adjustment
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SearchResultsModal({ search, quotes, reqs, custData, onClose, onOpenQuote, onOpenReq, onOpenCust }) {
+  const q = search.toLowerCase().trim();
+  
+  const results = useMemo(() => {
+    if (!q) return [];
+    const res = [];
+    
+    // Quotes
+    quotes.forEach(quote => {
+      const match = [
+        quote.qn,                // Quote Number
+        quote.desc,              // Quote Title / Description
+        quote.jobSite,           // Location
+        quote.contactName,       // Contact Name
+        quote.contactEmail,      // Contact Email
+        quote.contactPhone,      // Contact Phone
+        quote.notes,             // Additional Description / Notes
+        quote.client             // Customer Name
+      ].some(s => s?.toLowerCase().includes(q));
+      
+      if (match) res.push({ type: 'Quote', data: quote, label: quote.qn, sub: quote.client, desc: `${quote.desc} @ ${quote.jobSite}` });
+    });
+    
+    // Requests
+    reqs.forEach(req => {
+      const match = [
+        req.rn,                  // Request Number
+        req.company,             // Customer
+        req.requester,           // Contact Name
+        req.email,               // Contact Email
+        req.phone,               // Contact Phone
+        req.jobSite,             // Location
+        req.desc,                // Description
+        req.notes                // Additional Notes
+      ].some(s => s?.toLowerCase().includes(q));
+      
+      if (match) res.push({ type: 'Request', data: req, label: req.rn, sub: req.company, desc: `${req.desc || req.notes} @ ${req.jobSite}` });
+    });
+    
+    // Customers
+    Object.entries(custData).forEach(([name, data]) => {
+      const contactMatch = (data.contacts || []).some(c => 
+        [c.name, c.email, c.phone, c.title].some(s => s?.toLowerCase().includes(q))
+      );
+      const locationMatch = (data.locations || []).some(l => 
+        [l.name, l.address, l.notes].some(s => s?.toLowerCase().includes(q))
+      );
+      const profileMatch = [
+        name,                    // Customer Name
+        data.notes,              // Description / Profile Notes
+        data.billingAddr,        // Location
+        data.website,
+        data.industry
+      ].some(s => s?.toLowerCase().includes(q));
+      
+      if (profileMatch || contactMatch || locationMatch) {
+        res.push({ type: 'Customer', data: { name }, label: name, sub: data.industry || 'Industrial', desc: data.billingAddr });
+      }
+    });
+    
+    return res;
+  }, [q, quotes, reqs, custData]);
+
+  const T_COLORS = { Quote: C.acc, Request: C.blue, Customer: C.purp };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.4)", zIndex:800, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"40px 16px", overflowY:"auto" }}>
+      <div style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:640, boxShadow:"0 12px 40px rgba(0,0,0,.25)", display:"flex", flexDirection:"column", maxHeight:"85vh" }}>
+        <div style={{ padding:"16px 20px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:C.sur, borderTopLeftRadius:12, borderTopRightRadius:12 }}>
+          <div>
+            <div style={{ fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:1, fontWeight:700 }}>Search Results</div>
+            <div style={{ fontSize:15, color:C.txtM }}>Matches for "<span style={{ fontWeight:700, color:C.txt }}>{search}</span>"</div>
+          </div>
+          <button onClick={onClose} style={{ background:C.bg, border:"none", width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:20, color:C.txtS, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+        </div>
+        
+        <div style={{ flex:1, overflowY:"auto", padding:12 }}>
+          {results.length === 0 ? (
+            <div style={{ padding:40, textAlign:"center", color:C.txtS }}>
+              <div style={{ fontSize:40, marginBottom:10 }}>🔍</div>
+              <div style={{ fontSize:16, fontWeight:600 }}>No matches found</div>
+              <div style={{ fontSize:13 }}>Try different keywords like location, contact name, or description.</div>
+            </div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {results.map((r, i) => (
+                <div 
+                  key={i} 
+                  style={{ display:"flex", gap:12, padding:14, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, cursor:"pointer", transition:"all 0.2s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = T_COLORS[r.type]; e.currentTarget.style.background = C.bg; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = C.bdr; e.currentTarget.style.background = C.sur; }}
+                  onClick={() => {
+                    if (r.type === 'Quote') onOpenQuote(r.data);
+                    else if (r.type === 'Request') onOpenReq(r.data);
+                    else if (r.type === 'Customer') onOpenCust(r.data.name);
+                    onClose();
+                  }}
+                >
+                  <div style={{ width:40, height:40, background:C.bg, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0, color:T_COLORS[r.type], border:`1px solid ${C.bdr}` }}>
+                    {r.type === 'Quote' ? '📄' : r.type === 'Request' ? '📋' : '🏢'}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:2 }}>
+                      <span style={{ fontWeight:700, fontSize:14 }}>{r.label}</span>
+                      <span style={{ fontSize:10, fontWeight:800, color:T_COLORS[r.type], textTransform:"uppercase", letterSpacing:0.5, background:C.bg, padding:"2px 6px", borderRadius:4, border:`1px solid ${C.bdr}` }}>{r.type}</span>
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:600, color:C.txtM, marginBottom:4 }}>{r.sub}</div>
+                    <div style={{ fontSize:12, color:C.txtS, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div style={{ padding:14, borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ fontSize:11, color:C.txtS }}>Found {results.length} result(s)</div>
+          <button style={{ ...mkBtn("ghost"), padding:"5px 12px" }} onClick={onClose}>Close</button>
         </div>
       </div>
     </div>
@@ -2803,6 +2929,28 @@ function AdminPage({ token }) {
   const [loading, setLoading] = useState(true);
   const [newUser, setNewUser] = useState({ username: "", password: "", role: "user" });
   const [formErr, setFormErr] = useState("");
+  const [todos, setTodos] = useState(() => JSON.parse(localStorage.getItem("admin_todos") || "[]"));
+  const [newTodo, setNewTodo] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem("admin_todos", JSON.stringify(todos));
+  }, [todos]);
+
+  const addTodo = (e) => {
+    e.preventDefault();
+    if (!newTodo.trim()) return;
+    setTodos([...todos, { id: Date.now(), text: newTodo, done: false }]);
+    setNewTodo("");
+  };
+
+  const toggleTodo = (id) => {
+    setTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  };
+
+  const delTodo = (id) => {
+    setTodos(todos.filter(t => t.id !== id));
+  };
+
 
   const fetchUsers = async () => {
     try {
@@ -2858,8 +3006,19 @@ function AdminPage({ token }) {
   return (
     <div style={{ padding:"24px", maxWidth:1100, margin:"0 auto" }}>
       <Card>
-        <div style={{ fontSize:22, fontWeight:800, color:C.acc, marginBottom:4 }}>Admin Control Panel</div>
-        <div style={{ fontSize:14, color:C.txtM, marginBottom:20 }}>System oversight and user management</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontSize:22, fontWeight:800, color:C.acc, marginBottom:4 }}>Admin Control Panel</div>
+            <div style={{ fontSize:14, color:C.txtM, marginBottom:20 }}>System oversight and user management</div>
+          </div>
+          <button 
+             style={{ ...mkBtn("primary"), padding: "10px 20px", fontWeight: 700, background: "linear-gradient(135deg, #0d8c6a, #10b981)" }}
+             onClick={() => window.dispatchEvent(new CustomEvent('change-view', { detail: 'investor' }))}
+          >
+             📊 Open Investor Dashboard
+          </button>
+        </div>
+
 
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:20, marginBottom:30 }}>
           {/* USER LIST */}
@@ -2894,29 +3053,60 @@ function AdminPage({ token }) {
           </div>
 
           {/* CREATE FORM */}
-          <div style={{ background:C.sur, border:`1.5px dashed ${C.bdr}`, borderRadius:10, padding:20 }}>
-            <Sec c="Add New Account"/>
-            <form onSubmit={handleCreateUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div>
-                <Lbl c="USERNAME"/>
-                <input style={inp} value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} required placeholder="Enter username..."/>
+          <div style={{ display: "flex", flexDirection:"column", gap:20 }}>
+            <div style={{ background:C.sur, border:`1.5px dashed ${C.bdr}`, borderRadius:10, padding:20 }}>
+              <Sec c="Add New Account"/>
+              <form onSubmit={handleCreateUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                <div>
+                  <Lbl c="USERNAME"/>
+                  <input style={inp} value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} required placeholder="Enter username..."/>
+                </div>
+                <div>
+                  <Lbl c="PASSWORD"/>
+                  <input style={inp} type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} required placeholder="Enter password..."/>
+                </div>
+                <div>
+                  <Lbl c="ROLE"/>
+                  <select style={{ ...sel, width:"100%" }} value={newUser.role} onChange={e=>setNewUser(p=>({...p,role:e.target.value}))}>
+                    <option value="user">Standard User</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                {formErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {formErr}</div>}
+                <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:6 }}>Create User</button>
+              </form>
+            </div>
+
+            <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20, marginTop:10 }}>
+              <Sec c="Admin Tasks & Todos"/>
+              <form onSubmit={addTodo} style={{ display:"flex", gap:8, marginBottom:16 }}>
+                <input 
+                  style={{ ...inp, flex:1 }} 
+                  value={newTodo} 
+                  onChange={e=>setNewTodo(e.target.value)} 
+                  placeholder="What needs to be done?"
+                />
+                <button type="submit" style={{ ...mkBtn("blue"), padding:"0 16px" }}>Add</button>
+              </form>
+              <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:200, overflowY:"auto" }}>
+                {todos.length === 0 && <div style={{ textAlign:"center", padding:10, color:C.txtS, fontSize:13 }}>No pending tasks.</div>}
+                {todos.map(t => (
+                  <div key={t.id} style={{ display:"flex", alignItems:"center", gap:10, background:t.done ? C.bg : "transparent", padding:8, borderRadius:6, border:`1px solid ${t.done ? C.bdr : "transparent"}` }}>
+                    <input 
+                      type="checkbox" 
+                      checked={t.done} 
+                      onChange={() => toggleTodo(t.id)} 
+                      style={{ cursor:"pointer", width:16, height:16 }}
+                    />
+                    <span style={{ flex:1, fontSize:13, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+                    <button onClick={() => delTodo(t.id)} style={{ padding:0, border:"none", background:"transparent", color:C.txtS, cursor:"pointer", fontSize:12 }}>✕</button>
+                  </div>
+                ))}
               </div>
-              <div>
-                <Lbl c="PASSWORD"/>
-                <input style={inp} type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} required placeholder="Enter password..."/>
-              </div>
-              <div>
-                <Lbl c="ROLE"/>
-                <select style={{ ...sel, width:"100%" }} value={newUser.role} onChange={e=>setNewUser(p=>({...p,role:e.target.value}))}>
-                  <option value="user">Standard User</option>
-                  <option value="admin">Administrator</option>
-                </select>
-              </div>
-              {formErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {formErr}</div>}
-              <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:6 }}>Create User</button>
-            </form>
+            </div>
           </div>
         </div>
+
 
         {/* DATA BROWSER SECTION */}
         <DatabaseBrowser token={token} />
@@ -2949,6 +3139,8 @@ export default function App() {
   const [showWM,       setShowWM]       = useState(false);
   const [adjModal,     setAdjModal]     = useState(null);  // quote to adjust
   const [wonOnly,      setWonOnly]      = useState(false); // filter customers view
+  const [custView,     setCustView]     = useState("card"); // "list" or "card"
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [customerRates, setCustomerRates] = useState(INIT_CUSTOMER_RATES);
   const [baseLabor,     setBaseLabor]     = useState(DEFAULT_LABOR);
   const [equipment,     setEquipment]     = useState(EQUIPMENT);
@@ -2959,6 +3151,14 @@ export default function App() {
   const [showCustModal,    setShowCustModal]    = useState(false);
   const [profileTemplate,  setProfileTemplate]  = useState(DEFAULT_PROFILE_TEMPLATE);
   const [showProfileTempl, setShowProfileTempl] = useState(false);
+
+  // Reset filters when navigating to the main customers list (from another tab or detail view)
+  useEffect(() => {
+    if (view === "customers" && !selC) {
+      setWonOnly(false);
+      setSearch("");
+    }
+  }, [view, selC]);
   const [notifs,     setNotifs]     = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const fileRef = useRef();
@@ -2998,6 +3198,14 @@ export default function App() {
     setActive(full);
     setView("editor");
   }
+
+  useEffect(() => {
+    const handleView = (e) => setView(e.detail);
+    window.addEventListener('change-view', handleView);
+    return () => window.removeEventListener('change-view', handleView);
+  }, []);
+
+
 
   function saveAdjustment(quoteId, adj) {
     setQuotes(prev => prev.map(q =>
@@ -3129,6 +3337,19 @@ export default function App() {
     </div>
   );
 
+  if (view==="investor" && role==="admin") return (
+    <div style={{ minHeight: "100vh", background: "#020617" }}>
+      <button 
+        onClick={() => setView("admin")} 
+        style={{ ...mkBtn("ghost"), position: "fixed", top: 12, left: 16, zIndex: 100, color: "#fff", background: "rgba(15, 23, 42, 0.8)", borderColor: "#475569" }}
+      >
+        ← Back to Admin
+      </button>
+      <InvestorDashboard />
+    </div>
+  );
+
+
   // ── DASHBOARD ──────────────────────────────────────────────────────────────
   if (view==="dash") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
@@ -3208,6 +3429,7 @@ export default function App() {
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {adjModal&&<SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
       {showCustModal&&<CustomerModal custName={showCustModal} quotes={quotes.filter(q=>q.client===showCustModal)} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onClose={()=>setShowCustModal(false)}/>}
+      {showSearchModal&&<SearchResultsModal search={search} quotes={quotes} reqs={reqs} custData={custData} onClose={()=>setShowSearchModal(false)} onOpenQuote={openEdit} onOpenReq={r=>{setEditR(r);setShowRM(true);}} onOpenCust={setSelC}/>}
       {showRM && <ReqModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
@@ -3219,77 +3441,135 @@ export default function App() {
               <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:12 }}>
                 <button style={{ ...mkBtn("ghost"), fontSize:12, padding:"4px 9px" }} onClick={()=>setSelC(null)}>← All Customers</button>
                 <div style={{ fontSize:18, fontWeight:700 }}>{selC}</div>
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:12, alignItems:"start" }}>
-                <div>
-                  <Card>
-                    <Sec c="Contact Info"/>
-                    {con ? <><div style={{ fontSize:13, fontWeight:600 }}>{con.contactName}</div><div style={{ fontSize:12, color:C.txtM, marginTop:2 }}>{con.contactEmail}</div><div style={{ fontSize:12, color:C.txtM }}>{con.contactPhone}</div></> : <div style={{ fontSize:12, color:C.txtS }}>No contact info yet.</div>}
-                    <div style={{ marginTop:12, paddingTop:12, borderTop:`1px solid ${C.bdr}` }}>
-                      <Sec c="Notes"/>
-                      <textarea style={{ ...inp, height:90, resize:"vertical" }} placeholder="Add notes about this customer…"/>
-                    </div>
-                  </Card>
-                  <button style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", marginTop:4 }} onClick={()=>openNew({company:selC})}>+ New Estimate</button>
+                <div style={{ marginLeft:"auto", display:"flex", gap:4, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:2 }}>
+                  <button 
+                    style={{ ...mkBtn(custView==="card"?"primary":"ghost"), border:"none", padding:"4px 8px", fontSize:11, gap:4 }} 
+                    onClick={()=>setCustView("card")}
+                  >
+                    🔲 Card
+                  </button>
+                  <button 
+                    style={{ ...mkBtn(custView==="list"?"primary":"ghost"), border:"none", padding:"4px 8px", fontSize:11, gap:4 }} 
+                    onClick={()=>setCustView("list")}
+                  >
+                    📜 List
+                  </button>
                 </div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:custView==="card"?"300px 1fr":"1fr", gap:12, alignItems:"start" }}>
+                {custView === "card" && (
+                  <div>
+                    <Card>
+                      <Sec c="Contact Info"/>
+                      {con ? <><div style={{ fontSize:13, fontWeight:600 }}>{con.contactName}</div><div style={{ fontSize:12, color:C.txtM, marginTop:2 }}>{con.contactEmail}</div><div style={{ fontSize:12, color:C.txtM }}>{con.contactPhone}</div></> : <div style={{ fontSize:12, color:C.txtS }}>No contact info yet.</div>}
+                      <div style={{ marginTop:12, paddingTop:12, borderTop:`1px solid ${C.bdr}` }}>
+                        <Sec c="Notes"/>
+                        <textarea style={{ ...inp, height:90, resize:"vertical" }} placeholder="Add notes about this customer…"/>
+                      </div>
+                    </Card>
+                    <button style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", marginTop:4 }} onClick={()=>openNew({company:selC})}>+ New Estimate</button>
+                  </div>
+                )}
                 <div>
-                  {cQuotes.map(q => {
-                    const isCO = q.isChangeOrder;
-                    return (
-                      <Card key={q.id} style={{ marginBottom:9 }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:7 }}>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap", marginBottom:3 }}>
-                              <span style={{ fontWeight:700, color:isCO?C.purp:C.acc, fontSize:12 }}>{q.qn}</span>
-                              <Badge status={q.status}/>
-                              {isCO && <span style={{ fontSize:11, color:C.purp, fontWeight:600 }}>Change Order</span>}
-                              {q.locked && <span style={{ fontSize:11, color:C.grn }}>🔒 Job: {q.jobNum}</span>}
-                            </div>
-                            <div style={{ fontWeight:600, fontSize:14 }}>{q.desc}</div>
-                            <div style={{ fontSize:12, color:C.txtM, marginTop:1 }}>{q.jobSite}</div>
-                            <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
-                              <span style={{ fontSize:12, color:C.ora }}>Labor: {fmt(q.labor||0)}</span>
-                              <span style={{ fontSize:12, color:C.teal }}>Equip: {fmt(q.equip||q.equipment||0)}</span>
-                            </div>
-                            {(q.attachments||[]).length > 0 && <div style={{ fontSize:11, color:C.txtS, marginTop:2 }}>📎 {q.attachments.length} attachment(s)</div>}
-                            {q.locked && <div style={{ fontSize:11, color:C.grn, marginTop:1 }}>Est. completion: {q.compDate||"TBD"}</div>}
-                            {(q.salesAdjustments||[]).length > 0 && (
-                              <div style={{ marginTop:7, paddingTop:7, borderTop:`1px solid ${C.bdr}` }}>
-                                <div style={{ fontSize:10, color:C.txtS, fontWeight:600, textTransform:"uppercase", letterSpacing:.5, marginBottom:5 }}>Sales Adjustments</div>
-                                {(q.salesAdjustments||[]).map(a=>(
-                                  <div key={a.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:4, fontSize:11 }}>
-                                    <div style={{ flex:1, minWidth:0 }}>
-                                      <span style={{ fontWeight:600, color:a.amount>=0?C.grn:C.red, marginRight:5 }}>{a.amount>=0?"+":""}{fmt(a.amount)}</span>
-                                      <span style={{ background:a.amount>=0?C.grnB:C.redB, color:a.amount>=0?C.grn:C.red, border:`1px solid ${a.amount>=0?C.grnBdr:C.redBdr}`, borderRadius:3, padding:"1px 5px", fontSize:10, fontWeight:600, marginRight:5 }}>{a.reason}</span>
-                                      <span style={{ color:C.txtM }}>{a.note}</span>
-                                    </div>
-                                    <span style={{ color:C.txtS, whiteSpace:"nowrap", flexShrink:0 }}>{a.date}</span>
-                                  </div>
-                                ))}
+                  {custView === "card" ? (
+                    cQuotes.map(q => {
+                      const isCO = q.isChangeOrder;
+                      return (
+                        <Card key={q.id} style={{ marginBottom:9 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:7 }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap", marginBottom:3 }}>
+                                <span style={{ fontWeight:700, color:isCO?C.purp:C.acc, fontSize:12 }}>{q.qn}</span>
+                                <Badge status={q.status}/>
+                                {isCO && <span style={{ fontSize:11, color:C.purp, fontWeight:600 }}>Change Order</span>}
+                                {q.locked && <span style={{ fontSize:11, color:C.grn }}>🔒 Job: {q.jobNum}</span>}
                               </div>
-                            )}
+                              <div style={{ fontWeight:600, fontSize:14 }}>{q.desc}</div>
+                              <div style={{ fontSize:12, color:C.txtM, marginTop:1 }}>{q.jobSite}</div>
+                              <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
+                                <span style={{ fontSize:12, color:C.ora }}>Labor: {fmt(q.labor||0)}</span>
+                                <span style={{ fontSize:12, color:C.teal }}>Equip: {fmt(q.equip||q.equipment||0)}</span>
+                              </div>
+                              {(q.attachments||[]).length > 0 && <div style={{ fontSize:11, color:C.txtS, marginTop:2 }}>📎 {q.attachments.length} attachment(s)</div>}
+                              {q.locked && <div style={{ fontSize:11, color:C.grn, marginTop:1 }}>Est. completion: {q.compDate||"TBD"}</div>}
+                              {(q.salesAdjustments||[]).length > 0 && (
+                                <div style={{ marginTop:7, paddingTop:7, borderTop:`1px solid ${C.bdr}` }}>
+                                  <div style={{ fontSize:10, color:C.txtS, fontWeight:600, textTransform:"uppercase", letterSpacing:.5, marginBottom:5 }}>Sales Adjustments</div>
+                                  {(q.salesAdjustments||[]).map(a=>(
+                                    <div key={a.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:4, fontSize:11 }}>
+                                      <div style={{ flex:1, minWidth:0 }}>
+                                        <span style={{ fontWeight:600, color:a.amount>=0?C.grn:C.red, marginRight:5 }}>{a.amount>=0?"+":""}{fmt(a.amount)}</span>
+                                        <span style={{ background:a.amount>=0?C.grnB:C.redB, color:a.amount>=0?C.grn:C.red, border:`1px solid ${a.amount>=0?C.grnBdr:C.redBdr}`, borderRadius:3, padding:"1px 5px", fontSize:10, fontWeight:600, marginRight:5 }}>{a.reason}</span>
+                                        <span style={{ color:C.txtM }}>{a.note}</span>
+                                      </div>
+                                      <span style={{ color:C.txtS, whiteSpace:"nowrap", flexShrink:0 }}>{a.date}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ textAlign:"right", flexShrink:0 }}>
+                              {(() => {
+                                const adjSum = (q.salesAdjustments||[]).reduce((s,a)=>s+a.amount,0);
+                                const adjTotal = (q.total||0) + adjSum;
+                                return (<>
+                                  <div style={{ fontSize:20, fontWeight:700 }}>{fmt(adjTotal)}</div>
+                                  {adjSum !== 0 && <div style={{ fontSize:11, color:"#8a93a2", textDecoration:"line-through" }}>{fmt(q.total||0)}</div>}
+                                  {adjSum !== 0 && <div style={{ fontSize:11, fontWeight:600, color:adjSum>0?"#16a34a":"#dc2626" }}>{adjSum>0?"+":""}{fmt(adjSum)} adj.</div>}
+                                </>);
+                              })()}
+                              <div style={{ display:"flex", gap:4, marginTop:5, justifyContent:"flex-end", flexWrap:"wrap" }}>
+                                {!q.locked && <button style={{ ...mkBtn("outline"), padding:"3px 8px", fontSize:11 }} onClick={()=>openEdit(q)}>Edit</button>}
+                                {q.status==="Won" && !isCO && <button style={{ ...mkBtn("ghost"), padding:"3px 8px", fontSize:11 }} onClick={()=>openNew({company:q.client,jobSite:q.jobSite},true,q)}>+ Change Order</button>}
+                                {q.status==="Won" && <button style={{ background:"#eff6ff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:6,padding:"3px 8px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }} onClick={()=>setAdjModal(q)}>$ Sales Adjustment</button>}
+                                {!q.locked && <button style={{ ...mkBtn("danger"), padding:"3px 7px", fontSize:11 }} onClick={()=>setQuotes(p=>p.filter(x=>x.id!==q.id))}>✕</button>}
+                              </div>
+                            </div>
                           </div>
-                          <div style={{ textAlign:"right", flexShrink:0 }}>
-                            {(() => {
+                        </Card>
+                      );
+                    })
+                  ) : (
+                    <Card style={{ padding:0 }}>
+                      <div style={{ overflowX:"auto" }}>
+                        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                          <thead style={{ background:"#f9fafb" }}>
+                            <tr>
+                              {["Quote #","Description","Job Site","Status","Total","Actions"].map(h=><th key={h} style={{ ...thS, padding:"12px 14px", borderBottom:`1px solid ${C.bdr}` }}>{h}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cQuotes.map(q => {
+                              const isCO = q.isChangeOrder;
                               const adjSum = (q.salesAdjustments||[]).reduce((s,a)=>s+a.amount,0);
                               const adjTotal = (q.total||0) + adjSum;
-                              return (<>
-                                <div style={{ fontSize:20, fontWeight:700 }}>{fmt(adjTotal)}</div>
-                                {adjSum !== 0 && <div style={{ fontSize:11, color:"#8a93a2", textDecoration:"line-through" }}>{fmt(q.total||0)}</div>}
-                                {adjSum !== 0 && <div style={{ fontSize:11, fontWeight:600, color:adjSum>0?"#16a34a":"#dc2626" }}>{adjSum>0?"+":""}{fmt(adjSum)} adj.</div>}
-                              </>);
-                            })()}
-                            <div style={{ display:"flex", gap:4, marginTop:5, justifyContent:"flex-end", flexWrap:"wrap" }}>
-                              {!q.locked && <button style={{ ...mkBtn("outline"), padding:"3px 8px", fontSize:11 }} onClick={()=>openEdit(q)}>Edit</button>}
-                              {q.status==="Won" && !isCO && <button style={{ ...mkBtn("ghost"), padding:"3px 8px", fontSize:11 }} onClick={()=>openNew({company:q.client,jobSite:q.jobSite},true,q)}>+ Change Order</button>}
-                              {q.status==="Won" && <button style={{ background:"#eff6ff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:6,padding:"3px 8px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }} onClick={()=>setAdjModal(q)}>$ Sales Adjustment</button>}
-                              {!q.locked && <button style={{ ...mkBtn("danger"), padding:"3px 7px", fontSize:11 }} onClick={()=>setQuotes(p=>p.filter(x=>x.id!==q.id))}>✕</button>}
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })}
+                              return (
+                                <tr key={q.id} style={{ cursor:"pointer" }} onClick={()=>openEdit(q)}>
+                                  <td style={{ ...tdS, padding:"12px 14px", fontWeight:700, color:isCO?C.purp:C.acc }}>{q.qn}</td>
+                                  <td style={{ ...tdS, padding:"12px 14px" }}>
+                                    <div style={{ fontWeight:600 }}>{q.desc}</div>
+                                    {isCO && <div style={{ fontSize:10, color:C.purp }}>Change Order</div>}
+                                  </td>
+                                  <td style={{ ...tdS, padding:"12px 14px", fontSize:12, color:C.txtM, maxWidth:240, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{q.jobSite}</td>
+                                  <td style={{ ...tdS, padding:"12px 14px" }}><Badge status={q.status}/></td>
+                                  <td style={{ ...tdS, padding:"12px 14px", fontWeight:700 }}>
+                                    {fmt(adjTotal)}
+                                    {adjSum !== 0 && <div style={{ fontSize:9, color:adjSum>0?C.grn:C.red }}>({adjSum>0?"+":""}{fmt(adjSum)} adj.)</div>}
+                                  </td>
+                                  <td style={{ ...tdS, padding:"12px 14px" }}>
+                                    <div style={{ display:"flex", gap:4 }}>
+                                      {!q.locked && <button style={{ ...mkBtn("outline"), padding:"3px 7px", fontSize:10 }} onClick={e=>{e.stopPropagation();openEdit(q);}}>Edit</button>}
+                                      {q.status==="Won" && <button style={{ ...mkBtn("ghost"), padding:"3px 7px", fontSize:10 }} onClick={e=>{e.stopPropagation();setAdjModal(q);}}>$ Adj</button>}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
+                  )}
                 </div>
               </div>
             </>
@@ -3297,30 +3577,126 @@ export default function App() {
         })() : (
           <>
             {showProfileTempl && <ProfileTemplateModal template={profileTemplate} setTemplate={setProfileTemplate} onClose={()=>setShowProfileTempl(false)}/>}
-            <div style={{ display:"flex", gap:8, marginBottom:12, alignItems:"center", flexWrap:"wrap" }}>
-              <input style={{ ...inp, width:220, flex:"0 0 auto" }} placeholder="Search customers…" value={search} onChange={e=>setSearch(e.target.value)}/>
-              <button style={{ ...mkBtn(wonOnly?"primary":"ghost"), fontSize:11, padding:"6px 12px", whiteSpace:"nowrap" }} onClick={()=>setWonOnly(w=>!w)}>🏆 {wonOnly?"All Quotes":"Won Quotes"}</button>
-              <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"6px 12px", whiteSpace:"nowrap" }} onClick={()=>setShowProfileTempl(true)}>⚙ Edit Profile Template</button>
+            
+            <div style={{ display:"flex", alignItems:"flex-end", gap:12, marginBottom:16, flexWrap:"wrap" }}>
+              <div>
+                <Lbl c="FILTER BY CUSTOMER"/>
+                <select 
+                  style={{ ...sel, width:240, height:32 }} 
+                  value={selC || ""} 
+                  onChange={e => setSelC(e.target.value || null)}
+                >
+                  <option value="">--- All Customers ---</option>
+                  {CUSTOMERS.sort().map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{ flex:"0 0 auto", width:240 }}>
+                <Lbl c="GLOBAL KEYWORD SEARCH"/>
+                <div style={{ position:"relative" }}>
+                  <input 
+                    style={{ ...inp, paddingRight:32 }} 
+                    placeholder="Keywords (location, contact, desc)..." 
+                    value={search} 
+                    onChange={e=>setSearch(e.target.value)}
+                    onKeyDown={e => { if(e.key === 'Enter') setShowSearchModal(true); }}
+                  />
+                  <button 
+                    onClick={()=>setShowSearchModal(true)} 
+                    style={{ position:"absolute", right:6, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:14 }}
+                  >
+                    🔍
+                  </button>
+                </div>
+              </div>
+              <button 
+                style={{ ...mkBtn(wonOnly?"primary":"ghost"), fontSize:11, padding:"6px 12px", whiteSpace:"nowrap", gap:6 }} 
+                onClick={()=>setWonOnly(w=>!w)}
+              >
+                🏆 {wonOnly ? "Viewing: Won Quotes Only" : "Viewing: All Quotes"}
+              </button>
+              {(selC || search || wonOnly) && <button style={{ ...mkBtn("danger"), background:"none", color:C.red, border:`1px solid ${C.redBdr}`, fontSize:11, padding:"6px 12px", fontWeight:600 }} onClick={()=>{setSelC(null);setSearch("");setWonOnly(false);}}>✕ Clear</button>}
+              
+              <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
+                <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"6px 12px", whiteSpace:"nowrap" }} onClick={()=>setShowProfileTempl(true)}>⚙ Edit Profile Template</button>
+                <div style={{ display:"flex", gap:4, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:2 }}>
+                  <button 
+                    style={{ ...mkBtn(custView==="card"?"primary":"ghost"), border:"none", padding:"4px 8px", fontSize:11, gap:4 }} 
+                    onClick={()=>setCustView("card")}
+                  >
+                    🔲 Card
+                  </button>
+                  <button 
+                    style={{ ...mkBtn(custView==="list"?"primary":"ghost"), border:"none", padding:"4px 8px", fontSize:11, gap:4 }} 
+                    onClick={()=>setCustView("list")}
+                  >
+                    📜 List
+                  </button>
+                </div>
+              </div>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))", gap:10 }}>
-              {customers.filter(c=>!search||c.name.toLowerCase().includes(search.toLowerCase())).map(c => {
-                const displayQuotes = wonOnly ? c.quotes.filter(q=>q.status==="Won") : c.quotes;
-                const won = c.quotes.filter(q=>q.status==="Won");
-                const tot = wonOnly ? won.reduce((s,q)=>s+(q.total||0)+((q.salesAdjustments||[]).reduce((ss,a)=>ss+a.amount,0)),0) : c.quotes.reduce((s,q)=>s+(q.total||0),0);
-                return (
-                  <Card key={c.name} style={{ cursor:"pointer", marginBottom:0 }} onClick={()=>setSelC(c.name)}>
-                    <div style={{ fontWeight:700, fontSize:14, marginBottom:2 }}>{c.name}</div>
-                    <div style={{ fontSize:12, color:C.txtS, marginBottom:6 }}>{c.quotes.length} quote(s) · {won.length} won</div>
-                    <div style={{ fontSize:18, fontWeight:700, color:C.acc, marginBottom:5 }}>{fmt(tot)}</div>
-                    <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:9 }}>{displayQuotes.slice(0,4).map(q=><Badge key={q.id} status={q.status}/>)}</div>
-                    <div style={{ display:"flex", gap:6, borderTop:`1px solid ${C.bdr}`, paddingTop:9 }}>
-                      <button style={{ ...mkBtn("outline"), fontSize:11, padding:"4px 9px", flex:1, justifyContent:"center" }} onClick={e=>{e.stopPropagation();setSelC(c.name);}}>View Quotes</button>
-                      <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 9px", flex:1, justifyContent:"center" }} onClick={e=>{e.stopPropagation();setShowCustModal(c.name);}}>Profile</button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+
+            {custView === "card" ? (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))", gap:10 }}>
+                {customers.filter(c=>!search||c.name.toLowerCase().includes(search.toLowerCase())).map(c => {
+                  const displayQuotes = wonOnly ? c.quotes.filter(q=>q.status==="Won") : c.quotes;
+                  const won = c.quotes.filter(q=>q.status==="Won");
+                  const tot = wonOnly ? won.reduce((s,q)=>s+(q.total||0)+((q.salesAdjustments||[]).reduce((ss,a)=>ss+a.amount,0)),0) : c.quotes.reduce((s,q)=>s+(q.total||0),0);
+                  return (
+                    <Card key={c.name} style={{ cursor:"pointer", marginBottom:0 }} onClick={()=>setSelC(c.name)}>
+                      <div style={{ fontWeight:700, fontSize:14, marginBottom:2 }}>{c.name}</div>
+                      <div style={{ fontSize:12, color:C.txtS, marginBottom:6 }}>{c.quotes.length} quote(s) · {won.length} won</div>
+                      <div style={{ fontSize:18, fontWeight:700, color:C.acc, marginBottom:5 }}>{fmt(tot)}</div>
+                      <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:9 }}>{displayQuotes.slice(0,4).map(q=><Badge key={q.id} status={q.status}/>)}</div>
+                      <div style={{ display:"flex", gap:6, borderTop:`1px solid ${C.bdr}`, paddingTop:9 }}>
+                        <button style={{ ...mkBtn("outline"), fontSize:11, padding:"4px 9px", flex:1, justifyContent:"center" }} onClick={e=>{e.stopPropagation();setSelC(c.name);}}>View Quotes</button>
+                        <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 9px", flex:1, justifyContent:"center" }} onClick={e=>{e.stopPropagation();setShowCustModal(c.name);}}>Profile</button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card style={{ padding:0 }}>
+                <div style={{ overflowX:"auto" }}>
+                  <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                    <thead style={{ background:"#f9fafb" }}>
+                      <tr>
+                        {["Customer Name","Total Volume","Active Quotes","Won Jobs","Status","Actions"].map(h => (
+                          <th key={h} style={{ ...thS, padding:"12px 14px", borderBottom:`1px solid ${C.bdr}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customers.filter(c=>!search||c.name.toLowerCase().includes(search.toLowerCase())).map(c => {
+                        const displayQuotes = wonOnly ? c.quotes.filter(q=>q.status==="Won") : c.quotes;
+                        const won = c.quotes.filter(q=>q.status==="Won");
+                        const tot = wonOnly ? won.reduce((s,q)=>s+(q.total||0)+((q.salesAdjustments||[]).reduce((ss,a)=>ss+a.amount,0)),0) : c.quotes.reduce((s,q)=>s+(q.total||0),0);
+                        return (
+                          <tr key={c.name} style={{ cursor:"pointer" }} onClick={()=>setSelC(c.name)}>
+                            <td style={{ ...tdS, padding:"12px 14px", fontWeight:700, fontSize:14 }}>{c.name}</td>
+                            <td style={{ ...tdS, padding:"12px 14px", fontWeight:700, color:C.acc }}>{fmt(tot)}</td>
+                            <td style={{ ...tdS, padding:"12px 14px", color:C.txtM }}>{c.quotes.length}</td>
+                            <td style={{ ...tdS, padding:"12px 14px", color:C.grn, fontWeight:600 }}>{won.length}</td>
+                            <td style={{ ...tdS, padding:"12px 14px" }}>
+                              <div style={{ display:"flex", gap:3 }}>
+                                {displayQuotes.slice(0,3).map(q=><Badge key={q.id} status={q.status}/>)}
+                                {displayQuotes.length > 3 && <span style={{ fontSize:10, color:C.txtS }}>+{displayQuotes.length-3}</span>}
+                              </div>
+                            </td>
+                            <td style={{ ...tdS, padding:"12px 14px" }}>
+                              <div style={{ display:"flex", gap:6 }}>
+                                <button style={{ ...mkBtn("ghost"), fontSize:10, padding:"4px 8px" }} onClick={e=>{e.stopPropagation();setShowCustModal(c.name);}}>Profile</button>
+                                <button style={{ ...mkBtn("primary"), fontSize:10, padding:"4px 8px" }} onClick={e=>{e.stopPropagation();setSelC(c.name);}}>View</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
           </>
         )}
       </div>
