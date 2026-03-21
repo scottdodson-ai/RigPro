@@ -352,7 +352,7 @@ function AutoInput({ val, on, list, ph }) {
 function Header({ view, setView, extra, crumb, role, token, setToken, setRole }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const TABS = token ? [
-    ["dash","Dashboard"], ["customers","Customers"], ["requests","Requests"],
+    ["dash","Dashboard"], ["customers","Customers"], ["rfqs","Request For Quote"],
     ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"]
   ] : [["landing", "Home"]];
   
@@ -503,15 +503,15 @@ function ActionBtns({ onReq, onFromReq, onNew }) {
   const s = compact ? { fontSize:10, padding:"5px 8px", gap:3 } : {};
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
-      <button style={{ ...mkBtn("outline"), ...s }} onClick={onReq}>{compact ? "📋 Request" : "📋 Quote Request"}</button>
-      <button style={{ ...mkBtn("blue"), ...s }}    onClick={onFromReq}>{compact ? "📄 From" : "📄 From Request"}</button>
+      <button style={{ ...mkBtn("outline"), ...s }} onClick={onReq}>📋 New Request</button>
+      <button style={{ ...mkBtn("blue"), ...s }}    onClick={onFromReq}>📄 Pending Requests</button>
       <button style={{ ...mkBtn("primary"), ...s }} onClick={onNew}>{compact ? "+ New" : "+ New Estimate"}</button>
     </div>
   );
 }
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
-function ReqModal({ init, onSave, onClose }) {
+function RFQModal({ init, onSave, onClose }) {
   const blank = { id:uid(), rn:nextRN(), company:"", requester:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:"" };
   const [f, setF] = useState(init || blank);
   const u = (k,v) => setF(x => ({ ...x, [k]:v }));
@@ -519,7 +519,7 @@ function ReqModal({ init, onSave, onClose }) {
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.35)", zIndex:300, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"20px 12px", overflowY:"auto" }}>
       <div style={{ background:C.sur, borderRadius:10, padding:20, width:"100%", maxWidth:560, boxShadow:"0 8px 28px rgba(0,0,0,.18)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-          <div><div style={{ fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:1 }}>Quote Request</div><div style={{ fontSize:17, fontWeight:700 }}>{f.rn}</div></div>
+          <div><div style={{ fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:1 }}>Request For Quote</div><div style={{ fontSize:17, fontWeight:700 }}>{f.rn}</div></div>
           <button onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS }}>×</button>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
@@ -534,7 +534,7 @@ function ReqModal({ init, onSave, onClose }) {
         </div>
         <div style={{ display:"flex", gap:8, marginTop:18, justifyContent:"flex-end" }}>
           <button style={mkBtn("ghost")} onClick={onClose}>Cancel</button>
-          <button style={mkBtn("primary")} onClick={() => onSave(f)}>Save Request</button>
+          <button style={mkBtn("primary")} onClick={() => onSave(f)}>Save RFQ</button>
         </div>
       </div>
     </div>
@@ -753,7 +753,7 @@ function SearchResultsModal({ search, quotes, reqs, custData, onClose, onOpenQuo
         req.notes                // Additional Notes
       ].some(s => s?.toLowerCase().includes(q));
       
-      if (match) res.push({ type: 'Request', data: req, label: req.rn, sub: req.company, desc: `${req.desc || req.notes} @ ${req.jobSite}` });
+      if (match) res.push({ type: 'RFQ', data: req, label: req.rn, sub: req.company, desc: `${req.desc || req.notes} @ ${req.jobSite}` });
     });
     
     // Customers
@@ -780,7 +780,7 @@ function SearchResultsModal({ search, quotes, reqs, custData, onClose, onOpenQuo
     return res;
   }, [q, quotes, reqs, custData]);
 
-  const T_COLORS = { Quote: C.acc, Request: C.blue, Customer: C.purp };
+  const T_COLORS = { Quote: C.acc, RFQ: C.blue, Customer: C.purp };
 
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.4)", zIndex:800, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"40px 16px", overflowY:"auto" }}>
@@ -810,13 +810,13 @@ function SearchResultsModal({ search, quotes, reqs, custData, onClose, onOpenQuo
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.bdr; e.currentTarget.style.background = C.sur; }}
                   onClick={() => {
                     if (r.type === 'Quote') onOpenQuote(r.data);
-                    else if (r.type === 'Request') onOpenReq(r.data);
+                    else if (r.type === 'RFQ') onOpenReq(r.data);
                     else if (r.type === 'Customer') onOpenCust(r.data.name);
                     onClose();
                   }}
                 >
                   <div style={{ width:40, height:40, background:C.bg, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0, color:T_COLORS[r.type], border:`1px solid ${C.bdr}` }}>
-                    {r.type === 'Quote' ? '📄' : r.type === 'Request' ? '📋' : '🏢'}
+                    {r.type === 'Quote' ? '📄' : r.type === 'RFQ' ? '📋' : '🏢'}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:2 }}>
@@ -3258,7 +3258,7 @@ export default function App() {
 
   const cv      = active ? calcQuote(active, customerRates, eqOv, eqMap, baseLabor) : null;
   const pendN   = notifs.filter(n=>n.status==="Pending").length;
-  const actBtns = <ActionBtns onReq={()=>{setEditR(null);setShowRM(true);}} onFromReq={()=>setView("requests")} onNew={()=>openNew()}/>;
+  const actBtns = <ActionBtns onReq={()=>{setEditR(null);setShowRM(true);}} onFromReq={()=>setView("rfqs")} onNew={()=>openNew()}/>;
 
   const NotifPanel = () => (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.3)", zIndex:400, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
@@ -3353,7 +3353,7 @@ export default function App() {
   // ── DASHBOARD ──────────────────────────────────────────────────────────────
   if (view==="dash") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      {showRM && <ReqModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
+      {showRM && <RFQModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showNotifs && <NotifPanel/>}
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
@@ -3379,7 +3379,7 @@ export default function App() {
           </div>
         </Card>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:10, marginBottom:12 }}>
-          {[{ l:"Revenue Won", v:fmt(stats.rev), s:`${quotes.filter(q=>q.status==="Won").length} jobs`, c:C.grn },{ l:"Pipeline", v:fmt(stats.pipe), s:`${quotes.filter(q=>q.status==="Submitted").length} submitted`, c:C.blue },{ l:"Win Rate", v:stats.wr+"%", s:"closed quotes", c:C.acc },{ l:"Open Requests", v:stats.rn, s:"need estimates", c:C.ora }].map(x => (
+          {[{ l:"Revenue Won", v:fmt(stats.rev), s:`${quotes.filter(q=>q.status==="Won").length} jobs`, c:C.grn },{ l:"Pipeline", v:fmt(stats.pipe), s:`${quotes.filter(q=>q.status==="Submitted").length} submitted`, c:C.blue },{ l:"Win Rate", v:stats.wr+"%", s:"closed quotes", c:C.acc },{ l:"Open RFQs", v:stats.rn, s:"need estimates", c:C.ora }].map(x => (
             <Card key={x.l} style={{ marginBottom:0 }}><div style={{ fontSize:11, color:C.txtS, fontWeight:600, marginBottom:4 }}>{x.l}</div><div style={{ fontSize:24, fontWeight:700, color:x.c }}>{x.v}</div><div style={{ fontSize:11, color:C.txtS, marginTop:2 }}>{x.s}</div></Card>
           ))}
         </div>
@@ -3391,7 +3391,7 @@ export default function App() {
 
         {reqs.filter(r=>r.status!=="Quoted").length > 0 && (
           <Card>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, flexWrap:"wrap", gap:5 }}><Sec c="📋 Pending Requests"/><button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 9px" }} onClick={()=>setView("requests")}>View All</button></div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, flexWrap:"wrap", gap:5 }}><Sec c="📋 Requests for Quote"/><button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 9px" }} onClick={()=>setView("rfqs")}>View All</button></div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {reqs.filter(r=>r.status!=="Quoted").slice(0,3).map(r => (
                 <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 11px", background:C.bg, borderRadius:6, border:`1px solid ${C.bdr}`, flexWrap:"wrap" }}>
@@ -3430,7 +3430,7 @@ export default function App() {
       {adjModal&&<SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
       {showCustModal&&<CustomerModal custName={showCustModal} quotes={quotes.filter(q=>q.client===showCustModal)} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onClose={()=>setShowCustModal(false)}/>}
       {showSearchModal&&<SearchResultsModal search={search} quotes={quotes} reqs={reqs} custData={custData} onClose={()=>setShowSearchModal(false)} onOpenQuote={openEdit} onOpenReq={r=>{setEditR(r);setShowRM(true);}} onOpenCust={setSelC}/>}
-      {showRM && <ReqModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
+      {showRM && <RFQModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
         {selC ? (() => {
@@ -3703,13 +3703,13 @@ export default function App() {
     </div>
   );
 
-  // ── REQUESTS ───────────────────────────────────────────────────────────────
-  if (view==="requests") return (
+  // ── RFQs ───────────────────────────────────────────────────────────────
+  if (view==="rfqs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      {showRM && <ReqModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
+      {showRM && <RFQModal init={editR} onSave={saveReq} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
-        <div style={{ marginBottom:14 }}><div style={{ fontSize:20, fontWeight:700 }}>Quote Requests</div><div style={{ fontSize:12, color:C.txtS }}>Incoming requests waiting to be estimated</div></div>
+        <div style={{ marginBottom:14 }}><div style={{ fontSize:20, fontWeight:700 }}>Request For Quote</div><div style={{ fontSize:12, color:C.txtS }}>Incoming requests waiting for estimation</div></div>
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {reqs.map(r => (
             <Card key={r.id} style={{ marginBottom:0 }}>
