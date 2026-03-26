@@ -1115,9 +1115,9 @@ function ReportsPage({ quotes, reqs, role, username, jobFolders, globalCheck, on
       </div>
 
       {/* Category filter */}
-      <div style={{ display:"flex", gap:3, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:3, marginBottom:16, alignSelf:"flex-start", width:"fit-content" }}>
+      <div style={{ display:"flex", gap:3, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:8, padding:3, marginBottom:16, alignSelf:"flex-start", width:"fit-content" }}>
         {REPORT_CATEGORIES.map(c=>(
-          <button key={c} onClick={()=>setCatFilter(c)} style={{ background:catFilter===c?C.acc:"transparent", color:catFilter===c?"#fff":C.txtM, border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:catFilter===c?700:400 }}>{c}</button>
+          <button key={c} onClick={()=>setCatFilter(c)} style={{ background:catFilter===c?"#fff":"transparent", color:catFilter===c?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:catFilter===c?700:600 }}>{c}</button>
         ))}
       </div>
 
@@ -1914,14 +1914,14 @@ function RFQListView({ reqs, quotes, setReqs, openNew, setShowJFM, setEditR, set
           </div>
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-          <div style={{ display:"flex", gap:3, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:3 }}>
-            <button onClick={()=>setLayoutMode("list")} style={{ background:layoutMode==="list"?C.acc:"transparent", color:layoutMode==="list"?"#fff":C.txtM, border:"none", borderRadius:6, padding:"5px 10px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:layoutMode==="list"?700:400 }}>List</button>
-            <button onClick={()=>setLayoutMode("card")} style={{ background:layoutMode==="card"?C.acc:"transparent", color:layoutMode==="card"?"#fff":C.txtM, border:"none", borderRadius:6, padding:"5px 10px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:layoutMode==="card"?700:400 }}>Cards</button>
+          <div style={{ display:"flex", gap:3, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:8, padding:3 }}>
+            <button onClick={()=>setLayoutMode("list")} style={{ background:layoutMode==="list"?"#fff":"transparent", color:layoutMode==="list"?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 10px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:700 }}>List</button>
+            <button onClick={()=>setLayoutMode("card")} style={{ background:layoutMode==="card"?"#fff":"transparent", color:layoutMode==="card"?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 10px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:700 }}>Cards</button>
           </div>
-          <div style={{ display:"flex", gap:3, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:3 }}>
+          <div style={{ display:"flex", gap:3, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:8, padding:3 }}>
             {[["active","Active"],["all","All"],["dead","Quoted / Dead"]].map(([v,l])=>(
               <button key={v} onClick={()=>setRfqView(v)}
-                style={{ background:rfqView===v?C.acc:"transparent", color:rfqView===v?"#fff":C.txtM, border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:rfqView===v?700:400, whiteSpace:"nowrap" }}>
+                style={{ background:rfqView===v?"#fff":"transparent", color:rfqView===v?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:700, whiteSpace:"nowrap" }}>
                 {l}
               </button>
             ))}
@@ -2072,7 +2072,7 @@ function MasterJobList({ quotes, reqs, jobFolders, openEdit, setShowJFM, onUpdat
             {allJobs.length} won jobs · {fmt(allJobs.reduce((s,j)=>s+j.total,0))} total value
           </div>
         </div>
-        <input style={{ ...inp, width:280, fontSize:13 }}
+        <input style={{ ...inp, width:280, fontSize:13, border:`2px solid ${C.acc}`, borderRadius:8 }}
           placeholder="Search job #, customer, description, location…"
           value={search} onChange={e=>setSearch(e.target.value)}/>
       </div>
@@ -4037,6 +4037,13 @@ function LaborRatesPage({ customerRates, setCustomerRates, role, baseLabor, setB
          <div style={{ color: C.acc, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
             Customer Special Rates
          </div>
+         <input 
+                  type="text" 
+                  placeholder="Filter customers..." 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ ...inp, width: 250, border:`2px solid ${C.acc}`, borderRadius:8 }}
+               />
          <button style={{ ...mkBtn("primary"), padding: "6px 16px", fontSize: 12 }} onClick={() => setAdding(true)}>+ Add</button>
       </div>
 
@@ -6514,15 +6521,15 @@ export default function App() {
               <div style={{ display:"flex", alignItems:"center", gap:9, marginBottom:12 }}>
                 <button style={{ ...mkBtn("ghost"), fontSize:12, padding:"4px 9px" }} onClick={()=>setSelC(null)}>← All Customers</button>
                 <div style={{ fontSize:18, fontWeight:700 }}>{selC}</div>
-                <div style={{ marginLeft:"auto", display:"flex", gap:4, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:2 }}>
+                <div style={{ marginLeft:"auto", display:"flex", gap:4, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:6, padding:2 }}>
                   <button 
-                    style={{ ...mkBtn(custView==="card"?"primary":"ghost"), border:"none", padding:"4px 8px", fontSize:11, gap:4 }} 
+                    style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"6px 10px", fontSize:11, fontWeight:700, borderRadius:4, cursor:"pointer" }} 
                     onClick={()=>setCustView("card")}
                   >
                     Card
                   </button>
                   <button 
-                    style={{ ...mkBtn(custView==="list"?"primary":"ghost"), border:"none", padding:"4px 8px", fontSize:11, gap:4 }} 
+                    style={{ background:custView==="list"?"#fff":"transparent", color:custView==="list"?C.acc:"#fff", border:"none", padding:"6px 10px", fontSize:11, fontWeight:700, borderRadius:4, cursor:"pointer" }} 
                     onClick={()=>setCustView("list")}
                   >
                     List
@@ -6656,7 +6663,7 @@ export default function App() {
               <div>
                 <Lbl c="FILTER BY CUSTOMER"/>
                 <select 
-                  style={{ ...sel, width:240, height:32 }} 
+                  style={{ ...sel, width:240, height:32, border:`2px solid ${C.acc}`, borderRadius:8 }} 
                   value={selC || ""} 
                   onChange={e => setSelC(e.target.value || null)}
                 >
@@ -6668,7 +6675,7 @@ export default function App() {
                 <Lbl c="GLOBAL KEYWORD SEARCH"/>
                 <div style={{ position:"relative" }}>
                   <input 
-                    style={{ ...inp, paddingRight:32 }} 
+                    style={{ ...inp, paddingRight:32, border:`2px solid ${C.acc}`, borderRadius:8 }} 
                     placeholder="Keywords (location, contact, desc)..." 
                     value={search} 
                     onChange={e=>setSearch(e.target.value)}
@@ -6683,7 +6690,7 @@ export default function App() {
                 </div>
               </div>
               <button 
-                style={{ ...mkBtn(wonOnly?"primary":"ghost"), fontSize:11, padding:"6px 12px", whiteSpace:"nowrap", gap:6 }} 
+                style={{ background:wonOnly?C.acc:"transparent", color:wonOnly?"#fff":C.acc, border:`2px solid ${C.acc}`, borderRadius:8, fontSize:11, padding:"6px 12px", whiteSpace:"nowrap", gap:6, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center" }} 
                 onClick={()=>setWonOnly(w=>!w)}
               >
                 {wonOnly ? "Viewing: Won Quotes Only" : "Viewing: All Quotes"}
@@ -6692,15 +6699,15 @@ export default function App() {
               
               <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
                 <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"6px 12px", whiteSpace:"nowrap" }} onClick={()=>setShowProfileTempl(true)}>⚙ Edit Profile Template</button>
-                <div style={{ display:"flex", gap:4, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:2 }}>
+                <div style={{ display:"flex", gap:4, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:6, padding:2 }}>
                   <button 
-                    style={{ ...mkBtn(custView==="card"?"primary":"ghost"), border:"none", padding:"4px 8px", fontSize:11, gap:4 }} 
+                    style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"4px 8px", fontSize:11, gap:4, fontWeight:700, borderRadius:4, cursor:"pointer" }} 
                     onClick={()=>setCustView("card")}
                   >
                     Card
                   </button>
                   <button 
-                    style={{ ...mkBtn(custView==="list"?"primary":"ghost"), border:"none", padding:"4px 8px", fontSize:11, gap:4 }} 
+                    style={{ background:custView==="list"?"#fff":"transparent", color:custView==="list"?C.acc:"#fff", border:"none", padding:"4px 8px", fontSize:11, gap:4, fontWeight:700, borderRadius:4, cursor:"pointer" }} 
                     onClick={()=>setCustView("list")}
                   >
                     List
@@ -6710,13 +6717,13 @@ export default function App() {
             </div>
 
             {/* ── Prospect / Customer toggle bar ── */}
-            <div style={{ display:"flex", gap:3, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:3, alignSelf:"flex-start", marginBottom:10 }}>
+            <div style={{ display:"flex", gap:3, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:8, padding:3, alignSelf:"flex-start", marginBottom:10 }}>
               {[["all","All"],["prospects","Prospects"],["customers","Customers"]].map(([v,l]) => {
                 const count = v==="all" ? customers.length : customers.filter(c=>v==="prospects"?c.isProspect:!c.isProspect).length;
                 return (
-                  <button key={v} onClick={()=>setCustFilter(v)} style={{ background:custFilter===v?C.acc:"transparent", color:custFilter===v?"#fff":C.txtM, border:"none", borderRadius:6, padding:"6px 16px", fontSize:12, fontWeight:custFilter===v?700:400, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:5, whiteSpace:"nowrap" }}>
+                  <button key={v} onClick={()=>setCustFilter(v)} style={{ background:custFilter===v?"#fff":"transparent", color:custFilter===v?C.acc:"#fff", border:"none", borderRadius:6, padding:"6px 16px", fontSize:12, fontWeight:custFilter===v?700:600, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:5, whiteSpace:"nowrap" }}>
                     {l}
-                    <span style={{ background:custFilter===v?"rgba(255,255,255,0.25)":C.bg, color:custFilter===v?"#fff":C.txtS, borderRadius:10, padding:"1px 7px", fontSize:10, fontWeight:600 }}>{count}</span>
+                    <span style={{ background:custFilter===v?C.accL:"rgba(255,255,255,0.25)", color:custFilter===v?C.acc:"#fff", borderRadius:10, padding:"1px 7px", fontSize:10, fontWeight:600 }}>{count}</span>
                   </button>
                 );
               })}
