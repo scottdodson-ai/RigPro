@@ -58,6 +58,12 @@ const CUSTOMERS = [
 
 const DEFAULT_PER_DIEM = 50;
 const DEFAULT_HOTEL    = 120;
+const DEFAULT_COMPANY  = {
+  name: "Shoemaker Rigging & Transport LLC",
+  address: "3385 Miller Park Road · Akron, OH 44312",
+  services: "Industrial Rigging · Machinery Moving · Heavy Haul Transport",
+  logoSrc: null
+};
 
 const INIT_CUSTOMER_RATES = {
   "Apex Industrial LLC": {
@@ -492,6 +498,9 @@ function AutoInput({ val, on, list, ph }) {
 // ── HEADER ────────────────────────────────────────────────────────────────────
 function Header({ view, setView, extra, crumb, role, token, setToken, setRole }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const compStr = localStorage.getItem("rigpro_company");
+  const comp = compStr ? JSON.parse(compStr) : { name: "Shoemaker Rigging & Transport LLC", logoSrc: null };
+
   const TABS = token ? [
     ["dash","Dashboard"], ["customers","Customers"], ["rfqs","Request For Quote"],
     ["jobs","Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
@@ -553,10 +562,20 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
         {/* Top row: logo + nav */}
         <div style={{ display:"flex", alignItems:"center", minHeight:54 }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginRight:16 }}>
-            <div style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏗</div>
-            <div>
-              <div style={{ fontFamily:"Georgia,serif", fontSize:13, color:C.acc, fontWeight:700, lineHeight:1.1 }}>Shoemaker</div>
-              <div style={{ fontSize:9, color:C.txtS, letterSpacing:.5 }}>RIGGING & TRANSPORT</div>
+            {comp.logoSrc ? (
+              <img src={comp.logoSrc} alt="Logo" style={{ width:36, height:36, objectFit:"contain", borderRadius:4, background:"#fff", border:`2px solid ${C.accB}` }}/>
+            ) : (
+              <div style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏗</div>
+            )}
+            <div style={{ display:"flex", flexDirection:"column" }}>
+              <div style={{ fontFamily:"Georgia,serif", fontSize:14, color:C.acc, fontWeight:800, lineHeight:1.1 }}>
+                {comp.name.split(" ")[0]}
+              </div>
+              {comp.name.split(" ").length > 1 && (
+                <div style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
+                  {comp.name.replace(comp.name.split(" ")[0] + " ", "")}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1498,25 +1517,23 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
     : PERIODS.find(p=>p.key===period)?.label;
 
   return (
-    <div className="dashboard-metrics-container" style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "stretch", marginBottom: 15 }}>
+    <div className="dashboard-metrics-container" style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "stretch", marginBottom: 15 }}>
       <style>{`
-        .dash-period { flex: 1 1 180px; max-width: 220px; position: relative; min-height: 60px; }
+        .dash-period { position: relative; width: 100%; margin-bottom: 5px; }
         .dash-grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,140px), 1fr)); gap: 10px; margin-bottom: 12px; }
         .dash-grid-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,110px), 1fr)); gap: 8px; margin-bottom: 12px; }
         @media (max-width: 950px) {
-          .dashboard-metrics-container { flex-direction: column; }
-          .dash-period { flex: none; max-width: 100%; height: auto; min-height: 56px; }
           .dash-grid-stats, .dash-grid-status { grid-template-columns: 1fr 1fr; }
         }
       `}</style>
       {/* Left Column: Period Selector */ }
       <div className="dash-period">
         <button 
-          style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", width:"100%", height:"100%", justifyContent:"center", alignItems:"center", padding:"16px 14px", fontSize:18, display: "flex", flexDirection: "column", gap: 8 }}
+          style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", width:"100%", justifyContent:"space-between", padding:"10px 14px", fontSize:14 }}
           onClick={() => { setShowPeriodMenu(!showPeriodMenu); setShowRfqMenu(false); }}
         >
-          <span style={{ fontWeight:700, textAlign:"center", lineHeight:1.2 }}>{periodLabel}</span>
-          <span style={{ fontSize:12, opacity:0.9, fontWeight: 500 }}>Click to change Period ▾</span>
+          <span style={{ fontWeight:700 }}>{period==="custom" ? `Filter: ${customStart} → ${customEnd}` : `Filter: ${periodLabel}`}</span>
+          <span style={{ fontSize:11, opacity:0.9 }}>Click to change Filter ▾</span>
         </button>
         {showPeriodMenu && (
           <div style={{ position:"absolute", top:"100%", left:0, zIndex:100, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:8, display:"flex", flexDirection:"column", gap:4, width:"100%", marginTop:4, boxShadow:"0 4px 12px rgba(0,0,0,0.1)" }}>
@@ -1536,8 +1553,8 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
         )}
       </div>
 
-      {/* Right Column: Dash Stats */ }
-      <div style={{ flex: "999 1 300px", display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* Dash Stats */ }
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
       {/* Top 4 stat bubbles — clickable, responsive */}
       <div className="dash-grid-stats">
@@ -1601,6 +1618,7 @@ const inp2 = { background:C.sur, border:`1px solid ${C.bdrM}`, borderRadius:5, c
 function RecentQuotesCard({ quotes, openEdit, setView }) {
   const customers = useMemo(() => [...new Set(quotes.map(q=>q.client))].sort(), [quotes]);
   const [custFilter, setCustFilter] = useState("all");
+  const [expandedCustFilter, setExpandedCustFilter] = useState(false);
 
   const filtered = custFilter==="all" ? quotes : quotes.filter(q=>q.client===custFilter);
 
@@ -1608,20 +1626,25 @@ function RecentQuotesCard({ quotes, openEdit, setView }) {
     <Card>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, flexWrap:"wrap", gap:8 }}>
         <Sec c="Recent Quotes"/>
-        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ fontSize:11, color:C.txtS, fontWeight:600 }}>Customer:</span>
-            <select
-              value={custFilter}
-              onChange={e=>setCustFilter(e.target.value)}
-              style={{ ...sel, fontSize:11, padding:"4px 8px" }}
-            >
-              <option value="all">All Customers</option>
-              {customers.map(c=><option key={c} value={c}>{c}</option>)}
-            </select>
+        <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 9px" }} onClick={()=>setView("customers")}>View All</button>
+      </div>
+      <div style={{ position:"relative", marginBottom:15 }}>
+        <button 
+          style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", width:"100%", justifyContent:"space-between", padding:"10px 14px", fontSize:14 }}
+          onClick={() => { setExpandedCustFilter(p => !p); }}
+        >
+          <span style={{ fontWeight:700 }}>{custFilter==="all" ? "Filter: All Customers" : `Filter: ${custFilter}`}</span>
+          <span style={{ fontSize:11, opacity:0.9 }}>Click to change Filter ▾</span>
+        </button>
+        {expandedCustFilter && (
+          <div style={{ position:"absolute", top:"100%", left:0, zIndex:100, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:8, display:"flex", flexDirection:"column", gap:4, width:"100%", marginTop:4, boxShadow:"0 4px 12px rgba(0,0,0,0.1)", maxHeight:250, overflowY:"auto" }}>
+            <button onClick={()=>{setCustFilter("all"); setExpandedCustFilter(false);}} style={{ background:custFilter==="all"?C.bg:"transparent", color:custFilter==="all"?C.acc:C.txtM, border:"none", borderRadius:5, padding:"8px 11px", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:custFilter==="all"?700:500, textAlign:"left" }}>All Customers</button>
+            <div style={{ borderTop:`1px solid ${C.bdr}`, margin:"4px 0" }}></div>
+            {customers.map((c) => (
+              <button key={c} onClick={()=>{setCustFilter(c); setExpandedCustFilter(false);}} style={{ background:custFilter===c?C.bg:"transparent", color:custFilter===c?C.acc:C.txtM, border:"none", borderRadius:5, padding:"8px 11px", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:custFilter===c?700:500, textAlign:"left" }}>{c}</button>
+            ))}
           </div>
-          <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 9px" }} onClick={()=>setView("customers")}>View All</button>
-        </div>
+        )}
       </div>
       <div style={{ overflowX:"auto" }}>
         <style>{`
@@ -5880,9 +5903,18 @@ function DatabaseBrowser({ token }) {
   );
 }
 
-function AdminPage({ token, appUsers=[], setAppUsers }) {
+function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInfo }) {
   const users = appUsers;
   const setUsers = setAppUsers;
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const rd = new FileReader();
+      rd.onload = ev => setCompanyInfo({ ...companyInfo, logoSrc: ev.target.result });
+      rd.readAsDataURL(file);
+    }
+  };
   const [newUser, setNewUser] = useState({ username: "", password: "", role: "estimator", email: "" });
   const [formErr, setFormErr] = useState("");
   const [todos, setTodos] = useState(() => JSON.parse(localStorage.getItem("admin_todos") || "[]"));
@@ -5980,8 +6012,40 @@ function AdminPage({ token, appUsers=[], setAppUsers }) {
             ))
           </div>
 
-          {/* CREATE FORM */}
+          {/* CREATE FORM & SETTINGS */}
           <div style={{ display: "flex", flexDirection:"column", gap:20 }}>
+            <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20 }}>
+              <Sec c="Company Profile"/>
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                <div>
+                  <Lbl c="COMPANY NAME"/>
+                  <input style={inp} value={companyInfo.name} onChange={e=>setCompanyInfo({...companyInfo, name:e.target.value})}/>
+                </div>
+                <div>
+                  <Lbl c="ADDRESS"/>
+                  <input style={inp} value={companyInfo.address} onChange={e=>setCompanyInfo({...companyInfo, address:e.target.value})}/>
+                </div>
+                <div>
+                  <Lbl c="SERVICES DESCRIPTION"/>
+                  <input style={inp} value={companyInfo.services} onChange={e=>setCompanyInfo({...companyInfo, services:e.target.value})}/>
+                </div>
+                <div>
+                  <Lbl c="COMPANY LOGO (OPTIONAL)"/>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4 }}>
+                    {companyInfo.logoSrc ? (
+                      <div style={{ position:"relative" }}>
+                        <img src={companyInfo.logoSrc} alt="Logo" style={{ height:40, width:"auto", borderRadius:4, border:`1px solid ${C.bdr}` }}/>
+                        <button type="button" onClick={()=>setCompanyInfo({...companyInfo, logoSrc:null})} style={{ position:"absolute", top:-6, right:-6, background:C.red, color:"#fff", border:"none", borderRadius:"50%", width:16, height:16, fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", paddingBottom:2 }}>×</button>
+                      </div>
+                    ) : (
+                      <div style={{ width:40, height:40, background:C.bg, border:`1px dashed ${C.bdr}`, display:"flex", alignItems:"center", justifyContent:"center", color:C.txtS, fontSize:10, borderRadius:6 }}>Logo</div>
+                    )}
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ fontSize:12, maxWidth:180 }}/>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div style={{ background:C.sur, border:`1.5px dashed ${C.bdr}`, borderRadius:10, padding:20 }}>
               <Sec c="Add New Account"/>
               <form onSubmit={handleCreateUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
@@ -6108,6 +6172,11 @@ export default function App() {
   ]);
   const [perDiemRate, setPerDiemRate] = useState(DEFAULT_PER_DIEM);
   const [hotelRate,   setHotelRate]   = useState(DEFAULT_HOTEL);
+  const [companyInfo, setCompanyInfo] = useState(() => {
+    const s = localStorage.getItem("rigpro_company");
+    return s ? JSON.parse(s) : DEFAULT_COMPANY;
+  });
+  useEffect(() => { localStorage.setItem("rigpro_company", JSON.stringify(companyInfo)); }, [companyInfo]);
   const [liftTonThreshold, setLiftTonThreshold] = useState(10);
   const [jobFolders, setJobFolders] = useState({});
   const [showJFM,    setShowJFM]    = useState(null);
@@ -6319,7 +6388,7 @@ export default function App() {
   if (view==="admin") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} />
-      <AdminPage token={token} appUsers={appUsers} setAppUsers={setAppUsers}/>
+      <AdminPage token={token} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo}/>
     </div>
   );
 
@@ -6364,11 +6433,15 @@ export default function App() {
       <div style={{ padding:"16px", maxWidth:1160, margin:"0 auto" }}>
         <Card>
           <div style={{ display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
-            <div style={{ width:56, height:56, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, flexShrink:0 }}>🏗</div>
+            {companyInfo.logoSrc ? (
+              <img src={companyInfo.logoSrc} alt="Logo" style={{ width:56, height:56, objectFit:"contain", borderRadius:8, background:"#fff", border:`2px solid ${C.accB}` }}/>
+            ) : (
+              <div style={{ width:56, height:56, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, flexShrink:0 }}>🏗</div>
+            )}
             <div>
-              <div style={{ fontSize:20, fontWeight:700 }}>Shoemaker Rigging & Transport LLC</div>
-              <div style={{ fontSize:12, color:C.txtS }}>3385 Miller Park Road · Akron, OH 44312</div>
-              <div style={{ fontSize:11, color:C.txtS, marginTop:1 }}>Industrial Rigging · Machinery Moving · Heavy Haul Transport</div>
+              <div style={{ fontSize:20, fontWeight:700 }}>{companyInfo.name}</div>
+              <div style={{ fontSize:12, color:C.txtS }}>{companyInfo.address}</div>
+              <div style={{ fontSize:11, color:C.txtS, marginTop:1 }}>{companyInfo.services}</div>
             </div>
             <div style={{ marginLeft:"auto", textAlign:"right" }}>
               <div style={{ fontSize:11, color:C.txtS }}>Estimating System</div>
