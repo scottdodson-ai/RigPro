@@ -1046,7 +1046,7 @@ function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalChe
   return null;
 }
 
-function ReportsPage({ quotes, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport }) {
+function ReportsPage({ quotes, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack }) {
   const [catFilter,    setCatFilter]    = useState("All");
   const [activeReport, setActiveReport] = useState(() => {
     if(initialReportId) return BUILT_IN_REPORTS.find(r=>r.id===initialReportId) || null;
@@ -1102,9 +1102,14 @@ function ReportsPage({ quotes, reqs, role, username, jobFolders, globalCheck, on
   return (
     <div style={{ padding:"16px", maxWidth:1200, margin:"0 auto" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
-        <div>
-          <div style={{ fontSize:20, fontWeight:700 }}>Reports</div>
-          <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>{allReports.length} reports · {customReports.length} custom</div>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {onBack && (
+            <button style={{ ...mkBtn("outline"), fontSize:12, padding:"6px 10px", borderColor:C.bdr, color:C.txtM, background:"#fff" }} onClick={onBack}>← Back to Home</button>
+          )}
+          <div>
+            <div style={{ fontSize:20, fontWeight:700 }}>Reports</div>
+            <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>{allReports.length} reports · {customReports.length} custom</div>
+          </div>
         </div>
         <button style={{ ...mkBtn("primary"), padding:"8px 16px" }} onClick={()=>{ setEditingReport(null); setShowBuilder(true); }}>+ New Custom Report</button>
       </div>
@@ -1564,15 +1569,17 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
           { l:"Win Rate",     v:cur.wr+"%",      s:"closed quotes",              c:C.acc,  cv:cur.wr,   pv:prev.wr,   report:"win-loss"           },
           { l:"Open RFQs",    v:cur.rn,          s:"need estimates",             c:C.ora,  cv:cur.rn,   pv:prev.rn,   report:"rfq-response"       },
         ].map(x => (
-          <Card key={x.l} style={{ marginBottom:0, position:"relative", cursor:"pointer", transition:"box-shadow .15s" }}
+          <Card key={x.l} style={{ marginBottom:0, position:"relative", cursor:"pointer", transition:"box-shadow .15s", display:"flex", flexDirection:"column", height:"100%" }}
             onClick={()=>onOpenReport&&onOpenReport(x.report)}
             onMouseEnter={e=>e.currentTarget.style.boxShadow=`0 0 0 2px ${C.accB}`}
             onMouseLeave={e=>e.currentTarget.style.boxShadow=""}>
             <Change curVal={x.cv} prevVal={x.pv}/>
-            <div style={{ fontSize:"clamp(10px,1.1vw,11px)", color:C.txtS, fontWeight:600, marginBottom:4 }}>{x.l}</div>
-            <div style={{ fontSize:"clamp(18px,2.2vw,24px)", fontWeight:700, color:x.c }}>{x.v}</div>
-            <div style={{ fontSize:"clamp(10px,1.1vw,11px)", color:C.txtS, marginTop:2 }}>{x.s}</div>
-            <div style={{ fontSize:9, color:C.txtS, marginTop:5, opacity:.6 }}>↗ View Report</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize:"clamp(10px,1.1vw,11px)", color:C.txtS, fontWeight:600, marginBottom:4 }}>{x.l}</div>
+              <div style={{ fontSize:"clamp(18px,2.2vw,24px)", fontWeight:700, color:x.c }}>{x.v}</div>
+              <div style={{ fontSize:"clamp(10px,1.1vw,11px)", color:C.txtS, marginTop:2 }}>{x.s}</div>
+            </div>
+            <div style={{ fontSize:9, color:C.txtS, marginTop:"auto", paddingTop:5, opacity:.6 }}>↗ View Report</div>
           </Card>
         ))}
       </div>
@@ -1590,7 +1597,7 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
           const up = p >= 0;
           return (
             <div key={x.st}
-              style={{ background:s.bg, border:`1px solid ${s.bd}`, borderRadius:8, padding:12, position:"relative", cursor:"pointer", transition:"opacity .15s" }}
+              style={{ background:s.bg, border:`1px solid ${s.bd}`, borderRadius:8, padding:12, position:"relative", cursor:"pointer", transition:"opacity .15s", display:"flex", flexDirection:"column", height:"100%" }}
               onClick={()=>onOpenReport&&onOpenReport(x.report)}
               onMouseEnter={e=>e.currentTarget.style.opacity=".85"}
               onMouseLeave={e=>e.currentTarget.style.opacity=""}>
@@ -1599,10 +1606,12 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
                   {up?"▲":"▼"}{Math.abs(p)}%
                 </span>
               )}
-              <div style={{ fontSize:"clamp(10px,1.1vw,11px)", fontWeight:600, color:s.cl }}>{x.st}</div>
-              <div style={{ fontSize:"clamp(16px,2vw,20px)", fontWeight:700, color:s.cl, margin:"2px 0" }}>{x.n}</div>
-              <div style={{ fontSize:"clamp(10px,1.1vw,11px)", color:s.cl, opacity:.8 }}>{fmt(x.v)}</div>
-              <div style={{ fontSize:9, color:s.cl, opacity:.5, marginTop:4 }}>↗ Report</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize:"clamp(10px,1.1vw,11px)", fontWeight:600, color:s.cl }}>{x.st}</div>
+                <div style={{ fontSize:"clamp(16px,2vw,20px)", fontWeight:700, color:s.cl, margin:"2px 0" }}>{x.n}</div>
+                <div style={{ fontSize:"clamp(10px,1.1vw,11px)", color:s.cl, opacity:.8 }}>{fmt(x.v)}</div>
+              </div>
+              <div style={{ fontSize:9, color:s.cl, opacity:.5, marginTop:"auto", paddingTop:4 }}>↗ Report</div>
             </div>
           );
         })}
@@ -2237,8 +2246,8 @@ function ActionBtns({ onReq, onFromReq, onNew }) {
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onReq}>Request For Quote</button>
-      <button style={{ ...mkBtn("outline"), ...s }} onClick={onFromReq}>Pending Requests</button>
-      <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>{compact ? "+ New" : "+ New Estimate"}</button>
+      <button style={{ ...mkBtn("blue"), ...s }} onClick={onFromReq}>Pending Requests</button>
+      <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Estimate</button>
     </div>
   );
 }
@@ -4986,8 +4995,8 @@ function ChartCard({ title, data, total, onClickChart }) {
         !hasData ? (
           <div style={{ textAlign:"center", color:"#c8cdd5", fontSize:12, padding:"20px 0" }}>No data yet</div>
         ) : (
-          <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-            <div style={{ cursor:"pointer", flexShrink:0 }} onClick={()=>onClickChart({ title, data, total })} title="Click for details">
+          <div style={{ display:"flex", gap:12, alignItems:"center", cursor:"pointer" }} onClick={()=>onClickChart({ title, data, total })} title="Click anywhere to view details">
+            <div style={{ flexShrink:0 }}>
               <PieChart data={data}/>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
@@ -6957,6 +6966,7 @@ export default function App() {
         onOpenQuote={q=>{ openEdit(q); setView("editor"); }}
         onOpenJobFolder={r=>setShowJFM(r)}
         onClearInitialReport={()=>setTimeout(()=>setDashReportId(null),100)}
+        onBack={()=>{ setDashReportId(null); setView("dash"); }}
       />
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={quotes.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
