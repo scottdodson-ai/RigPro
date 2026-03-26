@@ -357,6 +357,13 @@ function blankQuote(req, customerRates, isCO=false, parentQ=null) {
 }
 
 function calcQuote(q, customerRates, eqOv, eqMapArg, baseLabor, perDiemRate=DEFAULT_PER_DIEM, hotelRate=DEFAULT_HOTEL) {
+  if (q.isHistorical) {
+    const total = Number(q.histTotal) || 0;
+    const dc = Number(q.histCosts) || 0;
+    const np = total - dc;
+    const nm = total > 0 ? (np / total) * 100 : 0;
+    return { labor:0, travel:0, equip:0, hauling:0, mats:0, subs:0, permits:0, subTotal:total, muAmt:0, muCost:0, preDisc:total, discAmt:0, total, dc, np, nm };
+  }
   const _eqMap = eqMapArg || EQ_MAP;
   const _baseLabor = baseLabor || DEFAULT_LABOR;
   const labor = (q.laborRows||[]).reduce((s,r) => {
@@ -6285,6 +6292,7 @@ export default function App() {
     // Unless a specific status override is passed
     const newStatus = opts.status || active.status;
     const upd = { ...active, ...cv, status: newStatus };
+    if (upd.isHistorical) upd.locked = true;
     if (upd.client) {
       const newRates = {};
       (upd.laborRows||[]).forEach(r => { if(r.special) newRates[r.role]={ reg:Number(r.overReg), ot:Number(r.overOT) }; });
@@ -7173,6 +7181,7 @@ export default function App() {
         <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
           {active.fromReqId    && <div style={{ background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.blue }}>Pre-filled from a Quote Request.</div>}
           {active.isChangeOrder && <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:"#6d28d9" }}>Change Order — linked to original won quote.</div>}
+          {active.isHistorical && <div style={{ background:C.accL, border:`1px solid ${C.accB}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.acc, fontWeight:700 }}>HISTORICAL ESTIMATE — Metrics manually established.</div>}
           {active.locked       && <div style={{ background:C.yelB, border:`1px solid ${C.yelBdr}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.yel }}>This quote is locked. View only.</div>}
 
           <Card>
@@ -7215,7 +7224,43 @@ export default function App() {
               <div><Lbl c="CONTACT NAME"/><input style={inp} value={active.contactName||""} onChange={e=>u("contactName",e.target.value)} disabled={active.locked}/></div>
               <div><Lbl c="CONTACT PHONE"/><input style={inp} value={active.contactPhone||""} onChange={e=>u("contactPhone",e.target.value)} disabled={active.locked}/></div>
               <div><Lbl c="CONTACT EMAIL"/><input style={inp} value={active.contactEmail||""} onChange={e=>u("contactEmail",e.target.value)} disabled={active.locked}/></div>
-              <div style={{ gridColumn:"span 2" }}><Lbl c="JOB DESCRIPTION"/><textarea style={{ ...inp, height:56, resize:"vertical" }} value={active.desc||""} onChange={e=>u("desc",e.target.value)} disabled={active.locked}/></div>
+              <div style={{ gridColumn:"span 2" }}>
+                <Lbl c="JOB DESCRIPTION"/>
+                <textarea style={{ ...inp, height:56, resize:"vertical", marginBottom:8 }} value={active.desc||""} onChange={e=>u("desc",e.target.value)} disabled={active.locked}/>
+                <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:C.txtM, cursor:active.locked?"not-allowed":"pointer" }}>
+                  <input type="checkbox" checked={!!active.isHistorical} onChange={e=>u("isHistorical", e.target.checked)} disabled={active.locked} style={{ width:15, height:15 }}/>
+                  <span style={{ color:C.acc }}>Historical Estimate Only</span>
+                </label>
+                {active.isHistorical && (
+                  <div style={{ marginTop:6 }}>
+                    <div style={{ fontSize:10, color:C.acc, fontStyle:"italic", marginBottom:8 }}>
+                      ⚠️ Quote will be instantly locked upon closing unless historical quotes are being bulk entered.
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, padding:12, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, alignItems:"end", marginBottom:10 }}>
+                      <div><Lbl c="TOTAL ESTIMATE AMOUNT"/><input type="number" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.histTotal||""} onChange={e=>u("histTotal",e.target.value)} disabled={active.locked}/></div>
+                      <div><Lbl c="TOTAL COSTS"/><input type="number" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.histCosts||""} onChange={e=>u("histCosts",e.target.value)} disabled={active.locked}/></div>
+                      <div><Lbl c="TOTAL HOURS"/><input type="number" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.histHours||""} onChange={e=>u("histHours",e.target.value)} disabled={active.locked}/></div>
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:10, padding:12, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, alignItems:"end" }}>
+                      <div>
+                        <Lbl c="HISTORICAL STATUS"/>
+                        <select style={{ ...sel, width:"100%", boxSizing:"border-box" }} value={["Won","Lost"].includes(active.status) ? active.status : ""} onChange={e=>u("status",e.target.value)} disabled={active.locked}>
+                          {!["Won","Lost"].includes(active.status) && <option value="" disabled>-- Select Status --</option>}
+                          <option value="Won">Won</option>
+                          <option value="Lost">Lost</option>
+                        </select>
+                      </div>
+                      {active.status === "Won" && (
+                        <>
+                          <div><Lbl c="JOB NUMBER"/><input style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.jobNum||""} onChange={e=>u("jobNum",e.target.value)} disabled={active.locked}/></div>
+                          <div><Lbl c="ACTUAL START DATE"/><input type="date" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.startDate||""} onChange={e=>u("startDate",e.target.value)} disabled={active.locked}/></div>
+                          <div><Lbl c="ACTUAL END DATE"/><input type="date" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.compDate||""} onChange={e=>u("compDate",e.target.value)} disabled={active.locked}/></div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
 
@@ -7237,19 +7282,21 @@ export default function App() {
             <div style={{ display:"flex", gap:7, flexWrap:"wrap", alignItems:"center", marginBottom:7 }}>
               {(active.attachments||[]).map((a,ix) => (
                 <div key={ix} style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:5, padding:"3px 8px", fontSize:12, display:"flex", alignItems:"center", gap:4 }}>
-                  {a.name}{!active.locked && <XBtn on={()=>u("attachments",(active.attachments||[]).filter((_,j)=>j!==ix))}/>}
+                  {a.name}{(!active.locked || active.isHistorical) && <XBtn on={()=>u("attachments",(active.attachments||[]).filter((_,j)=>j!==ix))}/>}
                 </div>
               ))}
               {(active.attachments||[]).length===0 && <span style={{ fontSize:12, color:C.txtS }}>No attachments yet.</span>}
             </div>
-            {!active.locked && <>
+            {(!active.locked || active.isHistorical) && <>
               <button style={{ ...mkBtn("ghost"), fontSize:11 }} onClick={()=>fileRef.current?.click()}>+ Attach Document</button>
               <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.jpg,.png" style={{ display:"none" }} onChange={e=>{ const f=e.target.files[0]; if(f){ u("attachments",[...(active.attachments||[]),{name:f.name}]); e.target.value=""; }}}/>
             </>}
           </Card>
 
-          <Card>
-            <Sec c="Labor"/>
+          {!active.isHistorical && (
+            <>
+              <Card>
+                <Sec c="Labor"/>
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", borderCollapse:"collapse", minWidth:620 }}>
                 <thead><tr>{["Role","Workers","Days","Reg Hrs","OT Hrs","Bill Rate","Subtotal","Special?",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
@@ -7473,6 +7520,8 @@ export default function App() {
             {!active.locked && <button style={{ ...mkBtn("outline"), marginTop:8, fontSize:11 }} onClick={()=>addR("permitRows",{ vendor:"", desc:"", cost:0, markup:0, notes:"" })}>+ Add Permit</button>}
           </Card>
           <SummaryPanel/>
+            </>
+          )}
           
           <div className="mobile-only-return-btn" style={{ marginTop: 20, marginBottom: 40, textAlign: "center" }}>
             <button style={{ ...mkBtn("outline"), padding: "12px 24px", fontSize: 16, width: "100%", maxWidth: 350, margin: "0 auto", background: "#fff" }} onClick={() => setView("dash")}>← Return to Home</button>
