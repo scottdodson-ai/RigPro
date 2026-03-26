@@ -1891,6 +1891,7 @@ function RFQDashCard({ reqs, quotes, jobFolders, setJobFolders, setShowJFM, open
 // ── RFQ LIST VIEW ─────────────────────────────────────────────────────────────
 function RFQListView({ reqs, quotes, setReqs, openNew, setShowJFM, setEditR, setShowRM, setDeadModal }) {
   const [rfqView, setRfqView] = useState("active"); // active | all | dead
+  const [layoutMode, setLayoutMode] = useState("list"); // list | card
 
   const filtered = rfqView==="active"
     ? reqs.filter(r=>r.status!=="Dead"&&r.status!=="Quoted")
@@ -1912,18 +1913,24 @@ function RFQListView({ reqs, quotes, setReqs, openNew, setShowJFM, setEditR, set
             {activeCount} active · {quotedCount} quoted · {deadCount} dead
           </div>
         </div>
-        <div style={{ display:"flex", gap:3, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:3 }}>
-          {[["active","Active"],["all","All"],["dead","Quoted / Dead"]].map(([v,l])=>(
-            <button key={v} onClick={()=>setRfqView(v)}
-              style={{ background:rfqView===v?C.acc:"transparent", color:rfqView===v?"#fff":C.txtM, border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:rfqView===v?700:400, whiteSpace:"nowrap" }}>
-              {l}
-            </button>
-          ))}
+        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:3, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:3 }}>
+            <button onClick={()=>setLayoutMode("list")} style={{ background:layoutMode==="list"?C.acc:"transparent", color:layoutMode==="list"?"#fff":C.txtM, border:"none", borderRadius:6, padding:"5px 10px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:layoutMode==="list"?700:400 }}>List</button>
+            <button onClick={()=>setLayoutMode("card")} style={{ background:layoutMode==="card"?C.acc:"transparent", color:layoutMode==="card"?"#fff":C.txtM, border:"none", borderRadius:6, padding:"5px 10px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:layoutMode==="card"?700:400 }}>Cards</button>
+          </div>
+          <div style={{ display:"flex", gap:3, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:3 }}>
+            {[["active","Active"],["all","All"],["dead","Quoted / Dead"]].map(([v,l])=>(
+              <button key={v} onClick={()=>setRfqView(v)}
+                style={{ background:rfqView===v?C.acc:"transparent", color:rfqView===v?"#fff":C.txtM, border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:rfqView===v?700:400, whiteSpace:"nowrap" }}>
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* List */}
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+      {/* List / Grid */}
+      <div style={{ display:layoutMode==="card"?"grid":"flex", gridTemplateColumns:layoutMode==="card"?"repeat(auto-fill, minmax(320px, 1fr))":undefined, flexDirection:layoutMode==="card"?undefined:"column", gap:10, alignItems:"stretch" }}>
         {filtered.length===0 && (
           <Card style={{ textAlign:"center", color:C.txtS, padding:40 }}>
             {rfqView==="active"?"No active RFQs — all requests have been quoted or closed.":"No requests found."}
@@ -1934,8 +1941,8 @@ function RFQListView({ reqs, quotes, setReqs, openNew, setShowJFM, setEditR, set
           const isQuoted = r.status==="Quoted";
           const linkedQ  = quotes.find(q=>q.fromReqId===r.id);
           return (
-            <Card key={r.id} style={{ marginBottom:0, opacity:isDead?0.75:1, background:isDead?"#111318":C.sur, border:isDead?`1px solid #374151`:`1px solid ${C.bdr}` }}>
-              <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"flex-start" }}>
+            <Card key={r.id} style={{ marginBottom:0, opacity:isDead?0.75:1, background:isDead?"#111318":C.sur, border:isDead?`1px solid #374151`:`1px solid ${C.bdr}`, display:"flex", flexDirection:"column", height:"100%" }}>
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:layoutMode==="card"?"stretch":"flex-start", flex:1, flexDirection:layoutMode==="card"?"column":"row" }}>
                 <div style={{ flex:1, minWidth:200 }}>
                   <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginBottom:3 }}>
                     <span style={{ fontWeight:700, color:isDead?"#9ca3af":C.acc, fontSize:12 }}>{r.rn}</span>
@@ -1960,7 +1967,7 @@ function RFQListView({ reqs, quotes, setReqs, openNew, setShowJFM, setEditR, set
                     </div>
                   )}
                 </div>
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center", marginTop:layoutMode==="card"?"auto":0 }}>
                   <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 9px" }} onClick={()=>setShowJFM(r)}>Job Folder</button>
                   {!isDead && !isQuoted && <>
                     <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 9px" }} onClick={()=>{setEditR(r);setShowRM(true);}}>Edit</button>
