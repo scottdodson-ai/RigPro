@@ -7465,8 +7465,16 @@ export default function App() {
             </div>
             {!active.locked && <button style={{ ...mkBtn("outline"), marginTop:8, fontSize:11 }} onClick={()=>addR("permitRows",{ vendor:"", desc:"", cost:0, markup:0, notes:"" })}>+ Add Permit</button>}
           </Card>
-
           <SummaryPanel/>
+          
+          <div className="mobile-only-return-btn" style={{ marginTop: 20, marginBottom: 40, textAlign: "center" }}>
+            <button style={{ ...mkBtn("outline"), padding: "12px 24px", fontSize: 16, width: "100%", maxWidth: 350, margin: "0 auto", background: "#fff" }} onClick={() => setView("dash")}>← Return to Home</button>
+          </div>
+          <style>{`
+            @media (min-width: 951px) {
+              .mobile-only-return-btn { display: none !important; }
+            }
+          `}</style>
         </div>
       </div>
     );
