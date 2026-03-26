@@ -4852,10 +4852,10 @@ function ChartCard({ title, data, total, onClickChart }) {
   return (
     <div style={{ background:"#fff", border:"1px solid #e2e5ea", borderRadius:8, padding:14, flex:1, minWidth:220 }}>
       <div 
-        style={{ fontSize:11, color:"#8a93a2", fontWeight:600, textTransform:"uppercase", letterSpacing:1, marginBottom:isCollapsed?0:10, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}
+        style={{ fontSize:11, lineHeight:1.3, color:"#8a93a2", fontWeight:600, textTransform:"uppercase", letterSpacing:1, marginBottom:isCollapsed?0:10, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"flex-start", minHeight:34 }}
         onClick={()=>setIsCollapsed(!isCollapsed)}
       >
-        <span>{title}</span>
+        <span style={{ paddingRight: 8 }}>{title}</span>
         <span>{isCollapsed ? "▼" : "▲"}</span>
       </div>
       {!isCollapsed && (
@@ -6257,7 +6257,7 @@ export default function App() {
             🔔
             {pendN>0&&<span style={{ position:"absolute", top:-3, right:-3, background:C.red, color:"#fff", borderRadius:"50%", width:15, height:15, fontSize:9, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>{pendN}</span>}
           </button>
-          {actBtns}
+          <div className="desktop-act-btns">{actBtns}</div>
         </div>
       }/>
       <div style={{ padding:"16px", maxWidth:1160, margin:"0 auto" }}>
@@ -6275,6 +6275,17 @@ export default function App() {
             </div>
           </div>
         </Card>
+        <style>{`
+          .desktop-act-btns { display: block; }
+          .mobile-act-btns { display: none; }
+          @media (max-width: 650px) {
+            .desktop-act-btns { display: none !important; }
+            .mobile-act-btns { display: flex !important; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+            .mobile-act-btns > div { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+            .mobile-act-btns button { width: 100%; justify-content: center; padding: 12px 14px !important; font-size: 15px !important; }
+          }
+        `}</style>
+        <div className="mobile-act-btns">{actBtns}</div>
         <DashboardMetrics quotes={quotes} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
         {/* ── SALESMAN TRACKING CHARTS ─────────────────────────────────── */}
         <SalesmanCharts quotes={quotes} reqs={reqs}/>
