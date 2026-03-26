@@ -1503,7 +1503,7 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
         .dash-period { flex: 1 1 180px; max-width: 220px; position: relative; min-height: 60px; }
         .dash-grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,140px), 1fr)); gap: 10px; margin-bottom: 12px; }
         .dash-grid-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,110px), 1fr)); gap: 8px; margin-bottom: 12px; }
-        @media (max-width: 600px) {
+        @media (max-width: 950px) {
           .dashboard-metrics-container { flex-direction: column; }
           .dash-period { flex: none; max-width: 100%; height: auto; min-height: 56px; }
           .dash-grid-stats, .dash-grid-status { grid-template-columns: 1fr 1fr; }
@@ -1624,17 +1624,32 @@ function RecentQuotesCard({ quotes, openEdit, setView }) {
         </div>
       </div>
       <div style={{ overflowX:"auto" }}>
-        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:460 }}>
-          <thead><tr>{["Quote #","Customer","Description","Date","Status","Total"].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
+        <style>{`
+          @media (max-width: 600px) {
+            .rq-hide-mobile { display: none !important; }
+            .rq-table { min-width: auto !important; }
+          }
+        `}</style>
+        <table className="rq-table" style={{ width:"100%", borderCollapse:"collapse", minWidth:460 }}>
+          <thead>
+            <tr>
+              <th style={thS}>Quote #</th>
+              <th style={thS}>Customer</th>
+              <th className="rq-hide-mobile" style={thS}>Description</th>
+              <th className="rq-hide-mobile" style={thS}>Date</th>
+              <th style={thS}>Status</th>
+              <th className="rq-hide-mobile" style={thS}>Total</th>
+            </tr>
+          </thead>
           <tbody>
             {filtered.slice(0,8).map(q=>(
               <tr key={q.id} style={{ cursor:"pointer" }} onClick={()=>openEdit(q)}>
                 <td style={{ ...tdS, color:C.acc, fontWeight:600, whiteSpace:"nowrap" }}>{q.qn}</td>
                 <td style={{ ...tdS, fontWeight:600 }}>{q.client}</td>
-                <td style={{ ...tdS, color:C.txtM, maxWidth:180 }}>{q.desc}</td>
-                <td style={{ ...tdS, color:C.txtS, whiteSpace:"nowrap" }}>{q.date}</td>
+                <td className="rq-hide-mobile" style={{ ...tdS, color:C.txtM, maxWidth:180 }}>{q.desc}</td>
+                <td className="rq-hide-mobile" style={{ ...tdS, color:C.txtS, whiteSpace:"nowrap" }}>{q.date}</td>
                 <td style={tdS}><Badge status={q.status}/></td>
-                <td style={{ ...tdS, fontWeight:700, whiteSpace:"nowrap" }}>{fmt(q.total||0)}</td>
+                <td className="rq-hide-mobile" style={{ ...tdS, fontWeight:700, whiteSpace:"nowrap" }}>{fmt(q.total||0)}</td>
               </tr>
             ))}
             {filtered.length===0 && (
@@ -2160,9 +2175,9 @@ function ActionBtns({ onReq, onFromReq, onNew }) {
   const s = compact ? { fontSize:10, padding:"5px 8px", gap:3 } : {};
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
-      <button style={{ ...mkBtn("outline"), ...s }} onClick={onReq}>Request For Quote</button>
-      <button style={{ ...mkBtn("blue"), ...s }}    onClick={onFromReq}>Pending Requests</button>
-      <button style={{ ...mkBtn("primary"), ...s }} onClick={onNew}>{compact ? "+ New" : "+ New Estimate"}</button>
+      <button style={{ ...mkBtn("blue"), ...s }} onClick={onReq}>Request For Quote</button>
+      <button style={{ ...mkBtn("outline"), ...s }} onClick={onFromReq}>Pending Requests</button>
+      <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>{compact ? "+ New" : "+ New Estimate"}</button>
     </div>
   );
 }
@@ -2482,8 +2497,13 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
             </div>
           )}
 
+          <style>{`
+            @media (max-width: 650px) {
+              .jfm-grid-responsive { grid-template-columns: 1fr !important; }
+            }
+          `}</style>
           {/* ROW 1: RFQ Info + Description side by side */}
-          <div style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:18 }}>
+          <div className="jfm-grid-responsive" style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:18 }}>
             {/* LEFT: RFQ Info — view or edit mode */}
             <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8, padding:"12px 14px" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
@@ -2604,7 +2624,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
           </div>
 
           {/* ROW 4: ESTIMATOR NOTES + TIMELINE */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+          <div className="jfm-grid-responsive" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
             {/* Notes */}
             <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8, padding:"12px 14px" }}>
               <div style={{ fontSize:9, color:C.txtS, fontWeight:800, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Estimator Notes</div>
@@ -4838,7 +4858,7 @@ function ChartCard({ title, data, total, onClickChart }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 600px)");
+    const mq = window.matchMedia("(max-width: 950px)");
     const sync = () => setIsCollapsed(!!mq.matches);
     sync();
     if (typeof mq.addEventListener === "function") mq.addEventListener("change", sync);
@@ -6278,7 +6298,7 @@ export default function App() {
         <style>{`
           .desktop-act-btns { display: block; }
           .mobile-act-btns { display: none; }
-          @media (max-width: 650px) {
+          @media (max-width: 950px) {
             .desktop-act-btns { display: none !important; }
             .mobile-act-btns { display: flex !important; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
             .mobile-act-btns > div { width: 100%; display: flex; flex-direction: column; gap: 8px; }
