@@ -1410,7 +1410,7 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
 }
 
 // ── DASHBOARD METRICS COMPONENT ──────────────────────────────────────────────
-function DashboardMetrics({ quotes, reqs, onOpenReport }) {
+function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqStageFilter }) {
   const now = new Date();
   const thisYear = now.getFullYear();
 
@@ -1424,6 +1424,10 @@ function DashboardMetrics({ quotes, reqs, onOpenReport }) {
 
   const [period,    setPeriod]    = useState("ytd");
   const [showPicker, setShowPicker] = useState(false);
+  const [showPeriodMenu, setShowPeriodMenu] = useState(false);
+  const [showRfqMenu, setShowRfqMenu] = useState(false);
+
+  const STAGES_DASH = ["RFQ Received","Client Contact","Viewed Job / Docs","Priced Materials / Rentals","Final Consult"];
   const [customStart, setCustomStart] = useState(() => `${thisYear}-01-01`);
   const [customEnd,   setCustomEnd]   = useState(() => now.toISOString().slice(0,10));
 
@@ -1494,29 +1498,49 @@ function DashboardMetrics({ quotes, reqs, onOpenReport }) {
     : PERIODS.find(p=>p.key===period)?.label;
 
   return (
-    <div>
-      {/* Period selector */}
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10, flexWrap:"wrap" }}>
-        <span style={{ fontSize:11, color:C.txtS, fontWeight:600 }}>Period:</span>
-        <div style={{ display:"flex", gap:2, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:7, padding:2, flexWrap:"wrap" }}>
-          {PERIODS.filter(p=>p.key!=="custom").map(p=>(
-            <button key={p.key} onClick={()=>{setPeriod(p.key);setShowPicker(false);}} style={{ background:period===p.key?C.acc:"transparent", color:period===p.key?"#fff":C.txtM, border:"none", borderRadius:5, padding:"4px 11px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:period===p.key?700:400, whiteSpace:"nowrap" }}>{p.label}</button>
-          ))}
-          <button onClick={()=>{setPeriod("custom");setShowPicker(true);}} style={{ background:period==="custom"?C.acc:"transparent", color:period==="custom"?"#fff":C.txtM, border:"none", borderRadius:5, padding:"4px 11px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:period==="custom"?700:400 }}>Custom…</button>
-        </div>
-        {period==="custom" && showPicker && (
-          <div style={{ display:"flex", alignItems:"center", gap:6, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:7, padding:"5px 10px" }}>
-            <input type="date" value={customStart} onChange={e=>setCustomStart(e.target.value)} style={{ ...inp2, width:130, fontSize:11, padding:"3px 6px" }}/>
-            <span style={{ color:C.txtS, fontSize:11 }}>to</span>
-            <input type="date" value={customEnd} onChange={e=>setCustomEnd(e.target.value)} style={{ ...inp2, width:130, fontSize:11, padding:"3px 6px" }}/>
-            <button onClick={()=>setShowPicker(false)} style={{ ...mkBtn("primary"), padding:"3px 10px", fontSize:11 }}>Apply</button>
+    <div className="dashboard-metrics-container" style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "stretch", marginBottom: 15 }}>
+      <style>{`
+        .dash-period { flex: 1 1 180px; max-width: 220px; position: relative; min-height: 60px; }
+        .dash-grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,140px), 1fr)); gap: 10px; margin-bottom: 12px; }
+        .dash-grid-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,110px), 1fr)); gap: 8px; margin-bottom: 12px; }
+        @media (max-width: 600px) {
+          .dashboard-metrics-container { flex-direction: column; }
+          .dash-period { flex: none; max-width: 100%; height: auto; min-height: 56px; }
+          .dash-grid-stats, .dash-grid-status { grid-template-columns: 1fr 1fr; }
+        }
+      `}</style>
+      {/* Left Column: Period Selector */ }
+      <div className="dash-period">
+        <button 
+          style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", width:"100%", height:"100%", justifyContent:"center", alignItems:"center", padding:"16px 14px", fontSize:18, display: "flex", flexDirection: "column", gap: 8 }}
+          onClick={() => { setShowPeriodMenu(!showPeriodMenu); setShowRfqMenu(false); }}
+        >
+          <span style={{ fontWeight:700, textAlign:"center", lineHeight:1.2 }}>{periodLabel}</span>
+          <span style={{ fontSize:12, opacity:0.9, fontWeight: 500 }}>Click to change Period ▾</span>
+        </button>
+        {showPeriodMenu && (
+          <div style={{ position:"absolute", top:"100%", left:0, zIndex:100, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:8, display:"flex", flexDirection:"column", gap:4, width:"100%", marginTop:4, boxShadow:"0 4px 12px rgba(0,0,0,0.1)" }}>
+            {PERIODS.filter(p=>p.key!=="custom").map(p=>(
+              <button key={p.key} onClick={()=>{setPeriod(p.key);setShowPeriodMenu(false);setShowPicker(false);}} style={{ background:period===p.key?C.bg:"transparent", color:period===p.key?C.acc:C.txtM, border:"none", borderRadius:5, padding:"8px 11px", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:period===p.key?700:500, textAlign:"left" }}>{p.label}</button>
+            ))}
+            <div style={{ borderTop:`1px solid ${C.bdr}`, margin:"4px 0" }}></div>
+            <button onClick={()=>{setPeriod("custom");setShowPicker(!showPicker);}} style={{ background:period==="custom"&&!showPicker?C.bg:"transparent", color:period==="custom"?C.acc:C.txtM, border:"none", borderRadius:5, padding:"8px 11px", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:period==="custom"?700:500, textAlign:"left" }}>Custom Range…</button>
+            {period==="custom" && showPicker && (
+              <div style={{ display:"flex", flexDirection:"column", gap:6, padding:"6px 0" }}>
+                <input type="date" value={customStart} onChange={e=>setCustomStart(e.target.value)} style={{ ...inp2, fontSize:13 }}/>
+                <input type="date" value={customEnd} onChange={e=>setCustomEnd(e.target.value)} style={{ ...inp2, fontSize:13 }}/>
+                <button onClick={()=>setShowPeriodMenu(false)} style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", padding:"6px", fontSize:13 }}>Apply Filter</button>
+              </div>
+            )}
           </div>
         )}
-        <span style={{ fontSize:10, color:C.txtS, marginLeft:2 }}>vs. previous period</span>
       </div>
 
+      {/* Right Column: Dash Stats */ }
+      <div style={{ flex: "999 1 300px", display: "flex", flexDirection: "column", gap: 12 }}>
+
       {/* Top 4 stat bubbles — clickable, responsive */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,140px),1fr))", gap:10, marginBottom:12 }}>
+      <div className="dash-grid-stats">
         {[
           { l:"Revenue Won",  v:fmt(cur.rev),    s:`${cur.wonN} jobs`,           c:C.grn,  cv:cur.rev,  pv:prev.rev,  report:"rev-by-month"      },
           { l:"Pipeline",     v:fmt(cur.pipe),   s:`${cur.subN} open`,      c:C.blue, cv:cur.pipe, pv:prev.pipe, report:"pipeline-summary"  },
@@ -1537,7 +1561,7 @@ function DashboardMetrics({ quotes, reqs, onOpenReport }) {
       </div>
 
       {/* Status breakdown bubbles — clickable, responsive */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,110px),1fr))", gap:8, marginBottom:12 }}>
+      <div className="dash-grid-status">
         {[
           { st:"In Progress", n:cur.draftN, v:cur.draftV, pn:prev.draftN, report:"pipeline-summary" },
           { st:"Submitted",   n:cur.subN,   v:cur.pipe,   pn:prev.subN,   report:"pipeline-summary" },
@@ -1565,6 +1589,7 @@ function DashboardMetrics({ quotes, reqs, onOpenReport }) {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );
@@ -1623,11 +1648,10 @@ function RecentQuotesCard({ quotes, openEdit, setView }) {
 }
 
 // ── RFQ DASHBOARD CARD ────────────────────────────────────────────────────────
-function RFQDashCard({ reqs, quotes, jobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal }) {
+function RFQDashCard({ reqs, quotes, jobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, rfqStageFilter }) {
   const STAGES_DASH = ["RFQ Received","Client Contact","Viewed Job / Docs","Priced Materials / Rentals","Final Consult"];
   const stageColors = ["#b86b0a","#2563eb","#0d9488","#7c3aed","#16a34a"];
   const [expandedRfq,    setExpandedRfq]    = useState(null);
-  const [rfqStageFilter, setRfqStageFilter] = useState("all");
 
   const pendingReqs = reqs.filter(r=>r.status!=="Quoted"&&r.status!=="Dead");
   if (pendingReqs.length === 0) return null;
@@ -1659,15 +1683,23 @@ function RFQDashCard({ reqs, quotes, jobFolders, setShowJFM, openNew, openEdit, 
         <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 9px" }} onClick={()=>setView("rfqs")}>View All</button>
       </div>
 
-      {/* Filter bar — Progress only */}
-      <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap", alignItems:"center" }}>
-        <span style={{ fontSize:11, color:C.txtS, fontWeight:600 }}>Filter by Progress:</span>
-        <div style={{ display:"flex", gap:2, background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:6, padding:2, flexWrap:"wrap" }}>
-          <button onClick={()=>setRfqStageFilter("all")} style={{ background:rfqStageFilter==="all"?C.acc:"transparent", color:rfqStageFilter==="all"?"#fff":C.txtM, border:"none", borderRadius:4, padding:"4px 10px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:rfqStageFilter==="all"?700:400 }}>All</button>
-          {STAGES_DASH.map((s,i) => (
-            <button key={i} onClick={()=>setRfqStageFilter(String(i))} style={{ background:rfqStageFilter===String(i)?stageColors[i]:"transparent", color:rfqStageFilter===String(i)?"#fff":C.txtM, border:"none", borderRadius:4, padding:"4px 10px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:rfqStageFilter===String(i)?700:400, whiteSpace:"nowrap" }}>{s}</button>
-          ))}
-        </div>
+      <div style={{ position:"relative", marginBottom:15 }}>
+        <button 
+          style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", width:"100%", justifyContent:"space-between", padding:"10px 14px", fontSize:14 }}
+          onClick={() => { setExpandedRfq(p => p==="filterMenu" ? null : "filterMenu"); }}
+        >
+          <span style={{ fontWeight:700 }}>{rfqStageFilter==="all" ? "Filter: All Requests" : `Filter: ${STAGES_DASH[Number(rfqStageFilter)]}`}</span>
+          <span style={{ fontSize:11, opacity:0.9 }}>Click to change Filter ▾</span>
+        </button>
+        {expandedRfq === "filterMenu" && (
+          <div style={{ position:"absolute", top:"100%", left:0, zIndex:100, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:8, display:"flex", flexDirection:"column", gap:4, width:"100%", marginTop:4, boxShadow:"0 4px 12px rgba(0,0,0,0.1)" }}>
+            <button onClick={()=>{setRfqStageFilter("all"); setExpandedRfq(null);}} style={{ background:rfqStageFilter==="all"?C.bg:"transparent", color:rfqStageFilter==="all"?C.acc:C.txtM, border:"none", borderRadius:5, padding:"8px 11px", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:rfqStageFilter==="all"?700:500, textAlign:"left" }}>All Requests</button>
+            <div style={{ borderTop:`1px solid ${C.bdr}`, margin:"4px 0" }}></div>
+            {STAGES_DASH.map((s,i) => (
+              <button key={i} onClick={()=>{setRfqStageFilter(String(i)); setExpandedRfq(null);}} style={{ background:rfqStageFilter===String(i)?C.bg:"transparent", color:rfqStageFilter===String(i)?C.acc:C.txtM, border:"none", borderRadius:5, padding:"8px 11px", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:rfqStageFilter===String(i)?700:500, textAlign:"left" }}>{s}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* RFQ rows */}
@@ -4803,27 +4835,49 @@ function PieChart({ data, size=120 }) {
 
 function ChartCard({ title, data, total, onClickChart }) {
   const hasData = data.some(d=>d.value>0);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 600px)");
+    const sync = () => setIsCollapsed(!!mq.matches);
+    sync();
+    if (typeof mq.addEventListener === "function") mq.addEventListener("change", sync);
+    else if (typeof mq.addListener === "function") mq.addListener(sync);
+    return () => {
+      if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", sync);
+      else if (typeof mq.removeListener === "function") mq.removeListener(sync);
+    };
+  }, []);
+
   return (
     <div style={{ background:"#fff", border:"1px solid #e2e5ea", borderRadius:8, padding:14, flex:1, minWidth:220 }}>
-      <div style={{ fontSize:11, color:"#8a93a2", fontWeight:600, textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>{title}</div>
-      {!hasData ? (
-        <div style={{ textAlign:"center", color:"#c8cdd5", fontSize:12, padding:"20px 0" }}>No data yet</div>
-      ) : (
-        <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-          <div style={{ cursor:"pointer", flexShrink:0 }} onClick={()=>onClickChart({ title, data, total })} title="Click for details">
-            <PieChart data={data}/>
+      <div 
+        style={{ fontSize:11, color:"#8a93a2", fontWeight:600, textTransform:"uppercase", letterSpacing:1, marginBottom:isCollapsed?0:10, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}
+        onClick={()=>setIsCollapsed(!isCollapsed)}
+      >
+        <span>{title}</span>
+        <span>{isCollapsed ? "▼" : "▲"}</span>
+      </div>
+      {!isCollapsed && (
+        !hasData ? (
+          <div style={{ textAlign:"center", color:"#c8cdd5", fontSize:12, padding:"20px 0" }}>No data yet</div>
+        ) : (
+          <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+            <div style={{ cursor:"pointer", flexShrink:0 }} onClick={()=>onClickChart({ title, data, total })} title="Click for details">
+              <PieChart data={data}/>
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              {data.filter(d=>d.value>0).map((d,i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4, fontSize:12 }}>
+                  <div style={{ width:9, height:9, borderRadius:2, background:d.color, flexShrink:0 }}/>
+                  <span style={{ color:"#4a5060", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{d.label}</span>
+                  <span style={{ fontWeight:700, color:"#1c1f26", flexShrink:0 }}>{d.value}</span>
+                </div>
+              ))}
+              <div style={{ borderTop:"1px solid #e2e5ea", marginTop:5, paddingTop:5, fontSize:11, color:"#8a93a2" }}>Total: <strong style={{ color:"#1c1f26" }}>{total}</strong></div>
+            </div>
           </div>
-          <div style={{ flex:1, minWidth:0 }}>
-            {data.filter(d=>d.value>0).map((d,i) => (
-              <div key={i} style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4, fontSize:12 }}>
-                <div style={{ width:9, height:9, borderRadius:2, background:d.color, flexShrink:0 }}/>
-                <span style={{ color:"#4a5060", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{d.label}</span>
-                <span style={{ fontWeight:700, color:"#1c1f26", flexShrink:0 }}>{d.value}</span>
-              </div>
-            ))}
-            <div style={{ borderTop:"1px solid #e2e5ea", marginTop:5, paddingTop:5, fontSize:11, color:"#8a93a2" }}>Total: <strong style={{ color:"#1c1f26" }}>{total}</strong></div>
-          </div>
-        </div>
+        )
       )}
     </div>
   );
@@ -5791,8 +5845,7 @@ function AdminPage({ token, appUsers=[], setAppUsers }) {
           {/* USER LIST */}
           <div style={{ flex:1 }}>
             <Sec c="Active Accounts"/>
-            ((
-              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 {users.map(u => (
                   <div key={u.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:C.sur, border:`1px solid ${C.bdr}`, padding:"12px 16px", borderRadius:8 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -5908,6 +5961,7 @@ export default function App() {
   const [token,      setToken]      = useState(localStorage.getItem("token") || "");
   const [role,       setRole]       = useState(localStorage.getItem("role") || "user");
   const [view,       setView]       = useState("landing");
+  const [rfqStageFilter, setRfqStageFilter] = useState("all");
   const [appUsers,   setAppUsers]   = useState([
     { id:1, username:"Dan M",    role:"estimator", email:"dan.m@shoemakerrigging.com"   },
     { id:2, username:"Sarah K",  role:"estimator", email:"sarah.k@shoemakerrigging.com" },
@@ -6221,11 +6275,11 @@ export default function App() {
             </div>
           </div>
         </Card>
-        <DashboardMetrics quotes={quotes} reqs={reqs} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
+        <DashboardMetrics quotes={quotes} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
         {/* ── SALESMAN TRACKING CHARTS ─────────────────────────────────── */}
         <SalesmanCharts quotes={quotes} reqs={reqs}/>
 
-        <RFQDashCard reqs={reqs} quotes={quotes} jobFolders={jobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal}/>
+        <RFQDashCard reqs={reqs} quotes={quotes} jobFolders={jobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal} rfqStageFilter={rfqStageFilter}/>
         <RecentQuotesCard quotes={quotes} openEdit={openEdit} setView={setView}/>
       </div>
     </div>
