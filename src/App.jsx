@@ -1663,10 +1663,22 @@ function RecentQuotesCard({ quotes, openEdit, setView }) {
 }
 
 // ── RFQ DASHBOARD CARD ────────────────────────────────────────────────────────
-function RFQDashCard({ reqs, quotes, jobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, rfqStageFilter }) {
+function RFQDashCard({ reqs, quotes, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, rfqStageFilter }) {
   const STAGES_DASH = ["RFQ Received","Client Contact","Viewed Job / Docs","Priced Materials / Rentals","Final Consult"];
   const stageColors = ["#b86b0a","#2563eb","#0d9488","#7c3aed","#16a34a"];
   const [expandedRfq,    setExpandedRfq]    = useState(null);
+  const [promptInfo,     setPromptInfo]     = useState(null);
+
+  function applyProgress() {
+    if (!promptInfo) return;
+    const { rfqId, newStage, note, date } = promptInfo;
+    setJobFolders(prev => {
+      const f = prev[rfqId] || { stage: 0, lastActivity: "", estimatorNotes: "", customChecks: [], timelines: [], attachments: [] };
+      const timelines = note.trim() ? [...(f.timelines||[]), { id: Math.random().toString(36).substring(2,9), date, note }] : (f.timelines||[]);
+      return { ...prev, [rfqId]: { ...f, stage: newStage, lastActivity: date, timelines } };
+    });
+    setPromptInfo(null);
+  }
 
   const pendingReqs = reqs.filter(r=>r.status!=="Quoted"&&r.status!=="Dead");
   if (pendingReqs.length === 0) return null;
@@ -1768,7 +1780,13 @@ function RFQDashCard({ reqs, quotes, jobFolders, setShowJFM, openNew, openEdit, 
                             <div key={s} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", position:"relative" }}>
                               {i>0 && <div style={{ position:"absolute", top:14, left:"-50%", right:"50%", height:2, background:done||active?stageColors[i-1]:C.bdr, zIndex:0 }}/>}
                               {i<STAGES_DASH.length-1 && <div style={{ position:"absolute", top:14, left:"50%", right:"-50%", height:2, background:done?color:C.bdr, zIndex:0 }}/>}
-                              <div title={s} style={{ width:28, height:28, borderRadius:"50%", border:`2px solid ${active||done?color:C.bdr}`, background:active||done?color:C.sur, color:active||done?"#fff":C.txtS, fontSize:11, fontWeight:800, zIndex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>{done?"✓":i+1}</div>
+                              <button 
+                                title={s} 
+                                onClick={(e) => { e.stopPropagation(); setPromptInfo({ rfqId: r.id, newStage: i, note: `Moved to stage: ${s}`, date: new Date().toISOString().slice(0, 10) }); }}
+                                style={{ width:28, height:28, borderRadius:"50%", border:`2px solid ${active||done?color:C.bdr}`, background:active||done?color:C.sur, color:active||done?"#fff":C.txtS, fontSize:11, fontWeight:800, zIndex:1, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", padding:0, fontFamily:"inherit" }}
+                              >
+                                {done?"✓":i+1}
+                              </button>
                               <div style={{ fontSize:8, color:active?color:C.txtS, fontWeight:active?800:500, marginTop:4, textAlign:"center", lineHeight:1.2, maxWidth:60 }}>{s}</div>
                             </div>
                           );
@@ -1814,6 +1832,26 @@ function RFQDashCard({ reqs, quotes, jobFolders, setShowJFM, openNew, openEdit, 
           );
         })}
       </div>
+
+      {promptInfo && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", padding: 20 }} onClick={()=>setPromptInfo(null)}>
+          <div style={{ background:C.sur, borderRadius:8, padding:20, width:400, maxWidth:"100%", boxShadow:"0 16px 48px rgba(0,0,0,.28)", display:"flex", flexDirection:"column" }} onClick={e=>e.stopPropagation()}>
+            <div style={{ fontSize:15, fontWeight:700, color:C.txt, marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Update Quote Progress</div>
+            <div style={{ fontSize:13, color:C.txtM, marginBottom:16 }}>Please enter an activity note for this progress update:</div>
+            
+            <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+              <input type="date" style={{ ...inp, width:132, fontSize:13 }} value={promptInfo.date} onChange={e=>setPromptInfo({...promptInfo, date:e.target.value})} />
+              <input style={{ ...inp, flex:1, fontSize:13 }} autoFocus value={promptInfo.note} onChange={e=>setPromptInfo({...promptInfo, note:e.target.value})} onKeyDown={e=>{ if (e.key==="Enter") applyProgress(); }} />
+            </div>
+            
+            <div style={{ display:"flex", justifyContent:"flex-end", gap:8, marginTop:10 }}>
+              <button style={{ ...mkBtn("ghost"), padding:"7px 12px" }} onClick={()=>setPromptInfo(null)}>Cancel</button>
+              <button style={{ ...mkBtn("primary"), padding:"7px 12px" }} onClick={applyProgress}>Save Progress</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Card>
   );
 }
@@ -2396,6 +2434,17 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
   const stageColors = ["#b86b0a","#2563eb","#0d9488","#7c3aed","#16a34a"];
   const [editingRfq,  setEditingRfq]  = useState(false);
   const [rfqEdits,    setRfqEdits]    = useState({ requester:rfq.requester||"", phone:rfq.phone||"", email:rfq.email||"", jobSite:rfq.jobSite||"", desc:rfq.desc||"", salesAssoc:rfq.salesAssoc||"", date:rfq.date||"" });
+  const [promptInfo,  setPromptInfo]  = useState(null);
+  const [mobilePage,  setMobilePage]  = useState(1);
+
+  const applyProgress = () => {
+    if (!promptInfo) return;
+    setStage(promptInfo.newStage);
+    if (promptInfo.note.trim()) {
+      setTimelines(prev=>[...prev,{ id: uid(), date: promptInfo.date, note: promptInfo.note }]);
+    }
+    setPromptInfo(null);
+  };
   const ue = (k,v) => setRfqEdits(p=>({...p,[k]:v}));
   const saveRfqEdits = () => { if(onUpdateRfq) onUpdateRfq({...rfq,...rfqEdits}); setEditingRfq(false); };
   const addTimeline = () => { if(!newTL.note.trim()) return; setTimelines(prev=>[...prev,{id:uid(),...newTL}]); setNewTL({date:today.toISOString().slice(0,10),note:""}); };
@@ -2498,10 +2547,19 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
           )}
 
           <style>{`
-            @media (max-width: 650px) {
+            @media (max-width: 950px) {
               .jfm-grid-responsive { grid-template-columns: 1fr !important; }
+              .jfm-page-tabs { display: flex !important; }
+              .jfm-hide-mobile { display: none !important; }
             }
           `}</style>
+
+          <div className="jfm-page-tabs" style={{ display:"none", borderBottom:`1px solid ${C.bdr}`, marginBottom:16 }}>
+            <button style={{ flex:1, padding:14, border:"none", background:mobilePage===1?C.sur:C.bg, color:mobilePage===1?C.acc:C.txtM, fontWeight:800, borderBottom:mobilePage===1?`3px solid ${C.acc}`:"none", cursor:"pointer", fontSize:12, textTransform:"uppercase" }} onClick={()=>setMobilePage(1)}>1. Details & Progress</button>
+            <button style={{ flex:1, padding:14, border:"none", background:mobilePage===2?C.sur:C.bg, color:mobilePage===2?C.acc:C.txtM, fontWeight:800, borderBottom:mobilePage===2?`3px solid ${C.acc}`:"none", cursor:"pointer", fontSize:12, textTransform:"uppercase" }} onClick={()=>setMobilePage(2)}>2. Timeline & Files</button>
+          </div>
+
+          <div className={`jfm-page1 ${mobilePage!==1?"jfm-hide-mobile":""}`} style={{ display:"flex", flexDirection:"column", gap:20 }}>
           {/* ROW 1: RFQ Info + Description side by side */}
           <div className="jfm-grid-responsive" style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:18 }}>
             {/* LEFT: RFQ Info — view or edit mode */}
@@ -2597,7 +2655,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
                   <div key={s} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", position:"relative" }}>
                     {i>0 && <div style={{ position:"absolute", top:18, left:"-50%", right:"50%", height:3, background:done||active?stageColors[i-1]:C.bdr, zIndex:0 }}/>}
                     {i<STAGES.length-1 && <div style={{ position:"absolute", top:18, left:"50%", right:"-50%", height:3, background:done?color:C.bdr, zIndex:0 }}/>}
-                    <button onClick={()=>setStage(i)} title={s} style={{ width:36, height:36, borderRadius:"50%", border:`3px solid ${active||done?color:C.bdr}`, background:active||done?color:C.sur, color:active||done?"#fff":C.txtS, fontSize:13, fontWeight:800, cursor:"pointer", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:active?`0 0 0 4px ${color}30`:"none", transition:"all .2s" }}>{done?"":i+1}</button>
+                    <button onClick={(e)=>{ e.stopPropagation(); setPromptInfo({ newStage: i, note: `Moved to stage: ${s}`, date: new Date().toISOString().slice(0, 10) }); }} title={s} style={{ width:36, height:36, borderRadius:"50%", border:`3px solid ${active||done?color:C.bdr}`, background:active||done?color:C.sur, color:active||done?"#fff":C.txtS, fontSize:13, fontWeight:800, cursor:"pointer", zIndex:1, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:active?`0 0 0 4px ${color}30`:"none", transition:"all .2s" }}>{done?"":i+1}</button>
                     <div style={{ fontSize:9, color:active?color:C.txtS, fontWeight:active?800:600, marginTop:6, textAlign:"center", lineHeight:1.2, maxWidth:80 }}>{s}</div>
                   </div>
                 );
@@ -2622,7 +2680,9 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
               ))}
             </div>
           </div>
+          </div>
 
+          <div className={`jfm-page2 ${mobilePage!==2?"jfm-hide-mobile":""}`} style={{ display:"flex", flexDirection:"column", gap:20 }}>
           {/* ROW 4: ESTIMATOR NOTES + TIMELINE */}
           <div className="jfm-grid-responsive" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
             {/* Notes */}
@@ -2680,6 +2740,27 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
               </div>
             )}
           </div>
+
+          </div>
+
+          {promptInfo && (
+            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", padding: 20 }} onClick={()=>setPromptInfo(null)}>
+              <div style={{ background:C.sur, borderRadius:8, padding:20, width:400, maxWidth:"100%", boxShadow:"0 16px 48px rgba(0,0,0,.28)", display:"flex", flexDirection:"column" }} onClick={e=>e.stopPropagation()}>
+                <div style={{ fontSize:15, fontWeight:700, color:C.txt, marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Update Quote Progress</div>
+                <div style={{ fontSize:13, color:C.txtM, marginBottom:16 }}>Please enter an activity note for this progress update:</div>
+                
+                <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+                  <input type="date" style={{ ...inp, width:132, fontSize:13 }} value={promptInfo.date} onChange={e=>setPromptInfo({...promptInfo, date:e.target.value})} />
+                  <input style={{ ...inp, flex:1, fontSize:13 }} autoFocus value={promptInfo.note} onChange={e=>setPromptInfo({...promptInfo, note:e.target.value})} onKeyDown={e=>{ if (e.key==="Enter") applyProgress(); }} />
+                </div>
+                
+                <div style={{ display:"flex", justifyContent:"flex-end", gap:8, marginTop:10 }}>
+                  <button style={{ ...mkBtn("ghost"), padding:"7px 12px" }} onClick={()=>setPromptInfo(null)}>Cancel</button>
+                  <button style={{ ...mkBtn("primary"), padding:"7px 12px" }} onClick={applyProgress}>Save Progress</button>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
 
@@ -6310,7 +6391,7 @@ export default function App() {
         {/* ── SALESMAN TRACKING CHARTS ─────────────────────────────────── */}
         <SalesmanCharts quotes={quotes} reqs={reqs}/>
 
-        <RFQDashCard reqs={reqs} quotes={quotes} jobFolders={jobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal} rfqStageFilter={rfqStageFilter}/>
+        <RFQDashCard reqs={reqs} quotes={quotes} jobFolders={jobFolders} setJobFolders={setJobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal} rfqStageFilter={rfqStageFilter}/>
         <RecentQuotesCard quotes={quotes} openEdit={openEdit} setView={setView}/>
       </div>
     </div>
