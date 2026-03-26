@@ -6663,7 +6663,7 @@ export default function App() {
               <div>
                 <Lbl c="FILTER BY CUSTOMER"/>
                 <select 
-                  style={{ ...sel, width:240, height:32, border:`2px solid ${C.acc}`, borderRadius:8 }} 
+                  style={{ ...sel, width:240, minHeight:38, boxSizing:"border-box", border:`2px solid ${C.acc}`, borderRadius:8 }} 
                   value={selC || ""} 
                   onChange={e => setSelC(e.target.value || null)}
                 >
@@ -6675,7 +6675,7 @@ export default function App() {
                 <Lbl c="GLOBAL KEYWORD SEARCH"/>
                 <div style={{ position:"relative" }}>
                   <input 
-                    style={{ ...inp, paddingRight:32, border:`2px solid ${C.acc}`, borderRadius:8 }} 
+                    style={{ ...inp, paddingRight:32, minHeight:38, boxSizing:"border-box", border:`2px solid ${C.acc}`, borderRadius:8 }} 
                     placeholder="Keywords (location, contact, desc)..." 
                     value={search} 
                     onChange={e=>setSearch(e.target.value)}
@@ -6690,7 +6690,7 @@ export default function App() {
                 </div>
               </div>
               <button 
-                style={{ background:wonOnly?C.acc:"transparent", color:wonOnly?"#fff":C.acc, border:`2px solid ${C.acc}`, borderRadius:8, fontSize:11, padding:"6px 12px", whiteSpace:"nowrap", gap:6, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center" }} 
+                style={{ background:wonOnly?C.acc:"transparent", color:wonOnly?"#fff":C.acc, border:`2px solid ${C.acc}`, borderRadius:8, fontSize:11, padding:"6px 14px", minHeight:38, boxSizing:"border-box", whiteSpace:"nowrap", gap:6, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center" }} 
                 onClick={()=>setWonOnly(w=>!w)}
               >
                 {wonOnly ? "Viewing: Won Quotes Only" : "Viewing: All Quotes"}
@@ -6698,7 +6698,7 @@ export default function App() {
               {(selC || search || wonOnly) && <button style={{ ...mkBtn("danger"), background:"none", color:C.red, border:`1px solid ${C.redBdr}`, fontSize:11, padding:"6px 12px", fontWeight:600 }} onClick={()=>{setSelC(null);setSearch("");setWonOnly(false);}}> Clear</button>}
               
               <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
-                <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"6px 12px", whiteSpace:"nowrap" }} onClick={()=>setShowProfileTempl(true)}>⚙ Edit Profile Template</button>
+                <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"6px 12px", border:"1px solid #000", borderRadius:6, whiteSpace:"nowrap" }} onClick={()=>setShowProfileTempl(true)}>⚙ Edit Profile Template</button>
                 <div style={{ display:"flex", gap:4, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:6, padding:2 }}>
                   <button 
                     style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"4px 8px", fontSize:11, gap:4, fontWeight:700, borderRadius:4, cursor:"pointer" }} 
@@ -6717,7 +6717,7 @@ export default function App() {
             </div>
 
             {/* ── Prospect / Customer toggle bar ── */}
-            <div style={{ display:"flex", gap:3, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:8, padding:3, alignSelf:"flex-start", marginBottom:10 }}>
+            <div style={{ display:"flex", gap:3, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:8, padding:3, width:"100%", boxSizing:"border-box", marginBottom:10 }}>
               {[["all","All"],["prospects","Prospects"],["customers","Customers"]].map(([v,l]) => {
                 const count = v==="all" ? customers.length : customers.filter(c=>v==="prospects"?c.isProspect:!c.isProspect).length;
                 return (
