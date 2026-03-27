@@ -5897,7 +5897,7 @@ function DatabaseBrowser({ token }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const tables = ['users', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
+  const tables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
 
   useEffect(() => {
     if (!selectedTable || !token) return;
@@ -6170,6 +6170,32 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
     }
   };
 
+  const [showBackupList, setShowBackupList] = useState(false);
+  const [localBackups, setLocalBackups] = useState([]);
+  const [selectedBackups, setSelectedBackups] = useState([]);
+
+  const loadBackups = async () => {
+    try {
+      const res = await fetch("/api/admin/backups/list", { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      setLocalBackups(Array.isArray(data) ? data : []);
+    } catch (e) { console.error(e); }
+  };
+
+  const deleteSelectedBackups = async () => {
+    if (!selectedBackups.length) return;
+    if (!window.confirm(`Delete ${selectedBackups.length} backup(s) permanently?`)) return;
+    try {
+      await fetch("/api/admin/backups/delete", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ filenames: selectedBackups })
+      });
+      setSelectedBackups([]);
+      loadBackups();
+    } catch (e) { alert("Delete failed"); }
+  };
+
   return (
     <div style={{ padding:"24px", maxWidth:1100, margin:"0 auto" }}>
       <Card>
@@ -6346,6 +6372,13 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   >
                     📥 Download SQL Backup
                   </button>
+
+                  <button 
+                    style={{ ...mkBtn("bg"), border:`1px solid ${C.bdr}`, padding:"10px 18px", fontSize:13, marginTop:10, color:C.txtM, width:"100%", justifyContent:"center" }}
+                    onClick={() => { setShowBackupList(true); loadBackups(); }}
+                  >
+                    📂 Manage Local Archive
+                  </button>
                 </div>
               </div>
             </div>
@@ -6379,6 +6412,50 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 
         {/* DATA BROWSER SECTION */}
         <DatabaseBrowser token={token} />
+
+        {/* BACKUP LIST DIALOG */}
+        {showBackupList && (
+          <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.6)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+            <div style={{ background:C.sur, width:"100%", maxWidth:600, borderRadius:12, overflow:"hidden", border:`1px solid ${C.bdr}`, boxShadow:"0 20px 50px rgba(0,0,0,0.3)" }}>
+              <div style={{ padding:"16px 20px", background:C.bg, borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div style={{ fontWeight:800, fontSize:16, color:C.acc }}>System Backup Archive</div>
+                <button onClick={() => setShowBackupList(false)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer" }}>✕</button>
+              </div>
+              <div style={{ padding:20, maxHeight:400, overflowY:"auto" }}>
+                <div style={{ fontSize:12, color:C.txtS, marginBottom:16 }}>The system maintains up to 3 automated backups. Older snapshots are rotated out automatically.</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {localBackups.length === 0 && <div style={{ textAlign:"center", padding:40, color:C.txtS }}>No local backups found.</div>}
+                  {localBackups.map(b => (
+                    <div key={b.filename} style={{ display:"flex", alignItems:"center", gap:12, padding:12, background:C.bg, borderRadius:8, border:`1px solid ${C.bdr}` }}>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedBackups.includes(b.filename)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedBackups([...selectedBackups, b.filename]);
+                          else setSelectedBackups(selectedBackups.filter(f => f !== b.filename));
+                        }}
+                      />
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:13, fontWeight:700 }}>{b.filename}</div>
+                        <div style={{ fontSize:11, color:C.txtS }}>{new Date(b.createdAt).toLocaleString()} • {(b.size / 1024).toFixed(1)} KB</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ padding:"16px 20px", borderTop:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between" }}>
+                <button onClick={() => setShowBackupList(false)} style={{ ...mkBtn("bg"), padding:"8px 16px" }}>Close</button>
+                <button 
+                  onClick={deleteSelectedBackups} 
+                  disabled={selectedBackups.length === 0}
+                  style={{ ...mkBtn(selectedBackups.length ? "danger" : "bg"), padding:"8px 16px", opacity: selectedBackups.length ? 1 : 0.5 }}
+                >
+                  Delete Selected ({selectedBackups.length})
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div style={{ borderTop:`1px solid ${C.bdr}`, paddingTop:20, marginTop:10 }}>
           <div style={{ background:C.accL, border:`1px solid ${C.accB}`, padding:16, borderRadius:8 }}>

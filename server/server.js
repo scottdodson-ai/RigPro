@@ -313,11 +313,15 @@ app.get('/api/admin/backup', authenticateToken, authenticateAdmin, (req, res) =>
   res.setHeader('Content-Type', 'application/sql');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-  const dumpCommand = `mysqldump -h ${host} -u ${user} ${database}`;
+  const dumpCommand = `mysqldump --skip-ssl -h ${host} -u ${user} ${database}`;
   const backupEnv = { ...process.env, MYSQL_PWD: password };
   const backupPath = path.join(BACKUPS_DIR, filename);
 
   const child = exec(`${dumpCommand} > ${backupPath}`, { env: backupEnv });
+
+  child.stderr.on('data', (data) => {
+    console.error(`[BACKUP] mysqldump stderr: ${data}`);
+  });
 
   child.on('exit', (code) => {
     if (code !== 0) {
@@ -357,6 +361,42 @@ app.get('/api/admin/backup', authenticateToken, authenticateAdmin, (req, res) =>
   });
 });
 
+// LIST LOCAL BACKUPS
+app.get('/api/admin/backups/list', authenticateToken, authenticateAdmin, (req, res) => {
+  try {
+    const files = fs.readdirSync(BACKUPS_DIR)
+      .filter(f => f.endsWith('.sql'))
+      .map(f => {
+        const stats = fs.statSync(path.join(BACKUPS_DIR, f));
+        return {
+          filename: f,
+          size: stats.size,
+          createdAt: stats.mtime
+        };
+      })
+      .sort((a, b) => b.createdAt - a.createdAt);
+    res.json(files);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to list backups' });
+  }
+});
+
+// DELETE BACKUPS
+app.post('/api/admin/backups/delete', authenticateToken, authenticateAdmin, (req, res) => {
+  const { filenames } = req.body;
+  if (!filenames || !Array.isArray(filenames)) return res.status(400).json({ error: 'Must provide array of filenames' });
+
+  try {
+    filenames.forEach(f => {
+      const safePath = path.join(BACKUPS_DIR, path.basename(f));
+      if (fs.existsSync(safePath)) fs.unlinkSync(safePath);
+    });
+    res.json({ message: 'Backups deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete some backups' });
+  }
+});
+
 // RESTORE DATABASE (Admin Only) - Takes a .sql file as raw text
 app.post('/api/admin/restore', authenticateToken, authenticateAdmin, async (req, res) => {
   const sql = req.body;
@@ -369,7 +409,7 @@ app.post('/api/admin/restore', authenticateToken, authenticateAdmin, async (req,
 
   console.log('[RESTORE] Starting database restoration...');
   
-  const restoreCommand = `mysql -h ${host} -u ${user} ${database}`;
+  const restoreCommand = `mysql --skip-ssl -h ${host} -u ${user} ${database}`;
   const restoreEnv = { ...process.env, MYSQL_PWD: password };
 
   const child = exec(restoreCommand, { env: restoreEnv });
@@ -405,11 +445,14 @@ app.get('/api/admin/tasks', authenticateToken, authenticateAdmin, async (req, re
 
 app.post('/api/admin/tasks', authenticateToken, authenticateAdmin, async (req, res) => {
   const { text, subnotes } = req.body;
+  if (!text) return res.status(400).json({ error: 'Task text is required' });
+
   try {
     const [result] = await db.query('INSERT INTO admin_tasks (text, subnotes) VALUES (?, ?)', [text, JSON.stringify(subnotes || [])]);
     res.json({ id: result.insertId, text, done: false, subnotes: subnotes || [] });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create task' });
+    console.error('[TASKS] Create error:', error);
+    res.status(500).json({ error: 'Failed to create task: ' + error.message });
   }
 });
 
