@@ -5987,10 +5987,17 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 
   useEffect(() => {
     if (!token) return;
+    // Load Tasks
     fetch("/api/admin/tasks", { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setTasks(Array.isArray(d) ? d : []))
       .catch(e => console.error("Load tasks err:", e));
+
+    // Load Users
+    fetch("/api/admin/users", { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setUsers(Array.isArray(d) ? d : []))
+      .catch(e => console.error("Load users err:", e));
   }, [token]);
 
   const addTask = async (e) => {
@@ -6244,8 +6251,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                     </div>
                   </div>
                 ))}
-              </div>
-            ))
+            </div>
           </div>
 
           {/* CREATE FORM & SETTINGS */}
