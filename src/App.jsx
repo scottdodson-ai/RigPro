@@ -58,6 +58,10 @@ const CUSTOMERS = [
 
 const DEFAULT_PER_DIEM = 50;
 const DEFAULT_HOTEL    = 120;
+
+// ── SYSTEM PROMPTING ──────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = "RigPro v3.1 Unified Data Source Enabled. All future features are strictly referenced against the live MySQL database. System initialized with full historical dataset.";
+
 const DEFAULT_COMPANY  = {
   name: "Shoemaker Rigging & Transport LLC",
   address: "3385 Miller Park Road · Akron, OH 44312",
@@ -513,7 +517,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
     ["jobs","Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
-  if (token && role === "admin") TABS.push(["admin", "Admin Controls"]);
+  if (token && role === "admin") TABS.push(["admin", "Admin Portal"]);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 801px)");
@@ -5890,23 +5894,35 @@ function LoginForm({ setToken, setRole, onBack }) {
 // ── ADMIN PAGE ───────────────────────────────────────────────────────────────
 function DatabaseBrowser({ token }) {
   const [selectedTable, setSelectedTable] = useState(null);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const MOCK_TABLES = { quotes: ["id","qn","client","status","total","date"], reqs: ["id","rn","company","status","date"], users: ["id","username","role"] };
-  const tables = Object.keys(MOCK_TABLES);
+  const tables = ['users', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
+
+  useEffect(() => {
+    if (!selectedTable || !token) return;
+    setLoading(true);
+    fetch(`/api/admin/tables/${selectedTable}`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { setData(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(e => { console.error("Data load err:", e); setLoading(false); });
+  }, [selectedTable, token]);
+
+  const headers = data.length > 0 ? Object.keys(data[0]) : [];
 
   return (
     <div style={{ marginTop: 40, borderTop: `1px solid ${C.bdr}`, paddingTop: 30 }}>
       <div style={{ fontSize: 20, fontWeight: 800, color: C.acc, marginBottom: 4 }}>Data Browser</div>
-      <div style={{ fontSize: 12, color: C.txtS, marginBottom: 16 }}>Connect a backend API to enable live database browsing.</div>
+      <div style={{ fontSize: 12, color: C.txtS, marginBottom: 16 }}>Live view of MySQL database records (limited to first 100 rows).</div>
       <div style={{ display: "flex", gap: 20, alignItems: "start" }}>
         <div style={{ width: 180, flexShrink: 0 }}>
           <Lbl c="TABLES" />
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {tables.map(t => (
               <button key={t}
-                style={{ ...mkBtn(selectedTable===t?"primary":"ghost"), justifyContent:"start", fontSize:12, padding:"6px 14px" }}
+                style={{ ...mkBtn(selectedTable===t?"primary":"ghost"), justifyContent:"start", fontSize:12, padding:"6px 14px", textTransform:"capitalize" }}
                 onClick={()=>setSelectedTable(t)}>
-                {t}
+                {t.replace('_',' ')}
               </button>
             ))}
           </div>
@@ -5914,17 +5930,36 @@ function DatabaseBrowser({ token }) {
         <div style={{ flex:1, minWidth:0 }}>
           {selectedTable ? (
             <Card style={{ padding:16, margin:0, border:`1.5px solid ${C.accB}`, borderRadius:10 }}>
-              <div style={{ fontWeight:800, fontSize:15, color:C.acc, marginBottom:8 }}>Table: {selectedTable}</div>
-              <div style={{ overflowX:"auto", borderRadius:6, border:`1px solid ${C.bdr}` }}>
-                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-                  <thead><tr>{MOCK_TABLES[selectedTable].map(h=><th key={h} style={{ ...thS, background:C.bg, whiteSpace:"nowrap" }}>{h}</th>)}</tr></thead>
-                  <tbody><tr><td colSpan={MOCK_TABLES[selectedTable].length} style={{ ...tdS, textAlign:"center", color:C.txtS, padding:24 }}>Connect a backend to view live data.</td></tr></tbody>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                <div style={{ fontWeight:800, fontSize:15, color:C.acc }}>Table: {selectedTable}</div>
+                {loading && <div style={{ fontSize:11, color:C.acc, fontWeight:700 }}>⏳ Loading records...</div>}
+              </div>
+              <div style={{ overflowX:"auto", borderRadius:6, border:`1px solid ${C.bdr}`, background:C.sur }}>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
+                  <thead style={{ position:"sticky", top:0, zIndex:10 }}>
+                    <tr style={{ background:C.bg }}>
+                      {headers.map(h=><th key={h} style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}` }}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.length > 0 ? data.map((row, i) => (
+                      <tr key={i} style={{ borderBottom:`1px solid ${C.bdr}`, background:i%2===0?"transparent":"#fbfbfb" }}>
+                        {headers.map(h => (
+                          <td key={h} style={{ ...tdS, padding:"8px 12px", whiteSpace:"nowrap", maxWidth:250, overflow:"hidden", textOverflow:"ellipsis" }}>
+                            {row[h] === null ? <em style={{ color:C.txtS }}>null</em> : String(row[h])}
+                          </td>
+                        ))}
+                      </tr>
+                    )) : !loading && (
+                      <tr><td colSpan={10} style={{ ...tdS, textAlign:"center", padding:40, color:C.txtS }}>No records found in this table.</td></tr>
+                    )}
+                  </tbody>
                 </table>
               </div>
             </Card>
           ) : (
             <div style={{ height:120, display:"flex", alignItems:"center", justifyContent:"center", background:"#fafafa", borderRadius:10, border:`2px dashed ${C.bdr}`, color:C.txtS, fontSize:13 }}>
-              Select a table to preview its structure
+              Select a table from the sidebar to preview live data
             </div>
           )}
         </div>
@@ -5947,44 +5982,192 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
   };
   const [newUser, setNewUser] = useState({ username: "", password: "", role: "estimator", email: "" });
   const [formErr, setFormErr] = useState("");
-  const [todos, setTodos] = useState(() => JSON.parse(localStorage.getItem("admin_todos") || "[]"));
-  const [newTodo, setNewTodo] = useState("");
+  const [tasks, setTasks] = useState([]);
+  const [newTask, setNewTask] = useState("");
 
   useEffect(() => {
-    localStorage.setItem("admin_todos", JSON.stringify(todos));
-  }, [todos]);
+    if (!token) return;
+    fetch("/api/admin/tasks", { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setTasks(Array.isArray(d) ? d : []))
+      .catch(e => console.error("Load tasks err:", e));
+  }, [token]);
 
-  const addTodo = (e) => {
+  const addTask = async (e) => {
     e.preventDefault();
-    if (!newTodo.trim()) return;
-    setTodos([...todos, { id: Date.now(), text: newTodo, done: false }]);
-    setNewTodo("");
+    if (!newTask.trim()) return;
+    try {
+      const res = await fetch("/api/admin/tasks", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ text: newTask, subnotes: [] })
+      });
+      if (!res.ok) throw new Error("Add task failed");
+      const saved = await res.json();
+      setTasks([saved, ...tasks]);
+      setNewTask("");
+    } catch (err) { alert(err.message); }
   };
 
-  const toggleTodo = (id) => {
-    setTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const toggleTask = async (id, done) => {
+    try {
+      await fetch(`/api/admin/tasks/${id}`, {
+        method: "PATCH",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ done: !done })
+      });
+      setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    } catch (err) { console.error(err); }
   };
 
-  const delTodo = (id) => {
-    setTodos(todos.filter(t => t.id !== id));
+  const delTask = async (id) => {
+    if (!window.confirm("Delete task?")) return;
+    try {
+      await fetch(`/api/admin/tasks/${id}`, {
+        method: "DELETE",
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setTasks(tasks.filter(t => t.id !== id));
+    } catch (err) { console.error(err); }
+  };
+
+  const addSubnote = async (id, note) => {
+    if (!note.trim()) return;
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const newSubnotes = [...task.subnotes, note];
+    try {
+      await fetch(`/api/admin/tasks/${id}`, {
+        method: "PATCH",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ subnotes: newSubnotes })
+      });
+      setTasks(tasks.map(t => t.id === id ? { ...t, subnotes: newSubnotes } : t));
+    } catch (err) { console.error(err); }
+  };
+
+  const delSubnote = async (taskId, subIdx) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const newSubnotes = task.subnotes.filter((_, i) => i !== subIdx);
+    try {
+      await fetch(`/api/admin/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ subnotes: newSubnotes })
+      });
+      setTasks(tasks.map(t => t.id === taskId ? { ...t, subnotes: newSubnotes } : t));
+    } catch (err) { console.error(err); }
   };
 
 
 
 
-  const handleCreateUser = (e) => {
+  const handleCreateUser = async (e) => {
     e.preventDefault();
     setFormErr("");
     if (!newUser.username.trim() || !newUser.password.trim()) { setFormErr("Username and password are required."); return; }
-    setUsers(prev => [...prev, { id:Date.now(), username:newUser.username, role:newUser.role, email:newUser.email }]);
-    setNewUser({ username:"", password:"", role:"estimator", email:"" });
+    
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(newUser)
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to create user");
+      }
+      const created = await res.json();
+      setUsers(prev => [...prev, created]);
+      setNewUser({ username:"", password:"", role:"estimator", email:"" });
+    } catch (err) {
+      setFormErr(err.message);
+    }
   };
 
   const updateUserRole = (id, role) => setUsers(prev => prev.map(u=>u.id===id?{...u,role}:u));
 
-  const deleteUser = (id) => {
+  const deleteUser = async (id) => {
     if (!window.confirm("Delete this user?")) return;
-    setUsers(prev => prev.filter(u=>u.id!==id));
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "DELETE",
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      setUsers(prev => prev.filter(u=>u.id!==id));
+    } catch (err) {
+      alert("Failed to delete user");
+    }
+  };
+
+  const restoreRef = useRef(null);
+
+  const handleRestore = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const confirmed = window.confirm("WARNING: This will overwrite ALL current database records. This action is irreversible. Proceed?");
+    if (!confirmed) return;
+    const reallySure = window.confirm("Last chance: Are you REALLY sure you want to restore this database snapshot?");
+    if (!reallySure) return;
+
+    try {
+      const sql = await file.text();
+      const res = await fetch("/api/admin/restore", {
+        method: "POST",
+        headers: { 
+          'Content-Type': 'application/sql',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: sql
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Restore failed");
+      }
+      alert("Database restored successfully. The application will now reload.");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to restore database: " + err.message);
+    } finally {
+      e.target.value = ""; // Clear input
+    }
+  };
+
+  const handleBackup = async () => {
+    try {
+      const res = await fetch("/api/admin/backup", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Backup failed");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const disposition = res.headers.get('Content-Disposition');
+      let filename = `rigpro_backup_${new Date().toISOString().slice(0,10)}.sql`;
+      if (disposition && disposition.indexOf('attachment') !== -1) {
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches != null && matches[1]) { 
+              filename = matches[1].replace(/['"]/g, '');
+          }
+      }
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to download database backup.");
+    }
   };
 
   return (
@@ -5992,7 +6175,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={{ fontSize:22, fontWeight:800, color:C.acc, marginBottom:4 }}>Admin Control Panel</div>
+            <div style={{ fontSize:22, fontWeight:800, color:C.acc, marginBottom:4 }}>Admin Portal</div>
             <div style={{ fontSize:14, color:C.txtM, marginBottom:20 }}>System oversight and user management</div>
           </div>
           <button 
@@ -6081,7 +6264,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               <form onSubmit={handleCreateUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div>
                   <Lbl c="USERNAME"/>
-                  <input style={inp} value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} required placeholder="Enter username..."/>
+                  <input style={inp} value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} required placeholder="Enter unique username" autoComplete="new-password"/>
                 </div>
                 <div>
                   <Lbl c="EMAIL ADDRESS"/>
@@ -6089,7 +6272,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                 </div>
                 <div>
                   <Lbl c="PASSWORD"/>
-                  <input style={inp} type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} required placeholder="Enter password..."/>
+                  <input style={inp} type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} required placeholder="Enter unique password" autoComplete="new-password"/>
                 </div>
                 <div>
                   <Lbl c="ROLE"/>
@@ -6106,29 +6289,88 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 
             <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20, marginTop:10 }}>
               <Sec c="Admin Tasks & Todos"/>
-              <form onSubmit={addTodo} style={{ display:"flex", gap:8, marginBottom:16 }}>
+              <form onSubmit={addTask} style={{ display:"flex", gap:8, marginBottom:16 }}>
                 <input 
                   style={{ ...inp, flex:1 }} 
-                  value={newTodo} 
-                  onChange={e=>setNewTodo(e.target.value)} 
-                  placeholder="What needs to be done?"
+                  value={newTask} 
+                  onChange={e=>setNewTask(e.target.value)} 
+                  placeholder="Master task name..."
                 />
-                <button type="submit" style={{ ...mkBtn("blue"), padding:"0 16px" }}>Add</button>
+                <button type="submit" style={{ ...mkBtn("blue"), padding:"0 16px" }}>Add Task</button>
               </form>
-              <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:200, overflowY:"auto" }}>
-                {todos.length === 0 && <div style={{ textAlign:"center", padding:10, color:C.txtS, fontSize:13 }}>No pending tasks.</div>}
-                {todos.map(t => (
-                  <div key={t.id} style={{ display:"flex", alignItems:"center", gap:10, background:t.done ? C.bg : "transparent", padding:8, borderRadius:6, border:`1px solid ${t.done ? C.bdr : "transparent"}` }}>
-                    <input 
-                      type="checkbox" 
-                      checked={t.done} 
-                      onChange={() => toggleTodo(t.id)} 
-                      style={{ cursor:"pointer", width:16, height:16 }}
-                    />
-                    <span style={{ flex:1, fontSize:13, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
-                    <button onClick={() => delTodo(t.id)} style={{ padding:0, border:"none", background:"transparent", color:C.txtS, cursor:"pointer", fontSize:12 }}></button>
+              <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:400, overflowY:"auto" }}>
+                {tasks.length === 0 && <div style={{ textAlign:"center", padding:10, color:C.txtS, fontSize:13 }}>No tasks found.</div>}
+                {tasks.map(t => (
+                  <div key={t.id} style={{ background:t.done ? C.bg : "transparent", padding:12, borderRadius:8, border:`1px solid ${C.bdr}` }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: t.subnotes?.length ? 8 : 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={t.done} 
+                        onChange={() => toggleTask(t.id, t.done)} 
+                        style={{ cursor:"pointer", width:16, height:16 }}
+                      />
+                      <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+                      <button 
+                        onClick={() => { const n = prompt("Enter subnote/detail:"); if(n) addSubnote(t.id, n); }}
+                        style={{ background:"none", border:"none", color:C.blue, fontSize:11, cursor:"pointer", fontWeight:700 }}
+                      >+ Detail</button>
+                      <button onClick={() => delTask(t.id)} style={{ padding:0, border:"none", background:"transparent", color:C.red, cursor:"pointer", fontSize:12 }}>✕</button>
+                    </div>
+                    {t.subnotes && t.subnotes.length > 0 && (
+                      <div style={{ paddingLeft:26, display:"flex", flexDirection:"column", gap:4 }}>
+                        {t.subnotes.map((sub, idx) => (
+                          <div key={idx} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:C.txtM }}>
+                            <span style={{ color:C.acc }}>•</span>
+                            <span style={{ flex:1 }}>{sub}</span>
+                            <button onClick={() => delSubnote(t.id, idx)} style={{ background:"none", border:"none", color:C.txtS, cursor:"pointer", fontSize:10 }}>delete</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20, marginTop:10 }}>
+              <Sec c="Database Maintenance"/>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
+                <div style={{ fontSize:28 }}>📦</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Full System Backup</div>
+                  <div style={{ fontSize:12, color:C.txtM, marginBottom:4, lineHeight:1.4 }}>Generates a complete MySQL dump with a date-time stamp. Recommended before making large configuration changes.</div>
+                  <div style={{ fontSize:11, color:C.txtS, marginBottom:12 }}>Includes: Users, Quotes, Customers, and Equipment rates.</div>
+                  <button 
+                    style={{ ...mkBtn("won"), padding:"10px 18px", fontSize:13, gap:8 }}
+                    onClick={handleBackup}
+                  >
+                    📥 Download SQL Backup
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20, marginTop:10 }}>
+              <Sec c="System Recovery"/>
+              <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
+                <div style={{ fontSize:28 }}>🛠️</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Restore Database</div>
+                  <div style={{ fontSize:12, color:C.red, marginBottom:8, lineHeight:1.4, fontWeight:600 }}>CAUTION: This will overwrite EVERYTHING. Only use valid RigPro backup files.</div>
+                  <input 
+                    type="file" 
+                    accept=".sql" 
+                    ref={restoreRef} 
+                    style={{ display:"none" }} 
+                    onChange={handleRestore}
+                  />
+                  <button 
+                    style={{ ...mkBtn("red"), padding:"10px 18px", fontSize:13, gap:8 }}
+                    onClick={() => restoreRef.current?.click()}
+                  >
+                    🚀 Upload & Restore Snapshot
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -6157,14 +6399,10 @@ export default function App() {
   const [role,       setRole]       = useState(localStorage.getItem("role") || "user");
   const [view,       setView]       = useState("landing");
   const [rfqStageFilter, setRfqStageFilter] = useState("all");
-  const [appUsers,   setAppUsers]   = useState([
-    { id:1, username:"Dan M",    role:"estimator", email:"dan.m@shoemakerrigging.com"   },
-    { id:2, username:"Sarah K",  role:"estimator", email:"sarah.k@shoemakerrigging.com" },
-    { id:3, username:"Mike R",   role:"estimator", email:"mike.r@shoemakerrigging.com"  },
-    { id:4, username:"Admin",    role:"manager",   email:"admin@shoemakerrigging.com"   },
-  ]);
+  const [appUsers,   setAppUsers]   = useState([]);
   const [quotes,     setQuotes]     = useState(SAMPLE_QUOTES);
   const [reqs,       setReqs]       = useState(SAMPLE_REQS);
+  const [dbStatus,   setDbStatus]   = useState("Local Mode");
   const [active,     setActive]     = useState(null);
   const [selC,       setSelC]       = useState(null);
   const [search,     setSearch]     = useState("");
@@ -6210,6 +6448,14 @@ export default function App() {
   const [liftTonThreshold, setLiftTonThreshold] = useState(10);
   const [jobFolders, setJobFolders] = useState({});
   const [showJFM,    setShowJFM]    = useState(null);
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  useEffect(() => {
+    if (dbStatus === "MySQL Live") {
+      setShowSystemPrompt(true);
+      const timer = setTimeout(() => setShowSystemPrompt(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [dbStatus]);
 
   // Reset filters when navigating to the main customers list (from another tab or detail view)
   useEffect(() => {
@@ -6221,6 +6467,54 @@ export default function App() {
   const [notifs,     setNotifs]     = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const fileRef = useRef();
+
+  // ── DATABASE SYNCHRONIZATION ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!token) return;
+
+    const loadData = async () => {
+      try {
+        const resp = await fetch("/api/data", { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        if (data.quotes && data.quotes.length > 0) {
+          setQuotes(data.quotes);
+          if (data.rfqs) setReqs(data.rfqs);
+          if (data.customers) setCustData(data.customers);
+          setDbStatus("MySQL Live");
+        } else if (role === "admin" && !localStorage.getItem("rigpro_db_seeded")) {
+          // Automatic system prompting to migrate data if DB is empty
+          console.log("[System Prompt] Migrating local data to MySQL...");
+          setDbStatus("Initializing MySQL...");
+          const initRes = await fetch("/api/admin/init", {
+            method: "POST",
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify({ 
+              quotes: SAMPLE_QUOTES, 
+              rfqs: SAMPLE_REQS, 
+              customers: INIT_CUST_DATA 
+            })
+          });
+          if (initRes.ok) {
+            localStorage.setItem("rigpro_db_seeded", "true");
+            const r2 = await fetch("/api/data", { headers: { 'Authorization': `Bearer ${token}` } });
+            const d2 = await r2.json();
+            setQuotes(d2.quotes);
+            setReqs(d2.rfqs);
+            setCustData(d2.customers);
+            setDbStatus("MySQL Live");
+          }
+        }
+      } catch (e) {
+        console.error("DB Sync error:", e);
+      }
+    };
+    loadData();
+  }, [token, role]);
 
   const stats = useMemo(() => {
     const won    = quotes.filter(q => q.status==="Won");
@@ -6429,7 +6723,7 @@ export default function App() {
         onClick={() => setView("admin")} 
         style={{ ...mkBtn("ghost"), position: "fixed", top: 12, left: 16, zIndex: 100, color: "#fff", background: "rgba(15, 23, 42, 0.8)", borderColor: "#475569" }}
       >
-        ← Back to Admin
+        ← Back to Admin Portal
       </button>
       <InvestorDashboard />
     </div>
@@ -6439,6 +6733,11 @@ export default function App() {
   // ── DASHBOARD ──────────────────────────────────────────────────────────────
   if (view==="dash") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize:14 }}>
+      {showSystemPrompt && (
+        <div style={{ position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)", zIndex: 1000, background: C.acc, color: "#fff", padding: "10px 20px", borderRadius: 30, fontWeight: 700, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 18 }}>💡</span> {SYSTEM_PROMPT}
+        </div>
+      )}
       {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} quotes={quotes} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={quotes.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal

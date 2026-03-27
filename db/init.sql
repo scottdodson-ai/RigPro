@@ -1,19 +1,42 @@
 CREATE DATABASE IF NOT EXISTS rigpro;
 USE rigpro;
 
+DROP TABLE IF EXISTS admin_tasks;
+DROP TABLE IF EXISTS job_folders;
+DROP TABLE IF EXISTS rfqs;
+DROP TABLE IF EXISTS quotes;
+DROP TABLE IF EXISTS customer_contacts;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS base_labor;
+DROP TABLE IF EXISTS equipment;
+DROP TABLE IF EXISTS users;
+
 -- 1. Users table for login
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100),
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 2. Admin Tasks table
+CREATE TABLE IF NOT EXISTS admin_tasks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    text VARCHAR(255) NOT NULL,
+    done BOOLEAN DEFAULT FALSE,
+    subnotes JSON, -- Array of strings or objects
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Note: The hashes below are for the password: 'pass'
-INSERT INTO users (username, password_hash, role) VALUES 
-('scott', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
-('admin', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin');
+INSERT INTO users (username, email, password_hash, role) VALUES 
+('scott', 'scott@shoemakerrigging.com', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
+('admin', 'admin@shoemakerrigging.com', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
+('Dan M',   'dan.m@shoemakerrigging.com',   '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
+('Sarah K', 'sarah.k@shoemakerrigging.com', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
+('Mike R',  'mike.r@shoemakerrigging.com',  '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator');
 
 -- 2. Base Labor Rates
 CREATE TABLE IF NOT EXISTS base_labor (
@@ -43,33 +66,33 @@ CREATE TABLE IF NOT EXISTS equipment (
 );
 
 INSERT INTO equipment (code, category, name, capacity, daily_rate, daily_cost) VALUES
-('242', 'Forklift', '2000 Gradall 534D-9', '9,000 lb', 790.00),
-('300', 'Forklift', 'Caterpillar GC35K', '15,500 lb', 840.00),
-('301', 'Forklift', 'HysterS80XLBCS', '8,000 lb', 530.00),
-('302', 'Forklift', 'Cat125D 12,500 LB Forklift', '12,500 lb', 850.00),
-('308', 'Forklift', 'Cat T150D 15,000 LB Forklift', '15,000 lb', 950.00),
-('320', 'Forklift', 'Royal T300B 30,000 lb', '30,000 lb', 1100.00),
-('322', 'Forklift', 'Rigger''s Special 80-100k', '100,000 lb', 1200.00),
-('237', 'Aerial Lift', 'Skyjack SJ3226', '–', 250.00),
-('251', 'Aerial Lift', 'JLG 450AJ Lift', '–', 525.00),
-('254', 'Aerial Lift', 'JLG 600S Boom', '–', 650.00),
-('255', 'Aerial Lift', '2013 Skyjack SJ4632', '–', 375.00),
-('259', 'Aerial Lift', '2015 Skyjack SJ3219', '–', 155.00),
-('250', 'Crane', '2005 Broderson IC-200-3F 30-Ton Carry Deck', '30,000 lb', 1000.00),
-('257', 'Crane', 'Broderson IC80-2D 17,000 lb Carry Deck', '17,000 lb', 750.00),
-('RP8x10', 'Misc', '8''x10'' Steel Road Plates', '–', 90.00),
-('RP4x10', 'Misc', '4''x10'' Steel Road Plates', '–', 90.00),
-('RP8x12', 'Misc', '8''x12'' Steel Road Plates', '–', 90.00),
-('RP8x20', 'Misc', '8''x20'' Steel Road Plates', '–', 100.00),
-('GANG', 'Tools', 'Gang Box Charge', '–', 50.00),
-('CONEX', 'Tools', 'Conex Job Trailer', '–', 50.00),
-('TORCH', 'Tools', 'Torch Outfit', '–', 50.00),
-('100D', 'Truck', '2007 Inter 9200 Tractor', '–', 1000.00),
-('110D', 'Truck', '2008 Landall Trailer', '–', 1000.00),
-('111D', 'Truck', '1999 Fontaine Flatbed Trailer', '–', 1000.00),
-('SEMI', 'Truck', 'Semi Truck and Trailer', '–', 1000.00),
-('CONE', 'Truck', 'Semi Truck and Conestoga', '–', 1500.00),
-('PICK', 'Truck', 'Pickup Truck', '–', 125.00);
+('242', 'Forklift', '2000 Gradall 534D-9', '9,000 lb', 790.00, 0.00),
+('300', 'Forklift', 'Caterpillar GC35K', '15,500 lb', 840.00, 0.00),
+('301', 'Forklift', 'HysterS80XLBCS', '8,000 lb', 530.00, 0.00),
+('302', 'Forklift', 'Cat125D 12,500 LB Forklift', '12,500 lb', 850.00, 0.00),
+('308', 'Forklift', 'Cat T150D 15,000 LB Forklift', '15,000 lb', 950.00, 0.00),
+('320', 'Forklift', 'Royal T300B 30,000 lb', '30,000 lb', 1100.00, 0.00),
+('322', 'Forklift', 'Rigger''s Special 80-100k', '100,000 lb', 1200.00, 0.00),
+('237', 'Aerial Lift', 'Skyjack SJ3226', '–', 250.00, 0.00),
+('251', 'Aerial Lift', 'JLG 450AJ Lift', '–', 525.00, 0.00),
+('254', 'Aerial Lift', 'JLG 600S Boom', '–', 650.00, 0.00),
+('255', 'Aerial Lift', '2013 Skyjack SJ4632', '–', 375.00, 0.00),
+('259', 'Aerial Lift', '2015 Skyjack SJ3219', '–', 155.00, 0.00),
+('250', 'Crane', '2005 Broderson IC-200-3F 30-Ton Carry Deck', '30,000 lb', 1000.00, 0.00),
+('257', 'Crane', 'Broderson IC80-2D 17,000 lb Carry Deck', '17,000 lb', 750.00, 0.00),
+('RP8x10', 'Misc', '8''x10'' Steel Road Plates', '–', 90.00, 0.00),
+('RP4x10', 'Misc', '4''x10'' Steel Road Plates', '–', 90.00, 0.00),
+('RP8x12', 'Misc', '8''x12'' Steel Road Plates', '–', 90.00, 0.00),
+('RP8x20', 'Misc', '8''x20'' Steel Road Plates', '–', 100.00, 0.00),
+('GANG', 'Tools', 'Gang Box Charge', '–', 50.00, 0.00),
+('CONEX', 'Tools', 'Conex Job Trailer', '–', 50.00, 0.00),
+('TORCH', 'Tools', 'Torch Outfit', '–', 50.00, 0.00),
+('100D', 'Truck', '2007 Inter 9200 Tractor', '–', 1000.00, 0.00),
+('110D', 'Truck', '2008 Landall Trailer', '–', 1000.00, 0.00),
+('111D', 'Truck', '1999 Fontaine Flatbed Trailer', '–', 1000.00, 0.00),
+('SEMI', 'Truck', 'Semi Truck and Trailer', '–', 1000.00, 0.00),
+('CONE', 'Truck', 'Semi Truck and Conestoga', '–', 1500.00, 0.00),
+('PICK', 'Truck', 'Pickup Truck', '–', 125.00, 0.00);
 
 -- 4. Customers
 CREATE TABLE IF NOT EXISTS customers (
@@ -147,4 +170,33 @@ INSERT INTO quotes (id, quote_number, customer_name, job_site, description, date
 (4, 'RIG-2024-002', 'Beacon Manufacturing Co.', '500 Commerce Blvd, Dayton, OH 45402', 'Hydraulic press installation', '2024-12-01', 'Submitted', 'Contract', 142500.00, 0, 'Sarah K', '', NULL, NULL, false),
 (5, 'RIG-2024-011', 'Beacon Manufacturing Co.', '500 Commerce Blvd, Dayton, OH 45402', 'CNC lathe bank relocation – Bldg B', '2024-09-15', 'Won', 'Contract', 71600.00, 0.07, 'Sarah K', 'J-2024-095', '2026-03-24', '2026-03-27', true),
 (6, 'RIG-2025-003', 'Beacon Manufacturing Co.', '500 Commerce Blvd, Dayton, OH 45402', 'Transformer set – electrical bay', '2025-01-22', 'Draft', 'T&M', 48300.00, 0, 'Mike R', '', NULL, NULL, false);
+
+-- 7. RFQs (Requests for Quote)
+CREATE TABLE IF NOT EXISTS rfqs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rfq_number VARCHAR(20) NOT NULL,
+    company VARCHAR(100) NOT NULL,
+    requester VARCHAR(100),
+    email VARCHAR(100),
+    phone VARCHAR(50),
+    job_site VARCHAR(255),
+    description TEXT,
+    notes TEXT,
+    date DATE,
+    status VARCHAR(50),
+    sales_assoc VARCHAR(50)
+);
+
+INSERT INTO rfqs (rfq_number, company, requester, email, phone, job_site, description, notes, date, status, sales_assoc) VALUES
+('REQ-2025-001', 'Apex Industrial LLC', 'James Whitfield', 'j.whitfield@apexind.com', '330-555-0182', '1200 Industrial Pkwy, Akron, OH 44312', 'Relocate 40-ton hydraulic press from Bay 3 to Bay 7, 200ft.', '', '2025-01-06', 'Quoted', 'Dan M'),
+('REQ-2025-002', 'Beacon Manufacturing Co.', 'Carolyn Marsh', 'c.marsh@beaconmfg.com', '937-555-0244', '500 Commerce Blvd, Dayton, OH 45402', 'Install transformer 15,000 lbs, second floor.', 'Need quote by end of week.', '2025-01-15', 'Quoted', 'Mike R'),
+('REQ-2026-011', 'Quartz Industrial Services', 'Steve Mallory', 's.mallory@quartzind.com', '419-555-1610', '600 Industrial Ct, Mansfield, OH 44903', 'Cooling tower pump skid replacement.', '', '2026-03-19', 'New', '');
+
+-- 8. Job Folders
+CREATE TABLE IF NOT EXISTS job_folders (
+    rfq_id INT PRIMARY KEY,
+    folder_data JSON,
+    FOREIGN KEY (rfq_id) REFERENCES rfqs(id) ON DELETE CASCADE
+);
+
 
