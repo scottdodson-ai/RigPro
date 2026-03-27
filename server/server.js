@@ -168,18 +168,7 @@ app.get('/api/admin/tables', authenticateToken, authenticateAdmin, async (req, r
   }
 });
 
-app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const table = req.params.table;
-  // Simple check to prevent basic SQL injection on table name
-  if (!/^[a-zA-Z0-9_]+$/.test(table)) return res.status(400).json({ error: 'Invalid table name' });
 
-  try {
-    const [rows] = await db.query(`SELECT * FROM ${table} LIMIT 500`);
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch table data' });
-  }
-});
 
 // GET ALL USERS (Admin Only)
 app.get('/api/admin/users', authenticateToken, authenticateAdmin, async (req, res) => {
@@ -221,7 +210,7 @@ app.delete('/api/admin/users/:id', authenticateToken, authenticateAdmin, async (
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
   const table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
@@ -330,15 +319,15 @@ app.get('/api/admin/backup', authenticateToken, authenticateAdmin, (req, res) =>
     } else {
       console.log(`[BACKUP] Backup saved to disk: ${filename}`);
       
-      // ROTATION: Keep latest 3 only
+      // ROTATION: Keep latest 5 only
       try {
         const files = fs.readdirSync(BACKUPS_DIR)
           .filter(f => f.endsWith('.sql'))
           .map(f => ({ name: f, time: fs.statSync(path.join(BACKUPS_DIR, f)).mtime }))
           .sort((a, b) => b.time - a.time);
 
-        if (files.length > 3) {
-          files.slice(3).forEach(f => {
+        if (files.length > 5) {
+          files.slice(5).forEach(f => {
             fs.unlinkSync(path.join(BACKUPS_DIR, f.name));
             console.log(`[BACKUP] Rotated (deleted) old backup: ${f.name}`);
           });
@@ -500,6 +489,46 @@ const initAdmin = async () => {
     console.error('Failed to initialize admin account', error);
   }
 };
+
+// RESTORE FROM LOCAL BACKUP
+app.post('/api/admin/restore-local', authenticateToken, authenticateAdmin, async (req, res) => {
+  const { filename } = req.body;
+  if (!filename) return res.status(400).json({ error: 'Filename is required' });
+
+  const safePath = path.join(BACKUPS_DIR, path.basename(filename));
+  if (!fs.existsSync(safePath)) return res.status(404).json({ error: 'Backup file not found' });
+
+  const host = process.env.DB_HOST || 'localhost';
+  const user = process.env.DB_USER || 'root';
+  const password = process.env.DB_PASSWORD || 'password123';
+  const database = process.env.DB_NAME || 'rigpro';
+
+  console.log(`[RESTORE] Restoring from local file: ${filename}`);
+  
+  const restoreCommand = `mysql --skip-ssl -h ${host} -u ${user} ${database}`;
+  const restoreEnv = { ...process.env, MYSQL_PWD: password };
+
+  try {
+    const child = exec(restoreCommand, { env: restoreEnv });
+    const script = fs.readFileSync(safePath, 'utf8');
+    
+    child.stdin.write(script);
+    child.stdin.end();
+
+    child.on('exit', (code) => {
+      if (code !== 0) {
+        console.error(`[RESTORE] Restore failed with code ${code}`);
+        if (!res.headersSent) res.status(500).json({ error: 'Restore failed' });
+      } else {
+        console.log('[RESTORE] Database restored successfully');
+        res.json({ message: 'Database restored successfully' });
+      }
+    });
+  } catch (error) {
+    console.error('[RESTORE] Error:', error);
+    res.status(500).json({ error: 'Failed to initiate restore' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

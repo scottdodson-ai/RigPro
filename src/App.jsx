@@ -5893,7 +5893,7 @@ function LoginForm({ setToken, setRole, onBack }) {
 
 // ── ADMIN PAGE ───────────────────────────────────────────────────────────────
 function DatabaseBrowser({ token }) {
-  const [selectedTable, setSelectedTable] = useState(null);
+  const [selectedTable, setSelectedTable] = useState("users");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -6102,41 +6102,6 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
     }
   };
 
-  const restoreRef = useRef(null);
-
-  const handleRestore = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const confirmed = window.confirm("WARNING: This will overwrite ALL current database records. This action is irreversible. Proceed?");
-    if (!confirmed) return;
-    const reallySure = window.confirm("Last chance: Are you REALLY sure you want to restore this database snapshot?");
-    if (!reallySure) return;
-
-    try {
-      const sql = await file.text();
-      const res = await fetch("/api/admin/restore", {
-        method: "POST",
-        headers: { 
-          'Content-Type': 'application/sql',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: sql
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Restore failed");
-      }
-      alert("Database restored successfully. The application will now reload.");
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to restore database: " + err.message);
-    } finally {
-      e.target.value = ""; // Clear input
-    }
-  };
-
   const handleBackup = async () => {
     try {
       const res = await fetch("/api/admin/backup", {
@@ -6194,6 +6159,38 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       setSelectedBackups([]);
       loadBackups();
     } catch (e) { alert("Delete failed"); }
+  };
+
+  const restoreLocalBackup = async (filename) => {
+    const confirmed = window.confirm(`DANGER: Restore system to snapshot generated on ${new Date().toLocaleString()}?\n\nThis will completely overwrite all current database records.`);
+    if (!confirmed) return;
+    const secondConfirm = window.confirm("Are you absolutely certain? This action is irreversible.");
+    if (!secondConfirm) return;
+
+    try {
+      const res = await fetch("/api/admin/restore-local", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ filename })
+      });
+      
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Server returned non-JSON response (${res.status}): ${text.slice(0, 100)}`);
+      }
+
+      if (!res.ok) throw new Error(data.error || "Restore failed");
+      
+      alert("Database restored successfully. The application will now reload.");
+      window.location.reload();
+    } catch (e) { 
+      console.error(e);
+      alert("Restore failed: " + e.message); 
+    }
   };
 
   return (
@@ -6370,15 +6367,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                     style={{ ...mkBtn("won"), padding:"10px 18px", fontSize:13, gap:8 }}
                     onClick={handleBackup}
                   >
-                    📥 Download SQL Backup
+                    📥 Create Database Backup
                   </button>
 
-                  <button 
-                    style={{ ...mkBtn("bg"), border:`1px solid ${C.bdr}`, padding:"10px 18px", fontSize:13, marginTop:10, color:C.txtM, width:"100%", justifyContent:"center" }}
-                    onClick={() => { setShowBackupList(true); loadBackups(); }}
-                  >
-                    📂 Manage Local Archive
-                  </button>
+
                 </div>
               </div>
             </div>
@@ -6388,20 +6380,13 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
                 <div style={{ fontSize:28 }}>🛠️</div>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Restore Database</div>
-                  <div style={{ fontSize:12, color:C.red, marginBottom:8, lineHeight:1.4, fontWeight:600 }}>CAUTION: This will overwrite EVERYTHING. Only use valid RigPro backup files.</div>
-                  <input 
-                    type="file" 
-                    accept=".sql" 
-                    ref={restoreRef} 
-                    style={{ display:"none" }} 
-                    onChange={handleRestore}
-                  />
+                  <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Restore from Archive</div>
+                  <div style={{ fontSize:12, color:C.red, marginBottom:8, lineHeight:1.4, fontWeight:600 }}>CAUTION: Restoration will overwrite ALL live data. Choose a recovery point carefully.</div>
                   <button 
-                    style={{ ...mkBtn("red"), padding:"10px 18px", fontSize:13, gap:8 }}
-                    onClick={() => restoreRef.current?.click()}
+                    style={{ ...mkBtn("danger"), padding:"12px 20px", fontSize:14, gap:8, fontWeight:800 }}
+                    onClick={() => { setShowBackupList(true); loadBackups(); }}
                   >
-                    🚀 Upload & Restore Snapshot
+                    🕒 Browse Recovery Points
                   </button>
                 </div>
               </div>
@@ -6422,7 +6407,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                 <button onClick={() => setShowBackupList(false)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer" }}>✕</button>
               </div>
               <div style={{ padding:20, maxHeight:400, overflowY:"auto" }}>
-                <div style={{ fontSize:12, color:C.txtS, marginBottom:16 }}>The system maintains up to 3 automated backups. Older snapshots are rotated out automatically.</div>
+                <div style={{ fontSize:12, color:C.txtS, marginBottom:16 }}>The system maintains up to 5 automated backups. Older snapshots are rotated out automatically.</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                   {localBackups.length === 0 && <div style={{ textAlign:"center", padding:40, color:C.txtS }}>No local backups found.</div>}
                   {localBackups.map(b => (
@@ -6436,9 +6421,15 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                         }}
                       />
                       <div style={{ flex:1 }}>
-                        <div style={{ fontSize:13, fontWeight:700 }}>{b.filename}</div>
-                        <div style={{ fontSize:11, color:C.txtS }}>{new Date(b.createdAt).toLocaleString()} • {(b.size / 1024).toFixed(1)} KB</div>
+                        <div style={{ fontSize:14, fontWeight:800, color:C.acc }}>{new Date(b.createdAt).toLocaleDateString()} at {new Date(b.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                        <div style={{ fontSize:10, color:C.txtS, fontFamily:"monospace" }}>ID: {b.filename} • {(b.size / 1024).toFixed(1)} KB</div>
                       </div>
+                      <button 
+                        onClick={() => restoreLocalBackup(b.filename)} 
+                        style={{ ...mkBtn("danger"), padding:"6px 12px", fontSize:11, borderRadius:6 }}
+                      >
+                        Restore
+                      </button>
                     </div>
                   ))}
                 </div>
