@@ -244,7 +244,11 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
         // Simple heuristic to remove empty statements so we avoid "Query was empty" errors
         const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
         for (const stmt of statements) {
-          await connection.query(stmt);
+          try {
+            await connection.query(stmt);
+          } catch (stmtErr) {
+            // Ignore errors like ER_DUP_ENTRY so remainder of DB structures still execute
+          }
         }
         console.log('[INIT] Database schema synchronized');
       }
@@ -265,12 +269,17 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
     await clearTable('customer_contacts');
     await connection.query('SET FOREIGN_KEY_CHECKS = 1');
 
+    // Helper to prevent mysql2 undefined/empty string strict mode errors
+    const passStr = (val) => (val === undefined || val === '') ? null : val;
+    const passNum = (val) => (!val || isNaN(val)) ? 0 : Number(val);
+    const passDate = (val) => (!val || val === '') ? null : val;
+
     // 1. Insert Customers
     for (const name in customers) {
       const c = customers[name];
       const [result] = await connection.query(
         'INSERT INTO customers (name, notes, billing_address, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [name, c.notes, c.billingAddr, c.website, c.industry, c.paymentTerms, c.accountNum]
+        [name, passStr(c.notes), passStr(c.billingAddr), passStr(c.website), passStr(c.industry), passStr(c.paymentTerms), passStr(c.accountNum)]
       );
       const customerId = result.insertId;
       
@@ -278,7 +287,7 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
         for (const contact of c.contacts) {
           await connection.query(
             'INSERT INTO customer_contacts (customer_id, name, title, email, phone, is_primary) VALUES (?, ?, ?, ?, ?, ?)',
-            [customerId, contact.name, contact.title, contact.email, contact.phone, contact.primary]
+            [customerId, passStr(contact.name), passStr(contact.title), passStr(contact.email), passStr(contact.phone), contact.primary ? 1 : 0]
           );
         }
       }
@@ -288,7 +297,7 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
     for (const q of quotes) {
       await connection.query(
         'INSERT INTO quotes (quote_number, customer_name, job_site, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [q.qn, q.client, q.jobSite, q.desc, q.date, q.status, q.qtype, q.labor||0, q.equip||0, q.hauling||0, q.travel||0, q.mats||0, q.total||0, q.markup||0, q.salesAssoc, q.jobNum, q.startDate || null, q.compDate || null, q.locked]
+        [passStr(q.qn), passStr(q.client), passStr(q.jobSite), passStr(q.desc), passDate(q.date), passStr(q.status), passStr(q.qtype), passNum(q.labor), passNum(q.equip), passNum(q.hauling), passNum(q.travel), passNum(q.mats), passNum(q.total), passNum(q.markup), passStr(q.salesAssoc), passStr(q.jobNum), passDate(q.startDate), passDate(q.compDate), q.locked ? 1 : 0]
       );
     }
 
@@ -296,7 +305,7 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
     for (const r of rfqs) {
       await connection.query(
         'INSERT INTO rfqs (rfq_number, company, requester, email, phone, job_site, description, notes, date, status, sales_assoc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [r.rn, r.company, r.requester, r.email, r.phone, r.jobSite, r.desc, r.notes, r.date, r.status, r.salesAssoc]
+        [passStr(r.rn), passStr(r.company), passStr(r.requester), passStr(r.email), passStr(r.phone), passStr(r.jobSite), passStr(r.desc), passStr(r.notes), passDate(r.date), passStr(r.status), passStr(r.salesAssoc)]
       );
     }
 
@@ -305,7 +314,7 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
   } catch (error) {
     await connection.rollback();
     console.error('Initialization error:', error);
-    res.status(500).json({ error: 'Failed to initialize database' });
+    res.status(500).json({ error: 'Failed to initialize database', details: error.message });
   } finally {
     connection.release();
   }

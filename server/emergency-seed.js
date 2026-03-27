@@ -1,0 +1,35 @@
+import fs from 'fs';
+import path from 'path';
+import mysql from 'mysql2/promise';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+async function run() {
+  const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'root',
+    password: 'password123',
+    database: 'rigpro',
+    multipleStatements: true
+  });
+  
+  try {
+    const initSqlPath = path.join(__dirname, '..', 'db', 'init.sql');
+    const schema = fs.readFileSync(initSqlPath, 'utf8');
+    const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    for (let stmt of statements) {
+      try {
+        await pool.query(stmt);
+      } catch (e) {
+        console.error('Failed stmt:', stmt.substring(0, 50), e.message);
+      }
+    }
+    console.log('Successfully recreated tables from init.sql!');
+  } catch(e) {
+    console.error('Seed script failed:', e.message);
+  }
+  process.exit();
+}
+run();

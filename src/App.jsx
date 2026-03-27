@@ -6506,7 +6506,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 export default function App() {
   const [token,      setToken]      = useState(localStorage.getItem("token") || "");
   const [role,       setRole]       = useState(localStorage.getItem("role") || "user");
-  const [view,       setView]       = useState("landing");
+  const [view,       setView]       = useState(localStorage.getItem("token") ? "dash" : "landing");
   const [rfqStageFilter, setRfqStageFilter] = useState("all");
   const [appUsers,   setAppUsers]   = useState([]);
   const [quotes,     setQuotes]     = useState(SAMPLE_QUOTES);
@@ -6598,7 +6598,7 @@ export default function App() {
           if (data.rfqs) setReqs(data.rfqs);
           if (data.customers) setCustData(data.customers);
           setDbStatus("MySQL Live");
-        } else if (role === "admin" && !localStorage.getItem("rigpro_db_seeded")) {
+        } else if (role === "admin") {
           // Automatic system prompting to migrate data if DB is empty
           console.log("[System Prompt] Migrating local data to MySQL...");
           setDbStatus("Initializing MySQL...");
