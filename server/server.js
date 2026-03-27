@@ -103,8 +103,13 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       rfqs
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch data' });
+    console.error('[API/DATA] Error:', error);
+    // If the tables don't exist yet (e.g. after a failed restore wipe), return empty data
+    // so the frontend can automatically trigger the DB re-initialization routine.
+    if (error.code === 'ER_NO_SUCH_TABLE') {
+      return res.json({ labor: [], equipment: [], customers: {}, quotes: [], rfqs: [] });
+    }
+    res.status(500).json({ error: 'Failed to fetch data', details: error.message });
   }
 });
 
@@ -231,15 +236,33 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
 
   const connection = await db.getConnection();
   try {
+    // 0. Auto-recover tables if they are missing
+    try {
+      const initSqlPath = path.join(__dirname, '..', 'db', 'init.sql');
+      if (fs.existsSync(initSqlPath)) {
+        const schema = fs.readFileSync(initSqlPath, 'utf8');
+        // Simple heuristic to remove empty statements so we avoid "Query was empty" errors
+        const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
+        for (const stmt of statements) {
+          await connection.query(stmt);
+        }
+        console.log('[INIT] Database schema synchronized');
+      }
+    } catch (schemaErr) {
+      console.warn('[INIT] Could not execute schema init.sql:', schemaErr.message);
+    }
+
     await connection.beginTransaction();
 
     // Clear existing data to avoid conflicts during one-time init
-    await connection.query('DELETE FROM quotes');
-    await connection.query('DELETE FROM rfqs');
-    // Note: customers might have related contacts, careful with deletion
+    // Ignore errors if table doesn't exist yet (just in case schema was incomplete)
+    const clearTable = async (table) => { try { await connection.query(`DELETE FROM ${table}`); } catch(e){} };
+    await clearTable('quotes');
+    await clearTable('rfqs');
+    
     await connection.query('SET FOREIGN_KEY_CHECKS = 0');
-    await connection.query('DELETE FROM customers');
-    await connection.query('DELETE FROM customer_contacts');
+    await clearTable('customers');
+    await clearTable('customer_contacts');
     await connection.query('SET FOREIGN_KEY_CHECKS = 1');
 
     // 1. Insert Customers
@@ -306,7 +329,7 @@ app.get('/api/admin/backup', authenticateToken, authenticateAdmin, (req, res) =>
   const backupEnv = { ...process.env, MYSQL_PWD: password };
   const backupPath = path.join(BACKUPS_DIR, filename);
 
-  const child = exec(`${dumpCommand} > ${backupPath}`, { env: backupEnv });
+  const child = exec(`${dumpCommand} > "${backupPath}"`, { env: backupEnv });
 
   child.stderr.on('data', (data) => {
     console.error(`[BACKUP] mysqldump stderr: ${data}`);
@@ -366,7 +389,8 @@ app.get('/api/admin/backups/list', authenticateToken, authenticateAdmin, (req, r
       .sort((a, b) => b.createdAt - a.createdAt);
     res.json(files);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to list backups' });
+    console.error("[LIST BACKUPS] Error:", error);
+    res.status(500).json({ error: 'Failed to list backups', details: error.message });
   }
 });
 
@@ -391,36 +415,32 @@ app.post('/api/admin/restore', authenticateToken, authenticateAdmin, async (req,
   const sql = req.body;
   if (!sql || typeof sql !== 'string') return res.status(400).json({ error: 'No SQL content provided' });
 
-  const host = process.env.DB_HOST || 'localhost';
-  const user = process.env.DB_USER || 'root';
-  const password = process.env.DB_PASSWORD || 'password123';
-  const database = process.env.DB_NAME || 'rigpro';
-
-  console.log('[RESTORE] Starting database restoration...');
+  console.log('[RESTORE] Starting native database restoration...');
   
-  const restoreCommand = `mysql --skip-ssl -h ${host} -u ${user} ${database}`;
-  const restoreEnv = { ...process.env, MYSQL_PWD: password };
+  try {
+    // Ensure the connection pool allows multiple statements if it doesn't already
+    const restorePool = mysql.createPool({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || 'password123',
+      database: process.env.DB_NAME || 'rigpro',
+      multipleStatements: true
+    });
 
-  const child = exec(restoreCommand, { env: restoreEnv });
-
-  child.stdin.write(sql);
-  child.stdin.end();
-
-  child.on('exit', (code) => {
-    if (code !== 0) {
-      console.error(`[RESTORE] mysql exited with code ${code}`);
-      if (!res.headersSent) res.status(500).json({ error: 'Database restoration failed' });
-    } else {
-      console.log(`[RESTORE] Restoration completed successfully.`);
-      res.json({ message: 'Database restored successfully' });
+    const statements = sql.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    for (const stmt of statements) {
+      await restorePool.query(stmt);
     }
-  });
+    await restorePool.end();
 
-  child.on('error', (err) => {
-    console.error('[RESTORE] Failed to start mysql:', err);
-    if (!res.headersSent) res.status(500).json({ error: 'Internal restoration error' });
-  });
+    console.log(`[RESTORE] Native restoration completed successfully.`);
+    res.json({ message: 'Database restored successfully' });
+  } catch (err) {
+    console.error('[RESTORE] Native mysql2 fail:', err);
+    res.status(500).json({ error: 'Data restoration error: ' + err.message });
+  }
 });
+
 
 // ADMIN TASKS & TODOS
 app.get('/api/admin/tasks', authenticateToken, authenticateAdmin, async (req, res) => {
@@ -498,35 +518,29 @@ app.post('/api/admin/restore-local', authenticateToken, authenticateAdmin, async
   const safePath = path.join(BACKUPS_DIR, path.basename(filename));
   if (!fs.existsSync(safePath)) return res.status(404).json({ error: 'Backup file not found' });
 
-  const host = process.env.DB_HOST || 'localhost';
-  const user = process.env.DB_USER || 'root';
-  const password = process.env.DB_PASSWORD || 'password123';
-  const database = process.env.DB_NAME || 'rigpro';
-
-  console.log(`[RESTORE] Restoring from local file: ${filename}`);
-  
-  const restoreCommand = `mysql --skip-ssl -h ${host} -u ${user} ${database}`;
-  const restoreEnv = { ...process.env, MYSQL_PWD: password };
+  console.log(`[RESTORE] Restoring native local file: ${filename}`);
 
   try {
-    const child = exec(restoreCommand, { env: restoreEnv });
-    const script = fs.readFileSync(safePath, 'utf8');
-    
-    child.stdin.write(script);
-    child.stdin.end();
-
-    child.on('exit', (code) => {
-      if (code !== 0) {
-        console.error(`[RESTORE] Restore failed with code ${code}`);
-        if (!res.headersSent) res.status(500).json({ error: 'Restore failed' });
-      } else {
-        console.log('[RESTORE] Database restored successfully');
-        res.json({ message: 'Database restored successfully' });
-      }
+    const restorePool = mysql.createPool({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || 'password123',
+      database: process.env.DB_NAME || 'rigpro',
+      multipleStatements: true
     });
+
+    const script = fs.readFileSync(safePath, 'utf8');
+    const statements = script.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    for (const stmt of statements) {
+      await restorePool.query(stmt);
+    }
+    await restorePool.end();
+
+    console.log('[RESTORE] Database native restore successfully');
+    res.json({ message: 'Database restored successfully' });
   } catch (error) {
-    console.error('[RESTORE] Error:', error);
-    res.status(500).json({ error: 'Failed to initiate restore' });
+    console.error('[RESTORE] Native Error:', error);
+    res.status(500).json({ error: 'Data restoration error: ' + error.message });
   }
 });
 

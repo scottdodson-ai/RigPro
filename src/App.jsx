@@ -6414,6 +6414,41 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               </div>
               <div style={{ padding:20, maxHeight:400, overflowY:"auto" }}>
                 <div style={{ fontSize:12, color:C.txtS, marginBottom:16 }}>The system maintains up to 5 automated backups. Older snapshots are rotated out automatically.</div>
+                
+                {/* Manual Browse Directory Interface */}
+                <div style={{ marginBottom: 20, padding: 12, background: C.accL, borderRadius: 8, border: `1px solid ${C.accB}` }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.acc, marginBottom: 8 }}>Manually Browse for Backup File:</div>
+                  <input 
+                     type="file" 
+                     accept=".sql" 
+                     onChange={(e) => {
+                       const file = e.target.files[0];
+                       if (!file) return;
+                       const reader = new FileReader();
+                       reader.onload = async (ev) => {
+                         const sql = ev.target.result;
+                         if (!window.confirm(`DANGER: Restore system using ${file.name}?\n\nThis will completely overwrite all current database records.`)) return;
+                         try {
+                           const req = await fetch("/api/admin/restore", {
+                             method: "POST",
+                             headers: { 'Content-Type': 'application/sql', 'Authorization': `Bearer ${token}` },
+                             body: sql
+                           });
+                           if (!req.ok) throw new Error("Restore failed");
+                           alert("Database restored successfully. The application will now reload.");
+                           window.location.reload();
+                         } catch (error) {
+                           alert("Failed to restore from file: " + error.message);
+                         }
+                       };
+                       reader.readAsText(file);
+                     }}
+                     style={{ fontSize: 13 }}
+                  />
+                  <div style={{ fontSize: 11, color: C.txtM, marginTop: 4 }}>Works natively on Mac and Windows directory browsers. (Max 50MB)</div>
+                </div>
+
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 8 }}>Local Server Backups:</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                   {localBackups.length === 0 && <div style={{ textAlign:"center", padding:40, color:C.txtS }}>No local backups found.</div>}
                   {localBackups.map(b => (
@@ -6549,6 +6584,12 @@ export default function App() {
     const loadData = async () => {
       try {
         const resp = await fetch("/api/data", { headers: { 'Authorization': `Bearer ${token}` } });
+        if (resp.status === 401 || resp.status === 403) {
+          setToken("");
+          localStorage.removeItem("token");
+          setView("login");
+          return;
+        }
         if (!resp.ok) return;
         const data = await resp.json();
 
