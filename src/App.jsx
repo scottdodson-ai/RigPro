@@ -5878,11 +5878,29 @@ function LoginForm({ setToken, setRole, onBack }) {
         {error && <div style={{ background:C.redB, color:C.red, padding:10, borderRadius:5, marginBottom:15, fontSize:13 }}>{error}</div>}
         <div style={{ marginBottom:14 }}>
           <div style={{ fontSize:12, fontWeight:600, color:C.txtM, marginBottom:6 }}>USERNAME</div>
-          <input style={{ ...inp, padding:"10px 12px", fontSize:14 }} value={username} onChange={e=>setUsername(e.target.value)} required />
+          <input 
+            id="login-username"
+            name="username"
+            type="text"
+            autoComplete="username"
+            style={{ ...inp, padding:"10px 12px", fontSize:14 }} 
+            value={username} 
+            onChange={e=>setUsername(e.target.value)} 
+            required 
+          />
         </div>
         <div style={{ marginBottom:20 }}>
           <div style={{ fontSize:12, fontWeight:600, color:C.txtM, marginBottom:6 }}>PASSWORD</div>
-          <input type="password" style={{ ...inp, padding:"10px 12px", fontSize:14 }} value={password} onChange={e=>setPassword(e.target.value)} required />
+          <input 
+            id="login-password"
+            name="password"
+            type="password" 
+            autoComplete="current-password"
+            style={{ ...inp, padding:"10px 12px", fontSize:14 }} 
+            value={password} 
+            onChange={e=>setPassword(e.target.value)} 
+            required 
+          />
         </div>
         <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"12px", fontSize:14 }}>Login</button>
         <button type="button" onClick={onBack} style={{ ...mkBtn("ghost"), width:"100%", justifyContent:"center", padding:"10px", marginTop:10, fontSize:14 }}>Cancel</button>
@@ -5971,6 +5989,7 @@ function DatabaseBrowser({ token }) {
 function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInfo }) {
   const users = appUsers;
   const setUsers = setAppUsers;
+  const [confirm, setConfirm] = useState(null); // { title, msg, onOk, btn:"Restore"|"Delete" }
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -6163,7 +6182,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       const res = await fetch("/api/admin/backups/list", { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await res.json();
       setLocalBackups(Array.isArray(data) ? data : []);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Load backups err:", e); }
   };
 
   const deleteSelectedBackups = async () => {
@@ -6181,35 +6200,37 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
   };
 
   const restoreLocalBackup = async (filename) => {
-    const confirmed = window.confirm(`DANGER: Restore system to snapshot generated on ${new Date().toLocaleString()}?\n\nThis will completely overwrite all current database records.`);
-    if (!confirmed) return;
-    const secondConfirm = window.confirm("Are you absolutely certain? This action is irreversible.");
-    if (!secondConfirm) return;
+    setConfirm({
+      title: "Confirm System Restore",
+      msg: `DANGER: You are about to restore the system to a snapshot from ${new Date().toLocaleString()}. This will completely overwrite all current database records. This action is irreversible.`,
+      btn: "Start Restore",
+      onOk: async () => {
+        try {
+          const res = await fetch("/api/admin/restore-local", {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ filename })
+          });
+          
+          let data;
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            data = await res.json();
+          } else {
+            const text = await res.text();
+            throw new Error(`Server error (${res.status}): ${text.slice(0, 100)}`);
+          }
 
-    try {
-      const res = await fetch("/api/admin/restore-local", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ filename })
-      });
-      
-      let data;
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
-      } else {
-        const text = await res.text();
-        throw new Error(`Server returned non-JSON response (${res.status}): ${text.slice(0, 100)}`);
+          if (!res.ok) throw new Error(data.error || "Restore failed");
+          
+          alert("Database restored successfully. The application will now reload.");
+          window.location.reload();
+        } catch (e) { 
+          console.error(e);
+          alert("Restore failed: " + e.message); 
+        } finally { setConfirm(null); }
       }
-
-      if (!res.ok) throw new Error(data.error || "Restore failed");
-      
-      alert("Database restored successfully. The application will now reload.");
-      window.location.reload();
-    } catch (e) { 
-      console.error(e);
-      alert("Restore failed: " + e.message); 
-    }
+    });
   };
 
   return (
@@ -6273,15 +6294,15 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div>
                   <Lbl c="COMPANY NAME"/>
-                  <input style={inp} value={companyInfo.name} onChange={e=>setCompanyInfo({...companyInfo, name:e.target.value})}/>
+                  <input id="company-name" name="companyName" type="text" style={inp} value={companyInfo.name} onChange={e=>setCompanyInfo({...companyInfo, name:e.target.value})}/>
                 </div>
                 <div>
                   <Lbl c="ADDRESS"/>
-                  <input style={inp} value={companyInfo.address} onChange={e=>setCompanyInfo({...companyInfo, address:e.target.value})}/>
+                  <input id="company-address" name="companyAddress" type="text" style={inp} value={companyInfo.address} onChange={e=>setCompanyInfo({...companyInfo, address:e.target.value})}/>
                 </div>
                 <div>
                   <Lbl c="SERVICES DESCRIPTION"/>
-                  <input style={inp} value={companyInfo.services} onChange={e=>setCompanyInfo({...companyInfo, services:e.target.value})}/>
+                  <input id="company-services" name="companyServices" type="text" style={inp} value={companyInfo.services} onChange={e=>setCompanyInfo({...companyInfo, services:e.target.value})}/>
                 </div>
                 <div>
                   <Lbl c="COMPANY LOGO (OPTIONAL)"/>
@@ -6305,15 +6326,44 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               <form onSubmit={handleCreateUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div>
                   <Lbl c="USERNAME"/>
-                  <input style={inp} value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} required placeholder="Enter unique username" autoComplete="new-password"/>
+                  <input 
+                    id="new-account-username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    style={inp} 
+                    value={newUser.username} 
+                    onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} 
+                    required 
+                    placeholder="Enter unique username"
+                  />
                 </div>
                 <div>
                   <Lbl c="EMAIL ADDRESS"/>
-                  <input style={inp} type="email" value={newUser.email} onChange={e=>setNewUser(p=>({...p,email:e.target.value}))} placeholder="user@shoemakerrigging.com"/>
+                  <input 
+                    id="new-account-email"
+                    name="email"
+                    autoComplete="email"
+                    style={inp} 
+                    type="email" 
+                    value={newUser.email} 
+                    onChange={e=>setNewUser(p=>({...p,email:e.target.value}))} 
+                    placeholder="user@shoemakerrigging.com"
+                  />
                 </div>
                 <div>
                   <Lbl c="PASSWORD"/>
-                  <input style={inp} type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} required placeholder="Enter unique password" autoComplete="new-password"/>
+                  <input 
+                    id="new-account-password"
+                    name="password"
+                    autoComplete="new-password"
+                    style={inp} 
+                    type="password" 
+                    value={newUser.password} 
+                    onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} 
+                    required 
+                    placeholder="Enter unique password"
+                  />
                 </div>
                 <div>
                   <Lbl c="ROLE"/>
@@ -6402,7 +6452,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   <div style={{ fontSize:12, color:C.red, marginBottom:8, lineHeight:1.4, fontWeight:600 }}>CAUTION: Restoration will overwrite ALL live data. Choose a recovery point carefully.</div>
                   <button 
                     style={{ ...mkBtn("danger"), padding:"12px 20px", fontSize:14, gap:8, fontWeight:800 }}
-                    onClick={() => { setShowBackupList(true); loadBackups(); }}
+                    onClick={() => { 
+                      setShowBackupList(true); 
+                      loadBackups(); 
+                    }}
                   >
                     🕒 Browse Recovery Points
                   </button>
@@ -6415,6 +6468,20 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 
         {/* DATA BROWSER SECTION */}
         <DatabaseBrowser token={token} />
+        
+        {/* CUSTOM CONFIRM DIALOG */}
+        {confirm && (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:10000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+            <div style={{ background:C.sur, width:"100%", maxWidth:450, borderRadius:12, padding:24, boxShadow:"0 20px 60px rgba(0,0,0,0.4)", border:`1.5px solid ${C.bdr}` }}>
+              <div style={{ fontSize:18, fontWeight:800, color:C.red, marginBottom:12 }}>{confirm.title}</div>
+              <div style={{ fontSize:14, color:C.txtM, lineHeight:1.5, marginBottom:24 }}>{confirm.msg}</div>
+              <div style={{ display:"flex", gap:12, justifyContent:"flex-end" }}>
+                <button style={{ ...mkBtn("bg"), padding:"8px 16px" }} onClick={()=>setConfirm(null)}>Cancel</button>
+                <button style={{ ...mkBtn("danger"), padding:"8px 20px", fontWeight:800 }} onClick={confirm.onOk}>{confirm.btn || "Confirm"}</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* BACKUP LIST DIALOG */}
         {showBackupList && (
