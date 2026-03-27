@@ -6093,7 +6093,19 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
     }
   };
 
-  const updateUserRole = (id, role) => setUsers(prev => prev.map(u=>u.id===id?{...u,role}:u));
+  const updateUserRole = async (id, role) => {
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "PUT",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ role })
+      });
+      if (!res.ok) throw new Error("Failed to update user role");
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
+    } catch (err) {
+      alert("Role update failed: " + err.message);
+    }
+  };
 
   const deleteUser = async (id) => {
     if (!window.confirm("Delete this user?")) return;
