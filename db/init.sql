@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS customer_contacts;
 DROP TABLE IF EXISTS customers;
 DROP TABLE IF EXISTS base_labor;
 DROP TABLE IF EXISTS equipment;
+DROP TABLE IF EXISTS estimators;
 DROP TABLE IF EXISTS users;
 
 -- 1. Users table for login
@@ -31,12 +32,27 @@ CREATE TABLE IF NOT EXISTS admin_tasks (
 );
 
 -- Note: The hashes below are for the password: 'pass'
+-- Note: The hashes below are for the password: 'pass'
 INSERT INTO users (username, email, password_hash, role) VALUES 
 ('scott', 'scott@shoemakerrigging.com', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
 ('admin', 'admin@shoemakerrigging.com', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
 ('Dan M',   'dan.m@shoemakerrigging.com',   '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
 ('Sarah K', 'sarah.k@shoemakerrigging.com', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
 ('Mike R',  'mike.r@shoemakerrigging.com',  '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator');
+
+-- Estimators table
+CREATE TABLE IF NOT EXISTS estimators (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(100),
+    phone VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'Active'
+);
+
+INSERT INTO estimators (name, email, phone) VALUES 
+('Dan M', 'dan.m@shoemakerrigging.com', '330-555-0101'),
+('Sarah K', 'sarah.k@shoemakerrigging.com', '330-555-0102'),
+('Mike R', 'mike.r@shoemakerrigging.com', '330-555-0103');
 
 -- 2. Base Labor Rates
 CREATE TABLE IF NOT EXISTS base_labor (

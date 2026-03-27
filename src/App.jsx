@@ -5915,7 +5915,7 @@ function DatabaseBrowser({ token }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const tables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
+  const tables = ['users', 'estimators', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
 
   useEffect(() => {
     if (!selectedTable || !token) return;
@@ -6431,12 +6431,79 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Full System Backup</div>
                   <div style={{ fontSize:12, color:C.txtM, marginBottom:4, lineHeight:1.4 }}>Generates a complete MySQL dump with a date-time stamp. Recommended before making large configuration changes.</div>
                   <div style={{ fontSize:11, color:C.txtS, marginBottom:12 }}>Includes: Users, Quotes, Customers, and Equipment rates.</div>
-                  <button 
-                    style={{ ...mkBtn("won"), padding:"10px 18px", fontSize:13, gap:8 }}
-                    onClick={handleBackup}
-                  >
-                    📥 Create Database Backup
-                  </button>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button 
+                      style={{ ...mkBtn("won"), padding:"10px 18px", fontSize:13, gap:8 }}
+                      onClick={handleBackup}
+                    >
+                      📥 Create Database Backup
+                    </button>
+                    <button 
+                      style={{ ...mkBtn("ghost"), padding:"10px 18px", fontSize:13, gap:8, border:`1px solid ${C.bdr}` }}
+                      onClick={async () => {
+                        try {
+                          const res = await fetch("/api/admin/export-excel", { headers: { 'Authorization': `Bearer ${token}` } });
+                          if (!res.ok) throw new Error("Export failed");
+                          const blob = await res.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          let filename = `rigpro_export_${new Date().toISOString().slice(0,10)}.xlsx`;
+                          a.download = filename;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                        } catch (e) {
+                          console.error(e);
+                          alert("Failed to export Excel file.");
+                        }
+                      }}
+                    >
+                      📊 Export to Excel
+                    </button>
+                    <div style={{ position: "relative" }}>
+                      <input 
+                         type="file" 
+                         accept=".xlsx"
+                         title="Import from Excel"
+                         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0, cursor: "pointer" }}
+                         onChange={async (e) => {
+                           const file = e.target.files[0];
+                           if (!file) return;
+                           if (!window.confirm("DANGER: You are about to restore the system data directly from this Excel file. This will overwrite existing database records! Proceed?")) {
+                             e.target.value = "";
+                             return;
+                           }
+                           const formData = new FormData();
+                           formData.append("file", file);
+                           try {
+                             const res = await fetch("/api/admin/import-excel", {
+                               method: "POST",
+                               headers: { 'Authorization': `Bearer ${token}` },
+                               body: formData
+                             });
+                             if (!res.ok) {
+                               const data = await res.json();
+                               throw new Error(data.error || "Import failed");
+                             }
+                             alert("Excel data successfully imported. The system will now reload to apply changes.");
+                             window.location.reload();
+                           } catch (err) {
+                             console.error("Import error:", err);
+                             alert("Failed to import Excel file: " + err.message);
+                           } finally {
+                             e.target.value = "";
+                           }
+                         }}
+                      />
+                      <button 
+                        style={{ ...mkBtn("danger"), padding:"10px 18px", fontSize:13, gap:8, border:`1px solid ${C.redBdr}` }}
+                      >
+                        📤 Import from Excel
+                      </button>
+                    </div>
+                  </div>
 
 
                 </div>
@@ -6672,6 +6739,7 @@ export default function App() {
         if (!resp.ok) return;
         const data = await resp.json();
 
+        if (data.users && Array.isArray(data.users)) setAppUsers(data.users);
         if (data.quotes && data.quotes.length > 0) {
           setQuotes(data.quotes);
           if (data.rfqs) setReqs(data.rfqs);
@@ -6700,6 +6768,7 @@ export default function App() {
             setQuotes(d2.quotes);
             setReqs(d2.rfqs);
             setCustData(d2.customers);
+            if (d2.users) setAppUsers(d2.users);
             setDbStatus("MySQL Live");
           }
         }

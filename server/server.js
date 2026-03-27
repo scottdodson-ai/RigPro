@@ -1,20 +1,28 @@
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import ExcelJS from 'exceljs';
+import multer from 'multer';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const BACKUPS_DIR = path.join(__dirname, 'backups');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
 if (!fs.existsSync(BACKUPS_DIR)) {
   fs.mkdirSync(BACKUPS_DIR, { recursive: true });
 }
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const upload = multer({ dest: UPLOADS_DIR });
 
 const app = express();
 app.use(cors());
@@ -79,6 +87,8 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const [contacts] = await db.query('SELECT * FROM customer_contacts');
     const [quotes] = await db.query('SELECT *, quote_number as qn, customer_name as client, is_locked as locked FROM quotes');
     const [rfqs] = await db.query('SELECT *, rfq_number as rn FROM rfqs');
+    const [users] = await db.query('SELECT id, username, email, role, created_at FROM users');
+    const [estimators] = await db.query('SELECT * FROM estimators');
 
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
@@ -100,14 +110,16 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       equipment,
       customers: custData,
       quotes,
-      rfqs
+      rfqs,
+      users,
+      estimators
     });
   } catch (error) {
     console.error('[API/DATA] Error:', error);
     // If the tables don't exist yet (e.g. after a failed restore wipe), return empty data
     // so the frontend can automatically trigger the DB re-initialization routine.
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ labor: [], equipment: [], customers: {}, quotes: [], rfqs: [] });
+      return res.json({ labor: [], equipment: [], customers: {}, quotes: [], rfqs: [], users: [] });
     }
     res.status(500).json({ error: 'Failed to fetch data', details: error.message });
   }
@@ -215,7 +227,7 @@ app.delete('/api/admin/users/:id', authenticateToken, authenticateAdmin, async (
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators'];
   const table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
@@ -400,6 +412,111 @@ app.get('/api/admin/backups/list', authenticateToken, authenticateAdmin, (req, r
   } catch (error) {
     console.error("[LIST BACKUPS] Error:", error);
     res.status(500).json({ error: 'Failed to list backups', details: error.message });
+  }
+});
+
+// EXPORT EXCEL
+app.get('/api/admin/export-excel', authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    const [tablesResult] = await db.query('SHOW TABLES');
+    const tables = tablesResult.map(r => Object.values(r)[0]);
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'RigPro DB Exporter';
+
+    for (const table of tables) {
+      const [rows] = await db.query(`SELECT * FROM ${table}`);
+      const worksheet = workbook.addWorksheet(table.substring(0, 31));
+      
+      if (rows.length === 0) {
+        worksheet.addRow(['No data']);
+      } else {
+        const headers = Object.keys(rows[0]);
+        const headerRow = worksheet.addRow(headers);
+        headerRow.font = { bold: true };
+        
+        for (const row of rows) {
+          worksheet.addRow(Object.values(row));
+        }
+      }
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="rigpro_export_${new Date().toISOString().slice(0,10)}.xlsx"`);
+    
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("[EXPORT EXCEL] Error:", error);
+    res.status(500).json({ error: 'Failed to export Excel spreadsheet' });
+  }
+});
+
+// IMPORT EXCEL
+app.post('/api/admin/import-excel', authenticateToken, authenticateAdmin, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No Excel file uploaded' });
+
+  let connection;
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(req.file.path);
+    
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+    await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+
+    // Get all valid tables to prevent SQL injection
+    const [tablesResult] = await connection.query('SHOW TABLES');
+    const validTables = tablesResult.map(r => Object.values(r)[0]);
+
+    for (const worksheet of workbook.worksheets) {
+      const tableName = worksheet.name;
+      if (!validTables.includes(tableName)) {
+        console.warn(`[IMPORT EXCEL] Skipping unknown sheet: ${tableName}`);
+        continue;
+      }
+      
+      const rows = [];
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // Skip headers
+        rows.push(row.values.slice(1));
+      });
+
+      if (rows.length > 0) {
+        await connection.query(`DELETE FROM \`${tableName}\``);
+        const headers = worksheet.getRow(1).values.slice(1);
+        const placeholders = headers.map(() => '?').join(', ');
+        
+        for (const rowData of rows) {
+          const paddedData = headers.map((_, i) => {
+            const val = rowData[i];
+            if (val && typeof val === 'object' && val.richText) {
+               // Handle rich text
+               return val.richText.map(t => t.text).join('');
+            }
+            if (val && typeof val === 'object' && val instanceof Date) {
+               return val.toISOString().slice(0, 19).replace('T', ' ');
+            }
+            return val === undefined ? null : val;
+          });
+          await connection.query(`INSERT INTO \`${tableName}\` (${headers.map(h => `\`${h}\``).join(', ')}) VALUES (${placeholders})`, paddedData);
+        }
+      }
+    }
+
+    await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+    await connection.commit();
+    res.json({ message: 'Excel import successful' });
+  } catch (error) {
+    if (connection) {
+      await connection.query('SET FOREIGN_KEY_CHECKS = 1'); // Reset
+      await connection.rollback();
+    }
+    console.error("[IMPORT EXCEL] Error:", error);
+    res.status(500).json({ error: 'Failed to import Excel data: ' + error.message });
+  } finally {
+    if (connection) connection.release();
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
   }
 });
 
