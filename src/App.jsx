@@ -3040,16 +3040,20 @@ function CustomerDocModal({ quote, onClose }) {
         quoteNum: quote.qn,
       };
 
-      // Call Anthropic API to generate the docx as base64
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      // Call Local Llama over OpenAI-like API to generate the docx as base64
+      const resp = await fetch("http://localhost:8080/v1/chat/completions", {
         method:"POST",
         headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({
-          model:"claude-sonnet-4-20250514",
+          model:"llama-3.1-8b-instruct",
           max_tokens:4000,
+          temperature: 0.1,
           messages:[{
+            role:"system",
+            content: "You are an expert Node.js developer. You must return ONLY the raw Node.js script. Do not output markdown boundaries, explanations, or any other text."
+          }, {
             role:"user",
-            content: `You are a Node.js code generator. Generate a complete self-contained Node.js script using the 'docx' npm package (already installed globally) that creates a professional customer proposal document matching the Shoemaker Rigging style. The script must:
+            content: `Generate a complete self-contained Node.js script using the 'docx' npm package (already installed globally) that creates a professional customer proposal document matching the Shoemaker Rigging style. The script must:
 
 1. Require docx from 'docx' 
 2. Create a document with these sections matching the example PDF style:
@@ -3076,7 +3080,7 @@ Output ONLY the complete Node.js script, no markdown, no explanation, nothing el
         })
       });
       const data = await resp.json();
-      const scriptCode = data.content?.find(c=>c.type==="text")?.text || "";
+      const scriptCode = data.choices?.[0]?.message?.content || "";
 
       if(!scriptCode || scriptCode.length < 100) {
         setGenError("Failed to generate document code. Please try again.");
