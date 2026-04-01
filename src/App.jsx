@@ -2000,7 +2000,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
 }
 
 // ── MASTER JOB LIST ───────────────────────────────────────────────────────────
-function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJobNum, onViewAttachments }) {
+function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJobNum, onViewAttachments, jobListFilter, setJobListFilter, setView }) {
   const [search,      setSearch]      = useState("");
   const [sortBy,      setSortBy]      = useState("jobNum");
   const [sortDir,     setSortDir]     = useState("asc");
@@ -2039,6 +2039,9 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
 
   const filtered = useMemo(() => {
     let rows = allJobs;
+    if(jobListFilter) {
+      rows = rows.filter(j => j.client === jobListFilter);
+    }
     if(search) {
       const s = search.toLowerCase();
       rows = rows.filter(j=>[j.jobNum,j.quoteNum,j.client,j.desc,j.jobSite,j.estimator].some(v=>v?.toLowerCase().includes(s)));
@@ -2049,7 +2052,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
       const res = av>bv?1:av<bv?-1:0;
       return sortDir==="asc"?res:-res;
     });
-  }, [allJobs, search, sortBy, sortDir]);
+  }, [allJobs, search, sortBy, sortDir, jobListFilter]);
 
   function toggleSort(col) {
     if(sortBy===col) setSortDir(d=>d==="asc"?"desc":"asc");
@@ -2077,10 +2080,21 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
     <div style={{ padding:"16px", maxWidth:1400, margin:"0 auto" }}>
       {/* Header */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16, flexWrap:"wrap", gap:10 }}>
-        <div>
-          <div style={{ fontSize:20, fontWeight:700 }}>Master Job List</div>
-          <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>
-            {allJobs.length} won jobs · {fmt(allJobs.reduce((s,j)=>s+j.total,0))} total value
+        <div style={{ display:"flex", alignItems:"center", gap:15 }}>
+          {jobListFilter && (
+            <button 
+              style={{ ...mkBtn("outline"), padding:"8px 16px", borderRadius:10, fontSize:13, fontWeight:800, border:`2px solid ${C.acc}`, color:C.acc }}
+              onClick={() => {
+                setJobListFilter(null);
+                setView("customers");
+              }}
+            >← Back to Customer Detail</button>
+          )}
+          <div>
+            <div style={{ fontSize:20, fontWeight:700 }}>{jobListFilter ? `${jobListFilter} · Master Job List` : "Master Job List"}</div>
+            <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>
+              {filtered.length} won jobs · {fmt(filtered.reduce((s,j)=>s+j.total,0))} total value
+            </div>
           </div>
         </div>
         <input style={{ ...inp, width:280, fontSize:13, border:`2px solid ${C.acc}`, borderRadius:8 }}
@@ -6675,7 +6689,8 @@ export default function App() {
   const [deadModal,    setDeadModal]    = useState(null);  // {type:"rfq"|"quote", item}
   const [dashReportId, setDashReportId] = useState(null); // report to open when navigating from dashboard
   const [wonOnly,      setWonOnly]      = useState(false); // filter customers view
-  const [custView,     setCustView]     = useState("card"); // "list" or "card"
+  const [custView,     setCustView]     = useState("list"); // "list" or "card"
+  const [jobListFilter, setJobListFilter] = useState(null); // customer name to filter Master Jobs list
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [customerRates, setCustomerRates] = useState(INIT_CUSTOMER_RATES);
   const [baseLabor,     setBaseLabor]     = useState(DEFAULT_LABOR);
@@ -7078,7 +7093,7 @@ export default function App() {
         showJFM, setShowJFM, deadModal, setDeadModal,
         profileTemplate, showProfileTempl, setShowProfileTempl,
         openEdit, openNew, liftTonThreshold, globalCheck, setGlobalCheck, appUsers,
-        setReqs, setJobs,
+        setReqs, setJobs, jobListFilter, setJobListFilter,
         Header, RFQModal, JobFolderModal, MarkDeadModal, CustomerModal, SearchResultsModal, SalesAdjustmentModal, ProfileTemplateModal
       }}
     />
@@ -7133,6 +7148,7 @@ export default function App() {
         jobs={jobs} reqs={reqs} jobFolders={jobFolders} openEdit={openEdit} setShowJFM={setShowJFM}
         onUpdateJobNum={(id, num) => setJobs(p=>p.map(q=>q.id===id?{...q,job_num:num}:q))}
         onViewAttachments={j=>setAttachModal(j)}
+        jobListFilter={jobListFilter} setJobListFilter={setJobListFilter} setView={setView}
       />
       {attachModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>

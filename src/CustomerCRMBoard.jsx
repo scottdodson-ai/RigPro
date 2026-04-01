@@ -95,7 +95,26 @@ const CustomerCRMBoard = (props) => {
             <div style={{ flex:1, overflowY:"auto", padding:60, background:"#fff" }}>
               {selC ? (
                 <div style={{ maxWidth:950, margin:"0 auto" }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
+                    <div style={{ display:"flex", gap:15, alignItems:"center", justifyContent:"flex-end" }}>
+                      <button style={{ ...mkBtn("outline"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.acc}`, color:C.acc, fontWeight:800 }} onClick={()=>{ setCustView("card"); }}>← Return to Search Grid</button>
+                      <button 
+                        style={{ ...mkBtn("ghost"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.blu}`, color:C.blu, fontWeight:800, opacity:jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? 0.3 : 1, cursor: jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? "not-allowed" : "pointer" }} 
+                        disabled={jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0}
+                        onClick={()=>{ 
+                          props.setJobListFilter(selC);
+                          setView("jobs"); 
+                        }}
+                      >📊 Job List ({jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length})</button>
+                      <button style={{ ...mkBtn("primary"), padding:"16px 25px", borderRadius:14, fontSize:15 }} onClick={()=>setShowCustModal(selC)}>Edit Company Profile</button>
+                    </div>
+
+                    <div style={{ height:15, display:"flex", alignItems:"center", justifyContent:"center", width:"100%" }}>
+                      {jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 && (
+                        <div style={{ fontSize:10, color:C.red, fontWeight:900, textTransform:"uppercase", letterSpacing:0.8 }}>No historical jobs exist for this account</div>
+                      )}
+                    </div>
+
                     <div>
                       <div style={{ fontSize:11, fontWeight:900, color:C.acc, letterSpacing:2, marginBottom:12 }}>MASTER DATA PROFILE [ ID: # {currentSelectionData?.customer_num || "N/A"} ]</div>
                       <div style={{ fontSize:44, fontWeight:900, color:C.txt, letterSpacing:"-1px", lineHeight:1 }}>{selC}</div>
@@ -103,10 +122,6 @@ const CustomerCRMBoard = (props) => {
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>{currentSelectionData?.industry || "Industrial Sector"}</div>
                         <div style={{ fontSize:13, color:C.ora, fontWeight:800, background:"#fff7ed", padding:"5px 12px", borderRadius:8 }}>PAYMENT TERMS: {currentSelectionData?.paymentTerms || "Net 30"}</div>
                       </div>
-                    </div>
-                    <div style={{ display:"flex", gap:15, alignItems:"center" }}>
-                      <button style={{ ...mkBtn("outline"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.acc}`, color:C.acc, fontWeight:800 }} onClick={()=>{ setCustView("card"); }}>← Return to Search Grid</button>
-                      <button style={{ ...mkBtn("primary"), padding:"16px 40px", borderRadius:14, fontSize:16 }} onClick={()=>setShowCustModal(selC)}>Edit Corporate Profile</button>
                     </div>
                   </div>
 
@@ -117,7 +132,7 @@ const CustomerCRMBoard = (props) => {
                         <div style={{ background:C.bg, padding:30, borderRadius:20, marginTop:15, fontSize:17, fontWeight:600, color:C.txt, lineHeight:1.7, border:`1px solid ${C.bdrL}`, boxShadow:"inset 0 2px 4px rgba(0,0,0,0.02)" }}>{currentSelectionData?.billingAddr || "Detailed Address Pending Validation"}</div>
                       </div>
                       <div>
-                        <Sec c="Official Corporate Domain"/>
+                        <Sec c="Official Company Domain"/>
                         {currentSelectionData?.website ? (
                           <a href={currentSelectionData.website.startsWith("http")?currentSelectionData.website:`https://${currentSelectionData.website}`} target="_blank" rel="noreferrer" style={{ display:"flex", alignItems:"center", gap:12, background:C.accL, color:C.acc, padding:25, borderRadius:20, marginTop:15, fontSize:16, fontWeight:800, textDecoration:"none", border:`1px solid ${C.accL}` }}>
                             <span style={{ fontSize:22 }}>🌐</span> {currentSelectionData.website}
