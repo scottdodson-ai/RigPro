@@ -356,7 +356,7 @@ app.get('/api/admin/backup', authenticateToken, authenticateAdmin, (req, res) =>
   res.setHeader('Content-Type', 'application/sql');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-  const dumpCommand = `mysqldump --skip-ssl -h ${host} -u ${user} ${database}`;
+  const dumpCommand = `mysqldump --skip-ssl --column-statistics=0 -h ${host} -u ${user} ${database}`;
   const backupEnv = { ...process.env, MYSQL_PWD: password };
   const backupPath = path.join(BACKUPS_DIR, filename);
 
