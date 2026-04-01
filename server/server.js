@@ -81,14 +81,31 @@ const authenticateToken = (req, res, next) => {
 // GET BASE DATA (Protected)
 app.get('/api/data', authenticateToken, async (req, res) => {
   try {
-    const [labor] = await db.query('SELECT * FROM base_labor');
-    const [equipment] = await db.query('SELECT * FROM equipment');
-    const [customers] = await db.query('SELECT * FROM customers');
-    const [contacts] = await db.query('SELECT * FROM customer_contacts');
-    const [master_jobs] = await db.query('SELECT *, customer_name as client, job_number as job_num, total_billings as total FROM master_jobs');
-    const [rfqs] = await db.query('SELECT *, rfq_number as rn FROM rfqs');
-    const [users] = await db.query('SELECT id, username, email, role, created_at FROM users');
-    const [estimators] = await db.query('SELECT * FROM estimators');
+    const safeQuery = async (sql, fallback = []) => {
+      try {
+        const [rows] = await db.query(sql);
+        return rows;
+      } catch (err) {
+        if (err.code === 'ER_NO_SUCH_TABLE') {
+          return fallback;
+        }
+        throw err;
+      }
+    };
+
+    const labor = await safeQuery('SELECT * FROM base_labor');
+    const equipment = await safeQuery('SELECT * FROM equipment');
+    const customers = await safeQuery('SELECT * FROM customers');
+    const contacts = await safeQuery('SELECT * FROM customer_contacts');
+    // Backward-compatible jobs source: prefer master_jobs, fall back to quotes.
+    const [masterJobsExists] = await db.query("SHOW TABLES LIKE 'master_jobs'");
+    const jobsQuery = masterJobsExists.length
+      ? 'SELECT *, customer_name as client, job_number as job_num, total_billings as total FROM master_jobs'
+      : 'SELECT *, customer_name as client, job_num as job_num, total as total FROM quotes';
+    const master_jobs = await safeQuery(jobsQuery);
+    const rfqs = await safeQuery('SELECT *, rfq_number as rn FROM rfqs');
+    const users = await safeQuery('SELECT id, username, email, role, created_at FROM users');
+    const estimators = await safeQuery('SELECT * FROM estimators');
 
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
@@ -129,7 +146,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     // If the tables don't exist yet (e.g. after a failed restore wipe), return empty data
     // so the frontend can automatically trigger the DB re-initialization routine.
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ labor: [], equipment: [], customers: {}, quotes: [], rfqs: [], users: [] });
+      return res.json({ labor: [], equipment: [], customers: {}, jobs: [], rfqs: [], users: [], estimators: [] });
     }
     res.status(500).json({ error: 'Failed to fetch data', details: error.message });
   }
@@ -248,6 +265,53 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch table data' });
   }
+});
+
+// VECTOR DB / AI MODEL STATUS (Admin Only)
+app.get('/api/admin/vector-db', authenticateToken, authenticateAdmin, async (req, res) => {
+  const AI_HOST = process.env.AI_HOST || 'http://ai:8080';
+
+  const safeFetch = async (url) => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const r = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!r.ok) return null;
+      return await r.json();
+    } catch {
+      return null;
+    }
+  };
+
+  const [health, props, slots] = await Promise.all([
+    safeFetch(`${AI_HOST}/health`),
+    safeFetch(`${AI_HOST}/props`),
+    safeFetch(`${AI_HOST}/slots`),
+  ]);
+
+  // Count indexed records from MySQL as proxy for "embedded" docs
+  let indexedCounts = {};
+  try {
+    const tables = ['customers', 'quotes', 'rfqs', 'equipment'];
+    for (const t of tables) {
+      try {
+        const [[row]] = await db.query(`SELECT COUNT(*) as cnt FROM \`${t}\``);
+        indexedCounts[t] = row.cnt;
+      } catch { indexedCounts[t] = 0; }
+    }
+  } catch {}
+
+  res.json({
+    status: health ? (health.status || 'ok') : 'offline',
+    modelLoaded: health ? health.status === 'ok' : false,
+    health,
+    props,
+    slots: Array.isArray(slots) ? slots : [],
+    indexedCounts,
+    aiHost: AI_HOST,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // BULK INITIALIZATION (Admin Only) - Seeds DB from frontend data
