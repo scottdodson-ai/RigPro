@@ -38,18 +38,20 @@ async function run() {
     for (let i = 2; i <= customerWs.rowCount; i++) {
         const row = customerWs.getRow(i);
         if (!row.hasValues) continue;
+        const excelId = row.getCell(1).value;
         const nameValue = row.getCell(2).value;
         if (!nameValue) continue;
         const name = nameValue.toString().trim();
         const [result] = await connection.query(
-            'INSERT INTO customers (name, notes, billing_address, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [name, row.getCell(3).value || null, row.getCell(4).value || null, row.getCell(5).value || null, row.getCell(6).value || null, row.getCell(7).value || null, row.getCell(8).value || null]
+            'INSERT INTO customers (name, notes, billing_address, website, industry, payment_terms, account_num, customer_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, row.getCell(3).value || null, row.getCell(4).value || null, row.getCell(5).value || null, row.getCell(6).value || null, row.getCell(7).value || null, row.getCell(8).value || null, excelId || null]
         );
         const lName = name.toLowerCase();
         const cName = cleanStr(name);
+        // Link by both name and this new numeric ID
         nameToId.set(lName, result.insertId);
         cleanNameToId.set(cName, result.insertId);
-        allCustomerNames.push({ name: lName, clean: cName, id: result.insertId });
+        allCustomerNames.push({ name: lName, clean: cName, id: result.insertId, excelId });
         custCount++;
     }
 

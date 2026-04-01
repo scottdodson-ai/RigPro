@@ -83,133 +83,133 @@ const INIT_CUSTOMER_RATES = {
 const SAMPLE_QUOTES = [
   // ── 2024 QUOTES ───────────────────────────────────────────────────────────
   // Apex Industrial LLC
-  { id:1,   qn:"RIG-2024-001", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Press line relocation – Bay 4",                    date:"2024-02-12", status:"Won",       qtype:"Contract", labor:38400, equip:32000, hauling:9800,  travel:2400, mats:4000,  total:84200,  markup:0,    salesAssoc:"Dan M",   jobNum:"J-2024-012", startDate:"2024-03-10", compDate:"2024-03-15", locked:true,  salesAdjustments:[{id:1,amount:4200,reason:"Additional Work",note:"Added crane pick for Bay 5",date:"2024-03-12"}], notes:"Long-term client.", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["300","250","SEMI"] },
-  { id:2,   qn:"RIG-2024-008", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Overhead crane installation – Bay 7",              date:"2024-08-20", status:"Won",       qtype:"Contract", labor:52000, equip:44000, hauling:11000, travel:3200, mats:6000,  total:112000, markup:0.08, salesAssoc:"Dan M",   jobNum:"J-2024-088", startDate:"2024-09-08", compDate:"2024-09-13", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["250","320","PICK"] },
-  { id:3,   qn:"RIG-2024-031", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Compressor skid installation – utility bay",       date:"2024-11-05", status:"Won",       qtype:"Contract", labor:29500, equip:24000, hauling:7200,  travel:1800, mats:3100,  total:63800,  markup:0.05, salesAssoc:"Sarah K", jobNum:"J-2024-131", startDate:"2024-11-22", compDate:"2024-11-26", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Rick Torres",      contactEmail:"r.torres@apexind.com",       contactPhone:"330-555-0199", equipList:["302","PICK"] },
+  { id:1,   qn:"RIG-2024-001", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Press line relocation – Bay 4",                    date:"2024-02-12", status:"Won",       qtype:"Contract", labor:38400, equip:32000, hauling:9800,  travel:2400, mats:4000,  total:84200,  markup:0,    salesAssoc:"Dan M",   job_num:"J-2024-012", startDate:"2024-03-10", compDate:"2024-03-15", locked:true,  salesAdjustments:[{id:1,amount:4200,reason:"Additional Work",note:"Added crane pick for Bay 5",date:"2024-03-12"}], notes:"Long-term client.", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["300","250","SEMI"] },
+  { id:2,   qn:"RIG-2024-008", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Overhead crane installation – Bay 7",              date:"2024-08-20", status:"Won",       qtype:"Contract", labor:52000, equip:44000, hauling:11000, travel:3200, mats:6000,  total:112000, markup:0.08, salesAssoc:"Dan M",   job_num:"J-2024-088", startDate:"2024-09-08", compDate:"2024-09-13", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["250","320","PICK"] },
+  { id:3,   qn:"RIG-2024-031", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Compressor skid installation – utility bay",       date:"2024-11-05", status:"Won",       qtype:"Contract", labor:29500, equip:24000, hauling:7200,  travel:1800, mats:3100,  total:63800,  markup:0.05, salesAssoc:"Sarah K", job_num:"J-2024-131", startDate:"2024-11-22", compDate:"2024-11-26", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Rick Torres",      contactEmail:"r.torres@apexind.com",       contactPhone:"330-555-0199", equipList:["302","PICK"] },
   // Beacon Manufacturing Co.
-  { id:4,   qn:"RIG-2024-002", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Hydraulic press installation",                     date:"2024-01-15", status:"Won",       qtype:"Contract", labor:56000, equip:62000, hauling:18000, travel:6500, mats:6500,  total:142500, markup:0,    salesAssoc:"Sarah K", jobNum:"J-2024-002", startDate:"2024-02-10", compDate:"2024-02-17", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carolyn Marsh",    contactEmail:"c.marsh@beaconmfg.com",      contactPhone:"937-555-0244", equipList:["300","257","SEMI","PICK"] },
-  { id:5,   qn:"RIG-2024-011", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"CNC lathe bank relocation – Bldg B",               date:"2024-09-15", status:"Won",       qtype:"Contract", labor:31000, equip:27000, hauling:8000,  travel:2200, mats:3400,  total:71600,  markup:0.07, salesAssoc:"Sarah K", jobNum:"J-2024-095", startDate:"2024-10-07", compDate:"2024-10-10", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carolyn Marsh",    contactEmail:"c.marsh@beaconmfg.com",      contactPhone:"937-555-0244", equipList:["300","SEMI"] },
-  { id:6,   qn:"RIG-2024-024", client:"Beacon Manufacturing Co.",    jobSite:"220 Warehouse Dr, Springfield, OH 45501",      desc:"Warehouse conveyor system relocation",             date:"2024-06-03", status:"Lost",      qtype:"T&M",      labor:18000, equip:14500, hauling:4200,  travel:1100, mats:1800,  total:39600,  markup:0,    salesAssoc:"Mike R",  jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Lost on price.", attachments:[], contactName:"Doug Hensley",     contactEmail:"d.hensley@beaconmfg.com",    contactPhone:"937-555-0280", equipList:["257","PICK"] },
+  { id:4,   qn:"RIG-2024-002", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Hydraulic press installation",                     date:"2024-01-15", status:"Won",       qtype:"Contract", labor:56000, equip:62000, hauling:18000, travel:6500, mats:6500,  total:142500, markup:0,    salesAssoc:"Sarah K", job_num:"J-2024-002", startDate:"2024-02-10", compDate:"2024-02-17", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carolyn Marsh",    contactEmail:"c.marsh@beaconmfg.com",      contactPhone:"937-555-0244", equipList:["300","257","SEMI","PICK"] },
+  { id:5,   qn:"RIG-2024-011", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"CNC lathe bank relocation – Bldg B",               date:"2024-09-15", status:"Won",       qtype:"Contract", labor:31000, equip:27000, hauling:8000,  travel:2200, mats:3400,  total:71600,  markup:0.07, salesAssoc:"Sarah K", job_num:"J-2024-095", startDate:"2024-10-07", compDate:"2024-10-10", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carolyn Marsh",    contactEmail:"c.marsh@beaconmfg.com",      contactPhone:"937-555-0244", equipList:["300","SEMI"] },
+  { id:6,   qn:"RIG-2024-024", client:"Beacon Manufacturing Co.",    jobSite:"220 Warehouse Dr, Springfield, OH 45501",      desc:"Warehouse conveyor system relocation",             date:"2024-06-03", status:"Lost",      qtype:"T&M",      labor:18000, equip:14500, hauling:4200,  travel:1100, mats:1800,  total:39600,  markup:0,    salesAssoc:"Mike R",  job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Lost on price.", attachments:[], contactName:"Doug Hensley",     contactEmail:"d.hensley@beaconmfg.com",    contactPhone:"937-555-0280", equipList:["257","PICK"] },
   // Cornerstone Plastics Inc.
-  { id:7,   qn:"RIG-2024-003", client:"Cornerstone Plastics Inc.",   jobSite:"800 Factory Dr, Columbus, OH 43219",           desc:"Kiln dismantle & reinstall",                       date:"2024-03-18", status:"Won",       qtype:"T&M",      labor:28000, equip:24000, hauling:7200,  travel:2400, mats:2600,  total:61800,  markup:0,    salesAssoc:"Dan M",   jobNum:"J-2024-018", startDate:"2024-04-05", compDate:"2024-04-09", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["308","PICK"] },
-  { id:8,   qn:"RIG-2024-015", client:"Cornerstone Plastics Inc.",   jobSite:"800 Factory Dr, Columbus, OH 43219",           desc:"Blow mold machine relocation",                     date:"2024-10-08", status:"Lost",      qtype:"Contract", labor:22000, equip:18000, hauling:5200,  travel:1500, mats:2100,  total:49500,  markup:0,    salesAssoc:"Dan M",   jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Lost to competitor.", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["301"] },
+  { id:7,   qn:"RIG-2024-003", client:"Cornerstone Plastics Inc.",   jobSite:"800 Factory Dr, Columbus, OH 43219",           desc:"Kiln dismantle & reinstall",                       date:"2024-03-18", status:"Won",       qtype:"T&M",      labor:28000, equip:24000, hauling:7200,  travel:2400, mats:2600,  total:61800,  markup:0,    salesAssoc:"Dan M",   job_num:"J-2024-018", startDate:"2024-04-05", compDate:"2024-04-09", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["308","PICK"] },
+  { id:8,   qn:"RIG-2024-015", client:"Cornerstone Plastics Inc.",   jobSite:"800 Factory Dr, Columbus, OH 43219",           desc:"Blow mold machine relocation",                     date:"2024-10-08", status:"Lost",      qtype:"Contract", labor:22000, equip:18000, hauling:5200,  travel:1500, mats:2100,  total:49500,  markup:0,    salesAssoc:"Dan M",   job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Lost to competitor.", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["301"] },
   // Delta Fabrication Group
-  { id:9,   qn:"RIG-2024-019", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Press brake relocation – north wing",              date:"2024-04-30", status:"Won",       qtype:"Contract", labor:29000, equip:24500, hauling:7100,  travel:2000, mats:3100,  total:65700,  markup:0.07, salesAssoc:"Mike R",  jobNum:"J-2024-049", startDate:"2024-05-20", compDate:"2024-05-23", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["300","257","SEMI"] },
-  { id:10,  qn:"RIG-2024-033", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Welding robot install – south bay",                date:"2024-12-02", status:"Won",       qtype:"Contract", labor:34000, equip:28000, hauling:8500,  travel:2300, mats:3800,  total:76600,  markup:0.06, salesAssoc:"Mike R",  jobNum:"J-2024-143", startDate:"2024-12-16", compDate:"2024-12-20", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["308","SEMI"] },
+  { id:9,   qn:"RIG-2024-019", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Press brake relocation – north wing",              date:"2024-04-30", status:"Won",       qtype:"Contract", labor:29000, equip:24500, hauling:7100,  travel:2000, mats:3100,  total:65700,  markup:0.07, salesAssoc:"Mike R",  job_num:"J-2024-049", startDate:"2024-05-20", compDate:"2024-05-23", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["300","257","SEMI"] },
+  { id:10,  qn:"RIG-2024-033", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Welding robot install – south bay",                date:"2024-12-02", status:"Won",       qtype:"Contract", labor:34000, equip:28000, hauling:8500,  travel:2300, mats:3800,  total:76600,  markup:0.06, salesAssoc:"Mike R",  job_num:"J-2024-143", startDate:"2024-12-16", compDate:"2024-12-20", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["308","SEMI"] },
   // Eagle Press & Die
-  { id:11,  qn:"RIG-2024-022", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Die spotting press removal",                       date:"2024-07-10", status:"Won",       qtype:"Contract", labor:18500, equip:15500, hauling:4800,  travel:1300, mats:1900,  total:42800,  markup:0.08, salesAssoc:"Mike R",  jobNum:"J-2024-071", startDate:"2024-08-01", compDate:"2024-08-03", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Bob Trexler",      contactEmail:"b.trexler@eaglepress.com",   contactPhone:"330-555-0311", equipList:["302","PICK"] },
-  { id:12,  qn:"RIG-2024-029", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Stamping press motor swap – Bay 3",                date:"2024-10-22", status:"Lost",      qtype:"T&M",      labor:12000, equip:9500,  hauling:2800,  travel:900,  mats:1200,  total:26400,  markup:0,    salesAssoc:"Dan M",   jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Customer did work in-house.", attachments:[], contactName:"Lisa Brandt",      contactEmail:"l.brandt@eaglepress.com",    contactPhone:"330-555-0322", equipList:["PICK"] },
+  { id:11,  qn:"RIG-2024-022", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Die spotting press removal",                       date:"2024-07-10", status:"Won",       qtype:"Contract", labor:18500, equip:15500, hauling:4800,  travel:1300, mats:1900,  total:42800,  markup:0.08, salesAssoc:"Mike R",  job_num:"J-2024-071", startDate:"2024-08-01", compDate:"2024-08-03", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Bob Trexler",      contactEmail:"b.trexler@eaglepress.com",   contactPhone:"330-555-0311", equipList:["302","PICK"] },
+  { id:12,  qn:"RIG-2024-029", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Stamping press motor swap – Bay 3",                date:"2024-10-22", status:"Lost",      qtype:"T&M",      labor:12000, equip:9500,  hauling:2800,  travel:900,  mats:1200,  total:26400,  markup:0,    salesAssoc:"Dan M",   job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Customer did work in-house.", attachments:[], contactName:"Lisa Brandt",      contactEmail:"l.brandt@eaglepress.com",    contactPhone:"330-555-0322", equipList:["PICK"] },
   // Frontier Castings Ltd.
-  { id:13,  qn:"RIG-2024-027", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Sand casting conveyor relocation",                 date:"2024-09-22", status:"Won",       qtype:"Contract", labor:39000, equip:33000, hauling:9500,  travel:2900, mats:4300,  total:88700,  markup:0.07, salesAssoc:"Sarah K", jobNum:"J-2024-097", startDate:"2024-10-14", compDate:"2024-10-18", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Tony Ruiz",        contactEmail:"t.ruiz@frontiercasting.com", contactPhone:"330-555-0518", equipList:["300","257","SEMI"] },
-  { id:14,  qn:"RIG-2024-035", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Melt furnace refractory removal",                  date:"2024-12-10", status:"Won",       qtype:"T&M",      labor:22000, equip:19000, hauling:5500,  travel:1800, mats:2400,  total:50700,  markup:0.05, salesAssoc:"Dan M",   jobNum:"J-2024-155", startDate:"2024-12-20", compDate:"2024-12-24", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Angela Kim",        contactEmail:"a.kim@frontiercasting.com",  contactPhone:"330-555-0530", equipList:["308","PICK"] },
+  { id:13,  qn:"RIG-2024-027", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Sand casting conveyor relocation",                 date:"2024-09-22", status:"Won",       qtype:"Contract", labor:39000, equip:33000, hauling:9500,  travel:2900, mats:4300,  total:88700,  markup:0.07, salesAssoc:"Sarah K", job_num:"J-2024-097", startDate:"2024-10-14", compDate:"2024-10-18", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Tony Ruiz",        contactEmail:"t.ruiz@frontiercasting.com", contactPhone:"330-555-0518", equipList:["300","257","SEMI"] },
+  { id:14,  qn:"RIG-2024-035", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Melt furnace refractory removal",                  date:"2024-12-10", status:"Won",       qtype:"T&M",      labor:22000, equip:19000, hauling:5500,  travel:1800, mats:2400,  total:50700,  markup:0.05, salesAssoc:"Dan M",   job_num:"J-2024-155", startDate:"2024-12-20", compDate:"2024-12-24", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Angela Kim",        contactEmail:"a.kim@frontiercasting.com",  contactPhone:"330-555-0530", equipList:["308","PICK"] },
   // Gateway Precision Tools
-  { id:15,  qn:"RIG-2024-004", client:"Gateway Precision Tools",     jobSite:"2200 Gateway Blvd, Toledo, OH 43612",          desc:"EDM machine relocation – clean room",              date:"2024-02-28", status:"Won",       qtype:"Contract", labor:16500, equip:13000, hauling:3800,  travel:1200, mats:1600,  total:36100,  markup:0.08, salesAssoc:"Sarah K", jobNum:"J-2024-014", startDate:"2024-03-18", compDate:"2024-03-20", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Frank Nguyen",      contactEmail:"f.nguyen@gatewaypt.com",     contactPhone:"419-555-0601", equipList:["302","PICK"] },
-  { id:16,  qn:"RIG-2024-021", client:"Gateway Precision Tools",     jobSite:"2200 Gateway Blvd, Toledo, OH 43612",          desc:"CNC machining center install",                     date:"2024-07-18", status:"Won",       qtype:"Contract", labor:24000, equip:20000, hauling:5800,  travel:1700, mats:2600,  total:54100,  markup:0.06, salesAssoc:"Sarah K", jobNum:"J-2024-078", startDate:"2024-08-12", compDate:"2024-08-15", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Frank Nguyen",      contactEmail:"f.nguyen@gatewaypt.com",     contactPhone:"419-555-0601", equipList:["308","PICK"] },
+  { id:15,  qn:"RIG-2024-004", client:"Gateway Precision Tools",     jobSite:"2200 Gateway Blvd, Toledo, OH 43612",          desc:"EDM machine relocation – clean room",              date:"2024-02-28", status:"Won",       qtype:"Contract", labor:16500, equip:13000, hauling:3800,  travel:1200, mats:1600,  total:36100,  markup:0.08, salesAssoc:"Sarah K", job_num:"J-2024-014", startDate:"2024-03-18", compDate:"2024-03-20", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Frank Nguyen",      contactEmail:"f.nguyen@gatewaypt.com",     contactPhone:"419-555-0601", equipList:["302","PICK"] },
+  { id:16,  qn:"RIG-2024-021", client:"Gateway Precision Tools",     jobSite:"2200 Gateway Blvd, Toledo, OH 43612",          desc:"CNC machining center install",                     date:"2024-07-18", status:"Won",       qtype:"Contract", labor:24000, equip:20000, hauling:5800,  travel:1700, mats:2600,  total:54100,  markup:0.06, salesAssoc:"Sarah K", job_num:"J-2024-078", startDate:"2024-08-12", compDate:"2024-08-15", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Frank Nguyen",      contactEmail:"f.nguyen@gatewaypt.com",     contactPhone:"419-555-0601", equipList:["308","PICK"] },
   // Horizon Automotive Parts
-  { id:17,  qn:"RIG-2024-006", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Transfer press line relocation",                   date:"2024-05-14", status:"Won",       qtype:"Contract", labor:68000, equip:72000, hauling:22000, travel:7200, mats:8500,  total:172700, markup:0.08, salesAssoc:"Mike R",  jobNum:"J-2024-055", startDate:"2024-06-02", compDate:"2024-06-09", locked:true,  salesAdjustments:[{id:2,amount:6500,reason:"Additional Work",note:"Extra rigging for subframe",date:"2024-06-05"}], notes:"Largest job of Q2.", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","250","SEMI","PICK"] },
-  { id:18,  qn:"RIG-2024-025", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Spot weld robot arm replacement",                  date:"2024-08-30", status:"Lost",      qtype:"T&M",      labor:14000, equip:11000, hauling:3200,  travel:1100, mats:1400,  total:30700,  markup:0,    salesAssoc:"Mike R",  jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Customer used OEM crew.", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["PICK"] },
+  { id:17,  qn:"RIG-2024-006", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Transfer press line relocation",                   date:"2024-05-14", status:"Won",       qtype:"Contract", labor:68000, equip:72000, hauling:22000, travel:7200, mats:8500,  total:172700, markup:0.08, salesAssoc:"Mike R",  job_num:"J-2024-055", startDate:"2024-06-02", compDate:"2024-06-09", locked:true,  salesAdjustments:[{id:2,amount:6500,reason:"Additional Work",note:"Extra rigging for subframe",date:"2024-06-05"}], notes:"Largest job of Q2.", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","250","SEMI","PICK"] },
+  { id:18,  qn:"RIG-2024-025", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Spot weld robot arm replacement",                  date:"2024-08-30", status:"Lost",      qtype:"T&M",      labor:14000, equip:11000, hauling:3200,  travel:1100, mats:1400,  total:30700,  markup:0,    salesAssoc:"Mike R",  job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Customer used OEM crew.", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["PICK"] },
   // Icon Rubber Products
-  { id:19,  qn:"RIG-2024-009", client:"Icon Rubber Products",        jobSite:"5100 Rubber Ln, Barberton, OH 44203",          desc:"Extruder relocation – Line 2",                     date:"2024-06-20", status:"Won",       qtype:"T&M",      labor:21000, equip:17500, hauling:5100,  travel:1600, mats:2200,  total:47400,  markup:0.05, salesAssoc:"Dan M",   jobNum:"J-2024-065", startDate:"2024-07-08", compDate:"2024-07-11", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Greg Owens",        contactEmail:"g.owens@iconrubber.com",     contactPhone:"330-555-0821", equipList:["301","PICK"] },
-  { id:20,  qn:"RIG-2024-032", client:"Icon Rubber Products",        jobSite:"5100 Rubber Ln, Barberton, OH 44203",          desc:"Banbury mixer overhaul lift",                      date:"2024-11-14", status:"Won",       qtype:"Contract", labor:27500, equip:23000, hauling:6600,  travel:2100, mats:2900,  total:62100,  markup:0.06, salesAssoc:"Dan M",   jobNum:"J-2024-132", startDate:"2024-12-02", compDate:"2024-12-05", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Greg Owens",        contactEmail:"g.owens@iconrubber.com",     contactPhone:"330-555-0821", equipList:["308","SEMI"] },
+  { id:19,  qn:"RIG-2024-009", client:"Icon Rubber Products",        jobSite:"5100 Rubber Ln, Barberton, OH 44203",          desc:"Extruder relocation – Line 2",                     date:"2024-06-20", status:"Won",       qtype:"T&M",      labor:21000, equip:17500, hauling:5100,  travel:1600, mats:2200,  total:47400,  markup:0.05, salesAssoc:"Dan M",   job_num:"J-2024-065", startDate:"2024-07-08", compDate:"2024-07-11", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Greg Owens",        contactEmail:"g.owens@iconrubber.com",     contactPhone:"330-555-0821", equipList:["301","PICK"] },
+  { id:20,  qn:"RIG-2024-032", client:"Icon Rubber Products",        jobSite:"5100 Rubber Ln, Barberton, OH 44203",          desc:"Banbury mixer overhaul lift",                      date:"2024-11-14", status:"Won",       qtype:"Contract", labor:27500, equip:23000, hauling:6600,  travel:2100, mats:2900,  total:62100,  markup:0.06, salesAssoc:"Dan M",   job_num:"J-2024-132", startDate:"2024-12-02", compDate:"2024-12-05", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Greg Owens",        contactEmail:"g.owens@iconrubber.com",     contactPhone:"330-555-0821", equipList:["308","SEMI"] },
   // Junction Steel Works
-  { id:21,  qn:"RIG-2024-010", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Coil reel and straightener set",                   date:"2024-07-02", status:"Won",       qtype:"Contract", labor:45000, equip:38000, hauling:11500, travel:3400, mats:5200,  total:103100, markup:0.07, salesAssoc:"Sarah K", jobNum:"J-2024-067", startDate:"2024-07-22", compDate:"2024-07-26", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["320","250","SEMI"] },
-  { id:22,  qn:"RIG-2024-028", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Shear line decommission",                          date:"2024-10-10", status:"Lost",      qtype:"T&M",      labor:16000, equip:13000, hauling:3800,  travel:1300, mats:1700,  total:35800,  markup:0,    salesAssoc:"Sarah K", jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"No budget this quarter.", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["300","PICK"] },
+  { id:21,  qn:"RIG-2024-010", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Coil reel and straightener set",                   date:"2024-07-02", status:"Won",       qtype:"Contract", labor:45000, equip:38000, hauling:11500, travel:3400, mats:5200,  total:103100, markup:0.07, salesAssoc:"Sarah K", job_num:"J-2024-067", startDate:"2024-07-22", compDate:"2024-07-26", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["320","250","SEMI"] },
+  { id:22,  qn:"RIG-2024-028", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Shear line decommission",                          date:"2024-10-10", status:"Lost",      qtype:"T&M",      labor:16000, equip:13000, hauling:3800,  travel:1300, mats:1700,  total:35800,  markup:0,    salesAssoc:"Sarah K", job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"No budget this quarter.", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["300","PICK"] },
   // Keystone Die Casting
-  { id:23,  qn:"RIG-2024-014", client:"Keystone Die Casting",        jobSite:"620 Die Cast Dr, Massillon, OH 44646",         desc:"Die cast machine #4 replacement",                  date:"2024-09-05", status:"Won",       qtype:"Contract", labor:51000, equip:46000, hauling:13500, travel:4100, mats:5800,  total:120400, markup:0.08, salesAssoc:"Mike R",  jobNum:"J-2024-091", startDate:"2024-09-25", compDate:"2024-09-30", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Helen Marsh",        contactEmail:"h.marsh@keystonedc.com",     contactPhone:"330-555-1044", equipList:["320","250","SEMI","PICK"] },
+  { id:23,  qn:"RIG-2024-014", client:"Keystone Die Casting",        jobSite:"620 Die Cast Dr, Massillon, OH 44646",         desc:"Die cast machine #4 replacement",                  date:"2024-09-05", status:"Won",       qtype:"Contract", labor:51000, equip:46000, hauling:13500, travel:4100, mats:5800,  total:120400, markup:0.08, salesAssoc:"Mike R",  job_num:"J-2024-091", startDate:"2024-09-25", compDate:"2024-09-30", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Helen Marsh",        contactEmail:"h.marsh@keystonedc.com",     contactPhone:"330-555-1044", equipList:["320","250","SEMI","PICK"] },
   // Landmark Tooling Inc.
-  { id:24,  qn:"RIG-2024-017", client:"Landmark Tooling Inc.",       jobSite:"3300 Tool & Die Ave, Medina, OH 44256",        desc:"Surface grinder relocation",                       date:"2024-10-17", status:"Won",       qtype:"T&M",      labor:13500, equip:11000, hauling:3200,  travel:1000, mats:1400,  total:30100,  markup:0.05, salesAssoc:"Dan M",   jobNum:"J-2024-107", startDate:"2024-11-04", compDate:"2024-11-06", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Phil Stevens",       contactEmail:"p.stevens@landmarktool.com", contactPhone:"330-555-1155", equipList:["302","PICK"] },
-  { id:25,  qn:"RIG-2024-030", client:"Landmark Tooling Inc.",       jobSite:"3300 Tool & Die Ave, Medina, OH 44256",        desc:"Coordinate measuring machine install",             date:"2024-11-20", status:"Lost",      qtype:"Contract", labor:8500,  equip:7000,  hauling:2000,  travel:700,  mats:900,   total:19100,  markup:0,    salesAssoc:"Dan M",   jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Client postponed project.", attachments:[], contactName:"Phil Stevens",       contactEmail:"p.stevens@landmarktool.com", contactPhone:"330-555-1155", equipList:["PICK"] },
+  { id:24,  qn:"RIG-2024-017", client:"Landmark Tooling Inc.",       jobSite:"3300 Tool & Die Ave, Medina, OH 44256",        desc:"Surface grinder relocation",                       date:"2024-10-17", status:"Won",       qtype:"T&M",      labor:13500, equip:11000, hauling:3200,  travel:1000, mats:1400,  total:30100,  markup:0.05, salesAssoc:"Dan M",   job_num:"J-2024-107", startDate:"2024-11-04", compDate:"2024-11-06", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Phil Stevens",       contactEmail:"p.stevens@landmarktool.com", contactPhone:"330-555-1155", equipList:["302","PICK"] },
+  { id:25,  qn:"RIG-2024-030", client:"Landmark Tooling Inc.",       jobSite:"3300 Tool & Die Ave, Medina, OH 44256",        desc:"Coordinate measuring machine install",             date:"2024-11-20", status:"Lost",      qtype:"Contract", labor:8500,  equip:7000,  hauling:2000,  travel:700,  mats:900,   total:19100,  markup:0,    salesAssoc:"Dan M",   job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Client postponed project.", attachments:[], contactName:"Phil Stevens",       contactEmail:"p.stevens@landmarktool.com", contactPhone:"330-555-1155", equipList:["PICK"] },
   // Meridian Extrusion Co.
-  { id:26,  qn:"RIG-2024-013", client:"Meridian Extrusion Co.",      jobSite:"4100 Extrusion Blvd, Sandusky, OH 44870",      desc:"Die cart system installation",                     date:"2024-08-12", status:"Won",       qtype:"Contract", labor:33000, equip:27500, hauling:8200,  travel:2600, mats:3600,  total:74900,  markup:0.06, salesAssoc:"Sarah K", jobNum:"J-2024-083", startDate:"2024-09-02", compDate:"2024-09-06", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carol Jensen",        contactEmail:"c.jensen@meridianext.com",   contactPhone:"419-555-1266", equipList:["308","SEMI"] },
+  { id:26,  qn:"RIG-2024-013", client:"Meridian Extrusion Co.",      jobSite:"4100 Extrusion Blvd, Sandusky, OH 44870",      desc:"Die cart system installation",                     date:"2024-08-12", status:"Won",       qtype:"Contract", labor:33000, equip:27500, hauling:8200,  travel:2600, mats:3600,  total:74900,  markup:0.06, salesAssoc:"Sarah K", job_num:"J-2024-083", startDate:"2024-09-02", compDate:"2024-09-06", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carol Jensen",        contactEmail:"c.jensen@meridianext.com",   contactPhone:"419-555-1266", equipList:["308","SEMI"] },
   // Northgate Aluminum
-  { id:27,  qn:"RIG-2024-016", client:"Northgate Aluminum",          jobSite:"700 Smelter Rd, Lima, OH 45801",               desc:"Rolling mill bearing replacement lift",            date:"2024-10-01", status:"Won",       qtype:"T&M",      labor:42000, equip:36000, hauling:10800, travel:3500, mats:4800,  total:97100,  markup:0.07, salesAssoc:"Mike R",  jobNum:"J-2024-101", startDate:"2024-10-21", compDate:"2024-10-25", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Bruce Tanner",       contactEmail:"b.tanner@northgatealum.com", contactPhone:"419-555-1377", equipList:["320","250","SEMI"] },
+  { id:27,  qn:"RIG-2024-016", client:"Northgate Aluminum",          jobSite:"700 Smelter Rd, Lima, OH 45801",               desc:"Rolling mill bearing replacement lift",            date:"2024-10-01", status:"Won",       qtype:"T&M",      labor:42000, equip:36000, hauling:10800, travel:3500, mats:4800,  total:97100,  markup:0.07, salesAssoc:"Mike R",  job_num:"J-2024-101", startDate:"2024-10-21", compDate:"2024-10-25", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Bruce Tanner",       contactEmail:"b.tanner@northgatealum.com", contactPhone:"419-555-1377", equipList:["320","250","SEMI"] },
 
   // ── 2025 QUOTES ───────────────────────────────────────────────────────────
   // Apex Industrial LLC
-  { id:28,  qn:"RIG-2025-001", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Heat treat oven relocation – Bay 2",               date:"2025-01-14", status:"Won",       qtype:"Contract", labor:31000, equip:26500, hauling:7800,  travel:2100, mats:3400,  total:70800,  markup:0.06, salesAssoc:"Dan M",   jobNum:"J-2025-004", startDate:"2025-02-03", compDate:"2025-02-07", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["300","SEMI"] },
-  { id:29,  qn:"RIG-2025-007", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Injection mold press relocation",                  date:"2025-04-10", status:"Won",       qtype:"T&M",      labor:24000, equip:19000, hauling:6500,  travel:1800, mats:2800,  total:54100,  markup:0.05, salesAssoc:"Sarah K", jobNum:"J-2025-042", startDate:"2025-05-01", compDate:"2025-05-05", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Rick Torres",      contactEmail:"r.torres@apexind.com",       contactPhone:"330-555-0199", equipList:["302","PICK"] },
-  { id:30,  qn:"RIG-2025-021", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Cooling tower pump skid installation",             date:"2025-08-05", status:"Won",       qtype:"Contract", labor:27000, equip:22500, hauling:6800,  travel:1900, mats:3000,  total:61200,  markup:0.05, salesAssoc:"Dan M",   jobNum:"J-2025-089", startDate:"2025-08-25", compDate:"2025-08-29", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["300","PICK"] },
+  { id:28,  qn:"RIG-2025-001", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Heat treat oven relocation – Bay 2",               date:"2025-01-14", status:"Won",       qtype:"Contract", labor:31000, equip:26500, hauling:7800,  travel:2100, mats:3400,  total:70800,  markup:0.06, salesAssoc:"Dan M",   job_num:"J-2025-004", startDate:"2025-02-03", compDate:"2025-02-07", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["300","SEMI"] },
+  { id:29,  qn:"RIG-2025-007", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Injection mold press relocation",                  date:"2025-04-10", status:"Won",       qtype:"T&M",      labor:24000, equip:19000, hauling:6500,  travel:1800, mats:2800,  total:54100,  markup:0.05, salesAssoc:"Sarah K", job_num:"J-2025-042", startDate:"2025-05-01", compDate:"2025-05-05", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Rick Torres",      contactEmail:"r.torres@apexind.com",       contactPhone:"330-555-0199", equipList:["302","PICK"] },
+  { id:30,  qn:"RIG-2025-021", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Cooling tower pump skid installation",             date:"2025-08-05", status:"Won",       qtype:"Contract", labor:27000, equip:22500, hauling:6800,  travel:1900, mats:3000,  total:61200,  markup:0.05, salesAssoc:"Dan M",   job_num:"J-2025-089", startDate:"2025-08-25", compDate:"2025-08-29", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["300","PICK"] },
   // Beacon Manufacturing Co.
-  { id:31,  qn:"RIG-2025-003", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Transformer set – electrical bay",                 date:"2025-01-22", status:"Won",       qtype:"T&M",      labor:18000, equip:21000, hauling:5500,  travel:1600, mats:2200,  total:48300,  markup:0,    salesAssoc:"Mike R",  jobNum:"J-2025-008", startDate:"2025-02-10", compDate:"2025-02-13", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Doug Hensley",     contactEmail:"d.hensley@beaconmfg.com",    contactPhone:"937-555-0280", equipList:["257","PICK"] },
-  { id:32,  qn:"RIG-2025-018", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Laser cutter installation – Bldg C",               date:"2025-06-17", status:"Won",       qtype:"Contract", labor:22500, equip:19000, hauling:5700,  travel:1700, mats:2500,  total:51400,  markup:0.05, salesAssoc:"Sarah K", jobNum:"J-2025-071", startDate:"2025-07-07", compDate:"2025-07-10", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carolyn Marsh",    contactEmail:"c.marsh@beaconmfg.com",      contactPhone:"937-555-0244", equipList:["308","PICK"] },
-  { id:33,  qn:"RIG-2025-031", client:"Beacon Manufacturing Co.",    jobSite:"220 Warehouse Dr, Springfield, OH 45501",      desc:"Robotic palletizer install",                       date:"2025-10-08", status:"Lost",      qtype:"Contract", labor:19000, equip:15500, hauling:4600,  travel:1400, mats:2000,  total:42500,  markup:0,    salesAssoc:"Mike R",  jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Lost on price to regional competitor.", attachments:[], contactName:"Doug Hensley",     contactEmail:"d.hensley@beaconmfg.com",    contactPhone:"937-555-0280", equipList:["257","PICK"] },
+  { id:31,  qn:"RIG-2025-003", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Transformer set – electrical bay",                 date:"2025-01-22", status:"Won",       qtype:"T&M",      labor:18000, equip:21000, hauling:5500,  travel:1600, mats:2200,  total:48300,  markup:0,    salesAssoc:"Mike R",  job_num:"J-2025-008", startDate:"2025-02-10", compDate:"2025-02-13", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Doug Hensley",     contactEmail:"d.hensley@beaconmfg.com",    contactPhone:"937-555-0280", equipList:["257","PICK"] },
+  { id:32,  qn:"RIG-2025-018", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Laser cutter installation – Bldg C",               date:"2025-06-17", status:"Won",       qtype:"Contract", labor:22500, equip:19000, hauling:5700,  travel:1700, mats:2500,  total:51400,  markup:0.05, salesAssoc:"Sarah K", job_num:"J-2025-071", startDate:"2025-07-07", compDate:"2025-07-10", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carolyn Marsh",    contactEmail:"c.marsh@beaconmfg.com",      contactPhone:"937-555-0244", equipList:["308","PICK"] },
+  { id:33,  qn:"RIG-2025-031", client:"Beacon Manufacturing Co.",    jobSite:"220 Warehouse Dr, Springfield, OH 45501",      desc:"Robotic palletizer install",                       date:"2025-10-08", status:"Lost",      qtype:"Contract", labor:19000, equip:15500, hauling:4600,  travel:1400, mats:2000,  total:42500,  markup:0,    salesAssoc:"Mike R",  job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Lost on price to regional competitor.", attachments:[], contactName:"Doug Hensley",     contactEmail:"d.hensley@beaconmfg.com",    contactPhone:"937-555-0280", equipList:["257","PICK"] },
   // Cornerstone Plastics Inc.
-  { id:34,  qn:"RIG-2025-009", client:"Cornerstone Plastics Inc.",   jobSite:"1450 Westgate Blvd, Columbus, OH 43228",       desc:"New facility equipment install",                   date:"2025-03-01", status:"Won",       qtype:"Contract", labor:41000, equip:36000, hauling:10500, travel:3100, mats:4800,  total:95400,  markup:0.08, salesAssoc:"Mike R",  jobNum:"J-2025-028", startDate:"2025-03-24", compDate:"2025-03-29", locked:true,  salesAdjustments:[], notes:"New location.", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["320","250","SEMI"] },
-  { id:35,  qn:"RIG-2025-022", client:"Cornerstone Plastics Inc.",   jobSite:"1450 Westgate Blvd, Columbus, OH 43228",       desc:"Trim press relocation – west wing",                date:"2025-07-14", status:"Won",       qtype:"T&M",      labor:19500, equip:16000, hauling:4700,  travel:1500, mats:2100,  total:43800,  markup:0.05, salesAssoc:"Dan M",   jobNum:"J-2025-076", startDate:"2025-08-04", compDate:"2025-08-07", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["302","PICK"] },
+  { id:34,  qn:"RIG-2025-009", client:"Cornerstone Plastics Inc.",   jobSite:"1450 Westgate Blvd, Columbus, OH 43228",       desc:"New facility equipment install",                   date:"2025-03-01", status:"Won",       qtype:"Contract", labor:41000, equip:36000, hauling:10500, travel:3100, mats:4800,  total:95400,  markup:0.08, salesAssoc:"Mike R",  job_num:"J-2025-028", startDate:"2025-03-24", compDate:"2025-03-29", locked:true,  salesAdjustments:[], notes:"New location.", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["320","250","SEMI"] },
+  { id:35,  qn:"RIG-2025-022", client:"Cornerstone Plastics Inc.",   jobSite:"1450 Westgate Blvd, Columbus, OH 43228",       desc:"Trim press relocation – west wing",                date:"2025-07-14", status:"Won",       qtype:"T&M",      labor:19500, equip:16000, hauling:4700,  travel:1500, mats:2100,  total:43800,  markup:0.05, salesAssoc:"Dan M",   job_num:"J-2025-076", startDate:"2025-08-04", compDate:"2025-08-07", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["302","PICK"] },
   // Delta Fabrication Group
-  { id:36,  qn:"RIG-2025-002", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Aluminum furnace relocation",                      date:"2025-01-08", status:"Lost",      qtype:"Contract", labor:21000, equip:18500, hauling:5800,  travel:1400, mats:2000,  total:47300,  markup:0,    salesAssoc:"Sarah K", jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["300","PICK"] },
-  { id:37,  qn:"RIG-2025-011", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Stamping line expansion – Bay 9",                  date:"2025-05-20", status:"Won",       qtype:"T&M",      labor:35000, equip:31000, hauling:9000,  travel:2700, mats:4200,  total:81900,  markup:0,    salesAssoc:"Dan M",   jobNum:"J-2025-055", startDate:"2025-06-09", compDate:"2025-06-13", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["320","PICK"] },
-  { id:38,  qn:"RIG-2025-028", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Press room HVAC unit lift & set",                  date:"2025-09-11", status:"Won",       qtype:"T&M",      labor:12000, equip:9500,  hauling:2800,  travel:900,  mats:1200,  total:26400,  markup:0,    salesAssoc:"Mike R",  jobNum:"J-2025-098", startDate:"2025-09-29", compDate:"2025-09-30", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["257","PICK"] },
+  { id:36,  qn:"RIG-2025-002", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Aluminum furnace relocation",                      date:"2025-01-08", status:"Lost",      qtype:"Contract", labor:21000, equip:18500, hauling:5800,  travel:1400, mats:2000,  total:47300,  markup:0,    salesAssoc:"Sarah K", job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["300","PICK"] },
+  { id:37,  qn:"RIG-2025-011", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Stamping line expansion – Bay 9",                  date:"2025-05-20", status:"Won",       qtype:"T&M",      labor:35000, equip:31000, hauling:9000,  travel:2700, mats:4200,  total:81900,  markup:0,    salesAssoc:"Dan M",   job_num:"J-2025-055", startDate:"2025-06-09", compDate:"2025-06-13", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["320","PICK"] },
+  { id:38,  qn:"RIG-2025-028", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Press room HVAC unit lift & set",                  date:"2025-09-11", status:"Won",       qtype:"T&M",      labor:12000, equip:9500,  hauling:2800,  travel:900,  mats:1200,  total:26400,  markup:0,    salesAssoc:"Mike R",  job_num:"J-2025-098", startDate:"2025-09-29", compDate:"2025-09-30", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["257","PICK"] },
   // Eagle Press & Die
-  { id:39,  qn:"RIG-2025-002B",client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Press relocation – Building B",                    date:"2025-02-14", status:"Won",       qtype:"Contract", labor:44000, equip:38000, hauling:12000, travel:3200, mats:5200,  total:98000,  markup:0.10, salesAssoc:"Mike R",  jobNum:"J-2025-018", startDate:"2025-03-06", compDate:"2025-03-11", locked:true,  salesAdjustments:[], notes:"Priority client.", attachments:[], contactName:"Bob Trexler",      contactEmail:"b.trexler@eaglepress.com",   contactPhone:"330-555-0311", equipList:["300","250","SEMI","PICK"] },
-  { id:40,  qn:"RIG-2025-013", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Robotic welding cell relocation",                  date:"2025-05-05", status:"Won",       qtype:"T&M",      labor:27000, equip:22000, hauling:6200,  travel:1900, mats:2800,  total:59900,  markup:0,    salesAssoc:"Dan M",   jobNum:"J-2025-051", startDate:"2025-05-26", compDate:"2025-05-29", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Lisa Brandt",      contactEmail:"l.brandt@eaglepress.com",    contactPhone:"330-555-0322", equipList:["308","257"] },
-  { id:41,  qn:"RIG-2025-029", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Blanking press electrical upgrade lift",           date:"2025-09-22", status:"Lost",      qtype:"Contract", labor:16000, equip:13000, hauling:3800,  travel:1200, mats:1700,  total:35700,  markup:0,    salesAssoc:"Sarah K", jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Deferred to 2026.", attachments:[], contactName:"Bob Trexler",      contactEmail:"b.trexler@eaglepress.com",   contactPhone:"330-555-0311", equipList:["302","PICK"] },
+  { id:39,  qn:"RIG-2025-002B",client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Press relocation – Building B",                    date:"2025-02-14", status:"Won",       qtype:"Contract", labor:44000, equip:38000, hauling:12000, travel:3200, mats:5200,  total:98000,  markup:0.10, salesAssoc:"Mike R",  job_num:"J-2025-018", startDate:"2025-03-06", compDate:"2025-03-11", locked:true,  salesAdjustments:[], notes:"Priority client.", attachments:[], contactName:"Bob Trexler",      contactEmail:"b.trexler@eaglepress.com",   contactPhone:"330-555-0311", equipList:["300","250","SEMI","PICK"] },
+  { id:40,  qn:"RIG-2025-013", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Robotic welding cell relocation",                  date:"2025-05-05", status:"Won",       qtype:"T&M",      labor:27000, equip:22000, hauling:6200,  travel:1900, mats:2800,  total:59900,  markup:0,    salesAssoc:"Dan M",   job_num:"J-2025-051", startDate:"2025-05-26", compDate:"2025-05-29", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Lisa Brandt",      contactEmail:"l.brandt@eaglepress.com",    contactPhone:"330-555-0322", equipList:["308","257"] },
+  { id:41,  qn:"RIG-2025-029", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Blanking press electrical upgrade lift",           date:"2025-09-22", status:"Lost",      qtype:"Contract", labor:16000, equip:13000, hauling:3800,  travel:1200, mats:1700,  total:35700,  markup:0,    salesAssoc:"Sarah K", job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Deferred to 2026.", attachments:[], contactName:"Bob Trexler",      contactEmail:"b.trexler@eaglepress.com",   contactPhone:"330-555-0311", equipList:["302","PICK"] },
   // Frontier Castings Ltd.
-  { id:42,  qn:"RIG-2025-006", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Furnace installation",                             date:"2025-02-28", status:"Won",       qtype:"T&M",      labor:32000, equip:28000, hauling:8500,  travel:2800, mats:3400,  total:74700,  markup:0.08, salesAssoc:"Dan M",   jobNum:"J-2025-022", startDate:"2025-03-20", compDate:"2025-03-25", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Tony Ruiz",        contactEmail:"t.ruiz@frontiercasting.com", contactPhone:"330-555-0518", equipList:["320","SEMI"] },
-  { id:43,  qn:"RIG-2025-016", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Core room equipment upgrade",                      date:"2025-06-10", status:"Won",       qtype:"Contract", labor:19000, equip:16500, hauling:4800,  travel:1400, mats:2100,  total:43800,  markup:0,    salesAssoc:"Mike R",  jobNum:"J-2025-065", startDate:"2025-07-01", compDate:"2025-07-04", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Angela Kim",        contactEmail:"a.kim@frontiercasting.com",  contactPhone:"330-555-0530", equipList:["308","PICK"] },
+  { id:42,  qn:"RIG-2025-006", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Furnace installation",                             date:"2025-02-28", status:"Won",       qtype:"T&M",      labor:32000, equip:28000, hauling:8500,  travel:2800, mats:3400,  total:74700,  markup:0.08, salesAssoc:"Dan M",   job_num:"J-2025-022", startDate:"2025-03-20", compDate:"2025-03-25", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Tony Ruiz",        contactEmail:"t.ruiz@frontiercasting.com", contactPhone:"330-555-0518", equipList:["320","SEMI"] },
+  { id:43,  qn:"RIG-2025-016", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Core room equipment upgrade",                      date:"2025-06-10", status:"Won",       qtype:"Contract", labor:19000, equip:16500, hauling:4800,  travel:1400, mats:2100,  total:43800,  markup:0,    salesAssoc:"Mike R",  job_num:"J-2025-065", startDate:"2025-07-01", compDate:"2025-07-04", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Angela Kim",        contactEmail:"a.kim@frontiercasting.com",  contactPhone:"330-555-0530", equipList:["308","PICK"] },
   // Gateway Precision Tools
-  { id:44,  qn:"RIG-2025-004", client:"Gateway Precision Tools",     jobSite:"2200 Gateway Blvd, Toledo, OH 43612",          desc:"5-axis machining center install",                  date:"2025-01-30", status:"Won",       qtype:"Contract", labor:28000, equip:23500, hauling:6900,  travel:2100, mats:3100,  total:63600,  markup:0.06, salesAssoc:"Sarah K", jobNum:"J-2025-011", startDate:"2025-02-18", compDate:"2025-02-22", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Frank Nguyen",      contactEmail:"f.nguyen@gatewaypt.com",     contactPhone:"419-555-0601", equipList:["308","SEMI"] },
-  { id:45,  qn:"RIG-2025-025", client:"Gateway Precision Tools",     jobSite:"2200 Gateway Blvd, Toledo, OH 43612",          desc:"Grinding center relocation – east wing",           date:"2025-08-20", status:"Lost",      qtype:"T&M",      labor:11500, equip:9000,  hauling:2600,  travel:900,  mats:1200,  total:25200,  markup:0,    salesAssoc:"Sarah K", jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Frank Nguyen",      contactEmail:"f.nguyen@gatewaypt.com",     contactPhone:"419-555-0601", equipList:["302","PICK"] },
+  { id:44,  qn:"RIG-2025-004", client:"Gateway Precision Tools",     jobSite:"2200 Gateway Blvd, Toledo, OH 43612",          desc:"5-axis machining center install",                  date:"2025-01-30", status:"Won",       qtype:"Contract", labor:28000, equip:23500, hauling:6900,  travel:2100, mats:3100,  total:63600,  markup:0.06, salesAssoc:"Sarah K", job_num:"J-2025-011", startDate:"2025-02-18", compDate:"2025-02-22", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Frank Nguyen",      contactEmail:"f.nguyen@gatewaypt.com",     contactPhone:"419-555-0601", equipList:["308","SEMI"] },
+  { id:45,  qn:"RIG-2025-025", client:"Gateway Precision Tools",     jobSite:"2200 Gateway Blvd, Toledo, OH 43612",          desc:"Grinding center relocation – east wing",           date:"2025-08-20", status:"Lost",      qtype:"T&M",      labor:11500, equip:9000,  hauling:2600,  travel:900,  mats:1200,  total:25200,  markup:0,    salesAssoc:"Sarah K", job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Frank Nguyen",      contactEmail:"f.nguyen@gatewaypt.com",     contactPhone:"419-555-0601", equipList:["302","PICK"] },
   // Horizon Automotive Parts
-  { id:46,  qn:"RIG-2025-008", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Assembly conveyor extension",                      date:"2025-03-15", status:"Won",       qtype:"Contract", labor:55000, equip:48000, hauling:14500, travel:4800, mats:6500,  total:128800, markup:0.07, salesAssoc:"Mike R",  jobNum:"J-2025-032", startDate:"2025-04-07", compDate:"2025-04-14", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","250","SEMI","PICK"] },
-  { id:47,  qn:"RIG-2025-024", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Paint line robot install",                         date:"2025-08-11", status:"Won",       qtype:"Contract", labor:37000, equip:31000, hauling:9200,  travel:3100, mats:4100,  total:84400,  markup:0.06, salesAssoc:"Mike R",  jobNum:"J-2025-085", startDate:"2025-09-01", compDate:"2025-09-05", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","SEMI","PICK"] },
+  { id:46,  qn:"RIG-2025-008", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Assembly conveyor extension",                      date:"2025-03-15", status:"Won",       qtype:"Contract", labor:55000, equip:48000, hauling:14500, travel:4800, mats:6500,  total:128800, markup:0.07, salesAssoc:"Mike R",  job_num:"J-2025-032", startDate:"2025-04-07", compDate:"2025-04-14", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","250","SEMI","PICK"] },
+  { id:47,  qn:"RIG-2025-024", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Paint line robot install",                         date:"2025-08-11", status:"Won",       qtype:"Contract", labor:37000, equip:31000, hauling:9200,  travel:3100, mats:4100,  total:84400,  markup:0.06, salesAssoc:"Mike R",  job_num:"J-2025-085", startDate:"2025-09-01", compDate:"2025-09-05", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","SEMI","PICK"] },
   // Icon Rubber Products
-  { id:48,  qn:"RIG-2025-010", client:"Icon Rubber Products",        jobSite:"5100 Rubber Ln, Barberton, OH 44203",          desc:"Calendar roll change-out",                         date:"2025-04-03", status:"Won",       qtype:"T&M",      labor:18000, equip:15000, hauling:4400,  travel:1400, mats:1900,  total:40700,  markup:0.05, salesAssoc:"Dan M",   jobNum:"J-2025-038", startDate:"2025-04-22", compDate:"2025-04-24", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Greg Owens",        contactEmail:"g.owens@iconrubber.com",     contactPhone:"330-555-0821", equipList:["308","PICK"] },
+  { id:48,  qn:"RIG-2025-010", client:"Icon Rubber Products",        jobSite:"5100 Rubber Ln, Barberton, OH 44203",          desc:"Calendar roll change-out",                         date:"2025-04-03", status:"Won",       qtype:"T&M",      labor:18000, equip:15000, hauling:4400,  travel:1400, mats:1900,  total:40700,  markup:0.05, salesAssoc:"Dan M",   job_num:"J-2025-038", startDate:"2025-04-22", compDate:"2025-04-24", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Greg Owens",        contactEmail:"g.owens@iconrubber.com",     contactPhone:"330-555-0821", equipList:["308","PICK"] },
   // Junction Steel Works
-  { id:49,  qn:"RIG-2025-014", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Pipe mill stand replacement",                      date:"2025-05-28", status:"Won",       qtype:"Contract", labor:58000, equip:52000, hauling:15500, travel:5100, mats:7000,  total:137600, markup:0.08, salesAssoc:"Sarah K", jobNum:"J-2025-059", startDate:"2025-06-16", compDate:"2025-06-21", locked:true,  salesAdjustments:[{id:3,amount:5800,reason:"Additional Work",note:"Extra support rigging required",date:"2025-06-18"}], notes:"", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["320","250","CONE","PICK"] },
-  { id:50,  qn:"RIG-2025-030", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Slitting line tension roll swap",                  date:"2025-10-14", status:"Won",       qtype:"T&M",      labor:24000, equip:20500, hauling:6000,  travel:2000, mats:2700,  total:55200,  markup:0.05, salesAssoc:"Sarah K", jobNum:"J-2025-108", startDate:"2025-11-03", compDate:"2025-11-06", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["308","SEMI"] },
+  { id:49,  qn:"RIG-2025-014", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Pipe mill stand replacement",                      date:"2025-05-28", status:"Won",       qtype:"Contract", labor:58000, equip:52000, hauling:15500, travel:5100, mats:7000,  total:137600, markup:0.08, salesAssoc:"Sarah K", job_num:"J-2025-059", startDate:"2025-06-16", compDate:"2025-06-21", locked:true,  salesAdjustments:[{id:3,amount:5800,reason:"Additional Work",note:"Extra support rigging required",date:"2025-06-18"}], notes:"", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["320","250","CONE","PICK"] },
+  { id:50,  qn:"RIG-2025-030", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Slitting line tension roll swap",                  date:"2025-10-14", status:"Won",       qtype:"T&M",      labor:24000, equip:20500, hauling:6000,  travel:2000, mats:2700,  total:55200,  markup:0.05, salesAssoc:"Sarah K", job_num:"J-2025-108", startDate:"2025-11-03", compDate:"2025-11-06", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["308","SEMI"] },
   // Keystone Die Casting
-  { id:51,  qn:"RIG-2025-012", client:"Keystone Die Casting",        jobSite:"620 Die Cast Dr, Massillon, OH 44646",         desc:"750-ton die cast press swap",                      date:"2025-05-06", status:"Won",       qtype:"Contract", labor:62000, equip:57000, hauling:17000, travel:5600, mats:7500,  total:149100, markup:0.08, salesAssoc:"Mike R",  jobNum:"J-2025-053", startDate:"2025-05-27", compDate:"2025-06-02", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Helen Marsh",        contactEmail:"h.marsh@keystonedc.com",     contactPhone:"330-555-1044", equipList:["320","250","SEMI","PICK"] },
+  { id:51,  qn:"RIG-2025-012", client:"Keystone Die Casting",        jobSite:"620 Die Cast Dr, Massillon, OH 44646",         desc:"750-ton die cast press swap",                      date:"2025-05-06", status:"Won",       qtype:"Contract", labor:62000, equip:57000, hauling:17000, travel:5600, mats:7500,  total:149100, markup:0.08, salesAssoc:"Mike R",  job_num:"J-2025-053", startDate:"2025-05-27", compDate:"2025-06-02", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Helen Marsh",        contactEmail:"h.marsh@keystonedc.com",     contactPhone:"330-555-1044", equipList:["320","250","SEMI","PICK"] },
   // Meridian Extrusion Co.
-  { id:52,  qn:"RIG-2025-019", client:"Meridian Extrusion Co.",      jobSite:"4100 Extrusion Blvd, Sandusky, OH 44870",      desc:"Extrusion press hydraulic unit swap",              date:"2025-06-25", status:"Won",       qtype:"Contract", labor:29000, equip:24000, hauling:7100,  travel:2300, mats:3200,  total:65600,  markup:0.06, salesAssoc:"Sarah K", jobNum:"J-2025-073", startDate:"2025-07-14", compDate:"2025-07-18", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carol Jensen",        contactEmail:"c.jensen@meridianext.com",   contactPhone:"419-555-1266", equipList:["308","SEMI"] },
+  { id:52,  qn:"RIG-2025-019", client:"Meridian Extrusion Co.",      jobSite:"4100 Extrusion Blvd, Sandusky, OH 44870",      desc:"Extrusion press hydraulic unit swap",              date:"2025-06-25", status:"Won",       qtype:"Contract", labor:29000, equip:24000, hauling:7100,  travel:2300, mats:3200,  total:65600,  markup:0.06, salesAssoc:"Sarah K", job_num:"J-2025-073", startDate:"2025-07-14", compDate:"2025-07-18", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carol Jensen",        contactEmail:"c.jensen@meridianext.com",   contactPhone:"419-555-1266", equipList:["308","SEMI"] },
   // Northgate Aluminum
-  { id:53,  qn:"RIG-2025-015", client:"Northgate Aluminum",          jobSite:"700 Smelter Rd, Lima, OH 45801",               desc:"Casting table replacement",                        date:"2025-05-19", status:"Won",       qtype:"Contract", labor:47000, equip:41000, hauling:12200, travel:4000, mats:5500,  total:109700, markup:0.07, salesAssoc:"Mike R",  jobNum:"J-2025-062", startDate:"2025-06-09", compDate:"2025-06-14", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Bruce Tanner",       contactEmail:"b.tanner@northgatealum.com", contactPhone:"419-555-1377", equipList:["320","250","SEMI"] },
+  { id:53,  qn:"RIG-2025-015", client:"Northgate Aluminum",          jobSite:"700 Smelter Rd, Lima, OH 45801",               desc:"Casting table replacement",                        date:"2025-05-19", status:"Won",       qtype:"Contract", labor:47000, equip:41000, hauling:12200, travel:4000, mats:5500,  total:109700, markup:0.07, salesAssoc:"Mike R",  job_num:"J-2025-062", startDate:"2025-06-09", compDate:"2025-06-14", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Bruce Tanner",       contactEmail:"b.tanner@northgatealum.com", contactPhone:"419-555-1377", equipList:["320","250","SEMI"] },
   // Overland Transport Mfg.
-  { id:54,  qn:"RIG-2025-005", client:"Overland Transport Mfg.",     jobSite:"2800 Axle Dr, Springfield, OH 45505",          desc:"Frame assembly jig install",                       date:"2025-02-20", status:"Won",       qtype:"Contract", labor:36000, equip:30500, hauling:9000,  travel:3000, mats:4000,  total:82500,  markup:0.06, salesAssoc:"Dan M",   jobNum:"J-2025-019", startDate:"2025-03-12", compDate:"2025-03-17", locked:true,  salesAdjustments:[], notes:"New account – strong prospect for repeat work.", attachments:[], contactName:"Walt Simmons",       contactEmail:"w.simmons@overlandmfg.com",  contactPhone:"937-555-1488", equipList:["320","SEMI","PICK"] },
-  { id:55,  qn:"RIG-2025-027", client:"Overland Transport Mfg.",     jobSite:"2800 Axle Dr, Springfield, OH 45505",          desc:"Wheel end machining center relocation",            date:"2025-09-03", status:"Won",       qtype:"T&M",      labor:22000, equip:18500, hauling:5400,  travel:1800, mats:2400,  total:50100,  markup:0,    salesAssoc:"Dan M",   jobNum:"J-2025-096", startDate:"2025-09-22", compDate:"2025-09-25", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Walt Simmons",       contactEmail:"w.simmons@overlandmfg.com",  contactPhone:"937-555-1488", equipList:["308","PICK"] },
+  { id:54,  qn:"RIG-2025-005", client:"Overland Transport Mfg.",     jobSite:"2800 Axle Dr, Springfield, OH 45505",          desc:"Frame assembly jig install",                       date:"2025-02-20", status:"Won",       qtype:"Contract", labor:36000, equip:30500, hauling:9000,  travel:3000, mats:4000,  total:82500,  markup:0.06, salesAssoc:"Dan M",   job_num:"J-2025-019", startDate:"2025-03-12", compDate:"2025-03-17", locked:true,  salesAdjustments:[], notes:"New account – strong prospect for repeat work.", attachments:[], contactName:"Walt Simmons",       contactEmail:"w.simmons@overlandmfg.com",  contactPhone:"937-555-1488", equipList:["320","SEMI","PICK"] },
+  { id:55,  qn:"RIG-2025-027", client:"Overland Transport Mfg.",     jobSite:"2800 Axle Dr, Springfield, OH 45505",          desc:"Wheel end machining center relocation",            date:"2025-09-03", status:"Won",       qtype:"T&M",      labor:22000, equip:18500, hauling:5400,  travel:1800, mats:2400,  total:50100,  markup:0,    salesAssoc:"Dan M",   job_num:"J-2025-096", startDate:"2025-09-22", compDate:"2025-09-25", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Walt Simmons",       contactEmail:"w.simmons@overlandmfg.com",  contactPhone:"937-555-1488", equipList:["308","PICK"] },
   // Pinnacle Forge & Stamp
-  { id:56,  qn:"RIG-2025-020", client:"Pinnacle Forge & Stamp",      jobSite:"1100 Forge Rd, Canton, OH 44705",              desc:"Hammer forge press relocation",                    date:"2025-07-07", status:"Won",       qtype:"Contract", labor:53000, equip:47000, hauling:14000, travel:4600, mats:6200,  total:124800, markup:0.08, salesAssoc:"Sarah K", jobNum:"J-2025-079", startDate:"2025-07-28", compDate:"2025-08-01", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Liz Kowalczyk",      contactEmail:"l.kowalczyk@pinnacleforge.com",contactPhone:"330-555-1599", equipList:["320","250","SEMI"] },
+  { id:56,  qn:"RIG-2025-020", client:"Pinnacle Forge & Stamp",      jobSite:"1100 Forge Rd, Canton, OH 44705",              desc:"Hammer forge press relocation",                    date:"2025-07-07", status:"Won",       qtype:"Contract", labor:53000, equip:47000, hauling:14000, travel:4600, mats:6200,  total:124800, markup:0.08, salesAssoc:"Sarah K", job_num:"J-2025-079", startDate:"2025-07-28", compDate:"2025-08-01", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Liz Kowalczyk",      contactEmail:"l.kowalczyk@pinnacleforge.com",contactPhone:"330-555-1599", equipList:["320","250","SEMI"] },
   // Quartz Industrial Services
-  { id:57,  qn:"RIG-2025-017", client:"Quartz Industrial Services",  jobSite:"600 Industrial Ct, Mansfield, OH 44903",       desc:"Industrial chiller skid set",                      date:"2025-06-02", status:"Won",       qtype:"T&M",      labor:17000, equip:14000, hauling:4100,  travel:1300, mats:1800,  total:38200,  markup:0,    salesAssoc:"Mike R",  jobNum:"J-2025-068", startDate:"2025-06-23", compDate:"2025-06-25", locked:true,  salesAdjustments:[], notes:"New account.", attachments:[], contactName:"Steve Mallory",      contactEmail:"s.mallory@quartzind.com",    contactPhone:"419-555-1610", equipList:["257","PICK"] },
+  { id:57,  qn:"RIG-2025-017", client:"Quartz Industrial Services",  jobSite:"600 Industrial Ct, Mansfield, OH 44903",       desc:"Industrial chiller skid set",                      date:"2025-06-02", status:"Won",       qtype:"T&M",      labor:17000, equip:14000, hauling:4100,  travel:1300, mats:1800,  total:38200,  markup:0,    salesAssoc:"Mike R",  job_num:"J-2025-068", startDate:"2025-06-23", compDate:"2025-06-25", locked:true,  salesAdjustments:[], notes:"New account.", attachments:[], contactName:"Steve Mallory",      contactEmail:"s.mallory@quartzind.com",    contactPhone:"419-555-1610", equipList:["257","PICK"] },
   // Ridgeline Machine Works
-  { id:58,  qn:"RIG-2025-023", client:"Ridgeline Machine Works",     jobSite:"4500 Machinist Way, Ravenna, OH 44266",        desc:"Horizontal boring mill relocation",                date:"2025-07-30", status:"Won",       qtype:"Contract", labor:31500, equip:26500, hauling:7800,  travel:2500, mats:3500,  total:71800,  markup:0.06, salesAssoc:"Dan M",   jobNum:"J-2025-082", startDate:"2025-08-18", compDate:"2025-08-22", locked:true,  salesAdjustments:[], notes:"New account.", attachments:[], contactName:"Tom Garfield",       contactEmail:"t.garfield@ridgelinemw.com", contactPhone:"330-555-1721", equipList:["308","SEMI","PICK"] },
+  { id:58,  qn:"RIG-2025-023", client:"Ridgeline Machine Works",     jobSite:"4500 Machinist Way, Ravenna, OH 44266",        desc:"Horizontal boring mill relocation",                date:"2025-07-30", status:"Won",       qtype:"Contract", labor:31500, equip:26500, hauling:7800,  travel:2500, mats:3500,  total:71800,  markup:0.06, salesAssoc:"Dan M",   job_num:"J-2025-082", startDate:"2025-08-18", compDate:"2025-08-22", locked:true,  salesAdjustments:[], notes:"New account.", attachments:[], contactName:"Tom Garfield",       contactEmail:"t.garfield@ridgelinemw.com", contactPhone:"330-555-1721", equipList:["308","SEMI","PICK"] },
   // Summit Plastics Group
-  { id:59,  qn:"RIG-2025-026", client:"Summit Plastics Group",       jobSite:"3200 Polymer Dr, Akron, OH 44314",             desc:"Blow mold line 4 expansion",                       date:"2025-09-08", status:"Won",       qtype:"Contract", labor:34500, equip:29000, hauling:8600,  travel:2800, mats:3800,  total:78700,  markup:0.06, salesAssoc:"Sarah K", jobNum:"J-2025-094", startDate:"2025-09-29", compDate:"2025-10-03", locked:true,  salesAdjustments:[], notes:"New account – large expansion planned.", attachments:[], contactName:"Pam Rodriguez",       contactEmail:"p.rodriguez@summitplastics.com",contactPhone:"330-555-1832", equipList:["320","SEMI","PICK"] },
+  { id:59,  qn:"RIG-2025-026", client:"Summit Plastics Group",       jobSite:"3200 Polymer Dr, Akron, OH 44314",             desc:"Blow mold line 4 expansion",                       date:"2025-09-08", status:"Won",       qtype:"Contract", labor:34500, equip:29000, hauling:8600,  travel:2800, mats:3800,  total:78700,  markup:0.06, salesAssoc:"Sarah K", job_num:"J-2025-094", startDate:"2025-09-29", compDate:"2025-10-03", locked:true,  salesAdjustments:[], notes:"New account – large expansion planned.", attachments:[], contactName:"Pam Rodriguez",       contactEmail:"p.rodriguez@summitplastics.com",contactPhone:"330-555-1832", equipList:["320","SEMI","PICK"] },
   // Titan Manufacturing LLC
-  { id:60,  qn:"RIG-2025-032", client:"Titan Manufacturing LLC",     jobSite:"8800 Titan Blvd, Lorain, OH 44052",           desc:"Heavy press foundation anchor & set",              date:"2025-10-21", status:"Won",       qtype:"Contract", labor:71000, equip:65000, hauling:19500, travel:6400, mats:8800,  total:170700, markup:0.09, salesAssoc:"Mike R",  jobNum:"J-2025-112", startDate:"2025-11-10", compDate:"2025-11-17", locked:true,  salesAdjustments:[{id:4,amount:8500,reason:"Additional Work",note:"Secondary crane required for second bay",date:"2025-11-13"}], notes:"New account – flagship job.", attachments:[], contactName:"Steve Dolan",         contactEmail:"s.dolan@titanmfg.com",       contactPhone:"440-555-1943", equipList:["320","250","CONE","SEMI","PICK"] },
+  { id:60,  qn:"RIG-2025-032", client:"Titan Manufacturing LLC",     jobSite:"8800 Titan Blvd, Lorain, OH 44052",           desc:"Heavy press foundation anchor & set",              date:"2025-10-21", status:"Won",       qtype:"Contract", labor:71000, equip:65000, hauling:19500, travel:6400, mats:8800,  total:170700, markup:0.09, salesAssoc:"Mike R",  job_num:"J-2025-112", startDate:"2025-11-10", compDate:"2025-11-17", locked:true,  salesAdjustments:[{id:4,amount:8500,reason:"Additional Work",note:"Secondary crane required for second bay",date:"2025-11-13"}], notes:"New account – flagship job.", attachments:[], contactName:"Steve Dolan",         contactEmail:"s.dolan@titanmfg.com",       contactPhone:"440-555-1943", equipList:["320","250","CONE","SEMI","PICK"] },
 
   // ── 2026 QUOTES (YTD + active pipeline) ──────────────────────────────────
   // Apex Industrial LLC
-  { id:61,  qn:"RIG-2026-001", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Press line relocation – Bay 4 expansion",          date:"2026-01-08", status:"Won",       qtype:"Contract", labor:42000, equip:36000, hauling:10500, travel:2800, mats:4500,  total:93800,  markup:0.06, salesAssoc:"Dan M",   jobNum:"J-2026-002", startDate:"2026-01-27", compDate:"2026-02-01", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["300","250","SEMI"] },
-  { id:62,  qn:"RIG-2026-008", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Injection mold press – Bay 10",                    date:"2026-02-14", status:"Submitted", qtype:"T&M",      labor:26000, equip:21500, hauling:6200,  travel:1900, mats:2900,  total:58500,  markup:0.05, salesAssoc:"Sarah K", jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Follow up on approval.", attachments:[], contactName:"Rick Torres",      contactEmail:"r.torres@apexind.com",       contactPhone:"330-555-0199", equipList:["302","PICK"] },
+  { id:61,  qn:"RIG-2026-001", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Press line relocation – Bay 4 expansion",          date:"2026-01-08", status:"Won",       qtype:"Contract", labor:42000, equip:36000, hauling:10500, travel:2800, mats:4500,  total:93800,  markup:0.06, salesAssoc:"Dan M",   job_num:"J-2026-002", startDate:"2026-01-27", compDate:"2026-02-01", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"James Whitfield",  contactEmail:"j.whitfield@apexind.com",    contactPhone:"330-555-0182", equipList:["300","250","SEMI"] },
+  { id:62,  qn:"RIG-2026-008", client:"Apex Industrial LLC",         jobSite:"1200 Industrial Pkwy, Akron, OH 44312",        desc:"Injection mold press – Bay 10",                    date:"2026-02-14", status:"Submitted", qtype:"T&M",      labor:26000, equip:21500, hauling:6200,  travel:1900, mats:2900,  total:58500,  markup:0.05, salesAssoc:"Sarah K", job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Follow up on approval.", attachments:[], contactName:"Rick Torres",      contactEmail:"r.torres@apexind.com",       contactPhone:"330-555-0199", equipList:["302","PICK"] },
   // Beacon Manufacturing Co.
-  { id:63,  qn:"RIG-2026-003", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Hydraulic press rebuild & set",                    date:"2026-01-20", status:"Won",       qtype:"Contract", labor:48000, equip:43000, hauling:12800, travel:4200, mats:5500,  total:113500, markup:0.07, salesAssoc:"Sarah K", jobNum:"J-2026-005", startDate:"2026-02-09", compDate:"2026-02-14", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carolyn Marsh",    contactEmail:"c.marsh@beaconmfg.com",      contactPhone:"937-555-0244", equipList:["300","257","SEMI","PICK"] },
-  { id:64,  qn:"RIG-2026-014", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Coolant system skid install",                      date:"2026-03-05", status:"Draft",     qtype:"T&M",      labor:16000, equip:13500, hauling:3900,  travel:1300, mats:1700,  total:36400,  markup:0,    salesAssoc:"Mike R",  jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Doug Hensley",     contactEmail:"d.hensley@beaconmfg.com",    contactPhone:"937-555-0280", equipList:["257","PICK"] },
+  { id:63,  qn:"RIG-2026-003", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Hydraulic press rebuild & set",                    date:"2026-01-20", status:"Won",       qtype:"Contract", labor:48000, equip:43000, hauling:12800, travel:4200, mats:5500,  total:113500, markup:0.07, salesAssoc:"Sarah K", job_num:"J-2026-005", startDate:"2026-02-09", compDate:"2026-02-14", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Carolyn Marsh",    contactEmail:"c.marsh@beaconmfg.com",      contactPhone:"937-555-0244", equipList:["300","257","SEMI","PICK"] },
+  { id:64,  qn:"RIG-2026-014", client:"Beacon Manufacturing Co.",    jobSite:"500 Commerce Blvd, Dayton, OH 45402",          desc:"Coolant system skid install",                      date:"2026-03-05", status:"Draft",     qtype:"T&M",      labor:16000, equip:13500, hauling:3900,  travel:1300, mats:1700,  total:36400,  markup:0,    salesAssoc:"Mike R",  job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Doug Hensley",     contactEmail:"d.hensley@beaconmfg.com",    contactPhone:"937-555-0280", equipList:["257","PICK"] },
   // Cornerstone Plastics Inc.
-  { id:65,  qn:"RIG-2026-004", client:"Cornerstone Plastics Inc.",   jobSite:"1450 Westgate Blvd, Columbus, OH 43228",       desc:"Injection press line – Phase 2",                   date:"2026-01-27", status:"Won",       qtype:"Contract", labor:44500, equip:39000, hauling:11500, travel:3400, mats:5000,  total:103400, markup:0.08, salesAssoc:"Mike R",  jobNum:"J-2026-007", startDate:"2026-02-16", compDate:"2026-02-21", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["320","250","SEMI"] },
+  { id:65,  qn:"RIG-2026-004", client:"Cornerstone Plastics Inc.",   jobSite:"1450 Westgate Blvd, Columbus, OH 43228",       desc:"Injection press line – Phase 2",                   date:"2026-01-27", status:"Won",       qtype:"Contract", labor:44500, equip:39000, hauling:11500, travel:3400, mats:5000,  total:103400, markup:0.08, salesAssoc:"Mike R",  job_num:"J-2026-007", startDate:"2026-02-16", compDate:"2026-02-21", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Pat Gilmore",      contactEmail:"p.gilmore@cornerstone.com",  contactPhone:"614-555-0312", equipList:["320","250","SEMI"] },
   // Delta Fabrication Group
-  { id:66,  qn:"RIG-2026-006", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Stamping press motor rebuild lift",                date:"2026-02-03", status:"Won",       qtype:"Contract", labor:31500, equip:27000, hauling:8000,  travel:2500, mats:3500,  total:72500,  markup:0.06, salesAssoc:"Dan M",   jobNum:"J-2026-009", startDate:"2026-02-23", compDate:"2026-02-27", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["300","257","SEMI"] },
-  { id:67,  qn:"RIG-2026-016", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Shear line Bay 5 upgrade",                         date:"2026-03-10", status:"Submitted", qtype:"T&M",      labor:23000, equip:19000, hauling:5500,  travel:1700, mats:2500,  total:51700,  markup:0,    salesAssoc:"Mike R",  jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["308","PICK"] },
+  { id:66,  qn:"RIG-2026-006", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Stamping press motor rebuild lift",                date:"2026-02-03", status:"Won",       qtype:"Contract", labor:31500, equip:27000, hauling:8000,  travel:2500, mats:3500,  total:72500,  markup:0.06, salesAssoc:"Dan M",   job_num:"J-2026-009", startDate:"2026-02-23", compDate:"2026-02-27", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["300","257","SEMI"] },
+  { id:67,  qn:"RIG-2026-016", client:"Delta Fabrication Group",     jobSite:"300 Metalworks Ave, Cleveland, OH 44124",      desc:"Shear line Bay 5 upgrade",                         date:"2026-03-10", status:"Submitted", qtype:"T&M",      labor:23000, equip:19000, hauling:5500,  travel:1700, mats:2500,  total:51700,  markup:0,    salesAssoc:"Mike R",  job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Sandra Voss",      contactEmail:"s.voss@deltafab.com",        contactPhone:"216-555-0415", equipList:["308","PICK"] },
   // Eagle Press & Die
-  { id:68,  qn:"RIG-2026-005", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Transfer press overhaul lift",                     date:"2026-01-31", status:"Won",       qtype:"Contract", labor:39000, equip:33500, hauling:9800,  travel:3100, mats:4300,  total:89700,  markup:0.07, salesAssoc:"Mike R",  jobNum:"J-2026-008", startDate:"2026-02-19", compDate:"2026-02-24", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Bob Trexler",      contactEmail:"b.trexler@eaglepress.com",   contactPhone:"330-555-0311", equipList:["300","250","SEMI","PICK"] },
-  { id:69,  qn:"RIG-2026-015", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Blanking press electrical upgrade lift",           date:"2026-03-12", status:"Submitted", qtype:"Contract", labor:17000, equip:14000, hauling:4100,  travel:1300, mats:1800,  total:38200,  markup:0,    salesAssoc:"Sarah K", jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Deferred from 2025.", attachments:[], contactName:"Lisa Brandt",      contactEmail:"l.brandt@eaglepress.com",    contactPhone:"330-555-0322", equipList:["302","PICK"] },
+  { id:68,  qn:"RIG-2026-005", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Transfer press overhaul lift",                     date:"2026-01-31", status:"Won",       qtype:"Contract", labor:39000, equip:33500, hauling:9800,  travel:3100, mats:4300,  total:89700,  markup:0.07, salesAssoc:"Mike R",  job_num:"J-2026-008", startDate:"2026-02-19", compDate:"2026-02-24", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Bob Trexler",      contactEmail:"b.trexler@eaglepress.com",   contactPhone:"330-555-0311", equipList:["300","250","SEMI","PICK"] },
+  { id:69,  qn:"RIG-2026-015", client:"Eagle Press & Die",           jobSite:"500 Eagle Way, Canton, OH 44702",              desc:"Blanking press electrical upgrade lift",           date:"2026-03-12", status:"Submitted", qtype:"Contract", labor:17000, equip:14000, hauling:4100,  travel:1300, mats:1800,  total:38200,  markup:0,    salesAssoc:"Sarah K", job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Deferred from 2025.", attachments:[], contactName:"Lisa Brandt",      contactEmail:"l.brandt@eaglepress.com",    contactPhone:"330-555-0322", equipList:["302","PICK"] },
   // Frontier Castings Ltd.
-  { id:70,  qn:"RIG-2026-007", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Induction furnace replacement",                    date:"2026-02-10", status:"Won",       qtype:"Contract", labor:58000, equip:52000, hauling:15500, travel:5000, mats:7000,  total:137500, markup:0.08, salesAssoc:"Dan M",   jobNum:"J-2026-011", startDate:"2026-03-02", compDate:"2026-03-08", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Tony Ruiz",        contactEmail:"t.ruiz@frontiercasting.com", contactPhone:"330-555-0518", equipList:["320","250","SEMI"] },
+  { id:70,  qn:"RIG-2026-007", client:"Frontier Castings Ltd.",      jobSite:"900 Industrial Blvd, Youngstown, OH 44503",    desc:"Induction furnace replacement",                    date:"2026-02-10", status:"Won",       qtype:"Contract", labor:58000, equip:52000, hauling:15500, travel:5000, mats:7000,  total:137500, markup:0.08, salesAssoc:"Dan M",   job_num:"J-2026-011", startDate:"2026-03-02", compDate:"2026-03-08", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Tony Ruiz",        contactEmail:"t.ruiz@frontiercasting.com", contactPhone:"330-555-0518", equipList:["320","250","SEMI"] },
   // Horizon Automotive Parts
-  { id:71,  qn:"RIG-2026-009", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Body framing robot install – Line 3",              date:"2026-02-18", status:"Won",       qtype:"Contract", labor:64000, equip:57000, hauling:17000, travel:5600, mats:7500,  total:151100, markup:0.08, salesAssoc:"Mike R",  jobNum:"J-2026-013", startDate:"2026-03-10", compDate:"2026-03-17", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","250","CONE","SEMI","PICK"] },
-  { id:72,  qn:"RIG-2026-017", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Weld fixture relocation – Line 7",                 date:"2026-03-14", status:"Submitted", qtype:"T&M",      labor:29000, equip:24500, hauling:7200,  travel:2400, mats:3200,  total:66300,  markup:0,    salesAssoc:"Mike R",  jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","SEMI","PICK"] },
+  { id:71,  qn:"RIG-2026-009", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Body framing robot install – Line 3",              date:"2026-02-18", status:"Won",       qtype:"Contract", labor:64000, equip:57000, hauling:17000, travel:5600, mats:7500,  total:151100, markup:0.08, salesAssoc:"Mike R",  job_num:"J-2026-013", startDate:"2026-03-10", compDate:"2026-03-17", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","250","CONE","SEMI","PICK"] },
+  { id:72,  qn:"RIG-2026-017", client:"Horizon Automotive Parts",    jobSite:"750 Assembly Dr, Findlay, OH 45840",           desc:"Weld fixture relocation – Line 7",                 date:"2026-03-14", status:"Submitted", qtype:"T&M",      labor:29000, equip:24500, hauling:7200,  travel:2400, mats:3200,  total:66300,  markup:0,    salesAssoc:"Mike R",  job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Donna Holt",         contactEmail:"d.holt@horizonauto.com",     contactPhone:"419-555-0712", equipList:["320","SEMI","PICK"] },
   // Junction Steel Works
-  { id:73,  qn:"RIG-2026-010", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Coil straightener swap – Mill 2",                  date:"2026-02-25", status:"Won",       qtype:"Contract", labor:49000, equip:43500, hauling:13000, travel:4300, mats:5900,  total:115700, markup:0.07, salesAssoc:"Sarah K", jobNum:"J-2026-015", startDate:"2026-03-17", compDate:"2026-03-22", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["320","250","SEMI"] },
+  { id:73,  qn:"RIG-2026-010", client:"Junction Steel Works",        jobSite:"1800 Steel Way, Warren, OH 44483",             desc:"Coil straightener swap – Mill 2",                  date:"2026-02-25", status:"Won",       qtype:"Contract", labor:49000, equip:43500, hauling:13000, travel:4300, mats:5900,  total:115700, markup:0.07, salesAssoc:"Sarah K", job_num:"J-2026-015", startDate:"2026-03-17", compDate:"2026-03-22", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Ray Kowalski",       contactEmail:"r.kowalski@junctionsteel.com",contactPhone:"330-555-0933", equipList:["320","250","SEMI"] },
   // Keystone Die Casting
-  { id:74,  qn:"RIG-2026-011", client:"Keystone Die Casting",        jobSite:"620 Die Cast Dr, Massillon, OH 44646",         desc:"1000-ton press acquisition install",               date:"2026-02-28", status:"Submitted", qtype:"Contract", labor:78000, equip:71000, hauling:21000, travel:6900, mats:9500,  total:186400, markup:0.09, salesAssoc:"Mike R",  jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Largest quote of the year.", attachments:[], contactName:"Helen Marsh",        contactEmail:"h.marsh@keystonedc.com",     contactPhone:"330-555-1044", equipList:["320","250","CONE","SEMI","PICK"] },
+  { id:74,  qn:"RIG-2026-011", client:"Keystone Die Casting",        jobSite:"620 Die Cast Dr, Massillon, OH 44646",         desc:"1000-ton press acquisition install",               date:"2026-02-28", status:"Submitted", qtype:"Contract", labor:78000, equip:71000, hauling:21000, travel:6900, mats:9500,  total:186400, markup:0.09, salesAssoc:"Mike R",  job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Largest quote of the year.", attachments:[], contactName:"Helen Marsh",        contactEmail:"h.marsh@keystonedc.com",     contactPhone:"330-555-1044", equipList:["320","250","CONE","SEMI","PICK"] },
   // Titan Manufacturing LLC
-  { id:75,  qn:"RIG-2026-012", client:"Titan Manufacturing LLC",     jobSite:"8800 Titan Blvd, Lorain, OH 44052",           desc:"Secondary press bay equipment set",                date:"2026-03-04", status:"Submitted", qtype:"Contract", labor:62000, equip:56000, hauling:16800, travel:5500, mats:7800,  total:148100, markup:0.08, salesAssoc:"Mike R",  jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Follow-up on 2025 flagship job.", attachments:[], contactName:"Steve Dolan",         contactEmail:"s.dolan@titanmfg.com",       contactPhone:"440-555-1943", equipList:["320","250","SEMI","PICK"] },
+  { id:75,  qn:"RIG-2026-012", client:"Titan Manufacturing LLC",     jobSite:"8800 Titan Blvd, Lorain, OH 44052",           desc:"Secondary press bay equipment set",                date:"2026-03-04", status:"Submitted", qtype:"Contract", labor:62000, equip:56000, hauling:16800, travel:5500, mats:7800,  total:148100, markup:0.08, salesAssoc:"Mike R",  job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"Follow-up on 2025 flagship job.", attachments:[], contactName:"Steve Dolan",         contactEmail:"s.dolan@titanmfg.com",       contactPhone:"440-555-1943", equipList:["320","250","SEMI","PICK"] },
   // Northgate Aluminum
-  { id:76,  qn:"RIG-2026-013", client:"Northgate Aluminum",          jobSite:"700 Smelter Rd, Lima, OH 45801",               desc:"Furnace hearth replacement lift",                   date:"2026-03-11", status:"Draft",     qtype:"Contract", labor:44000, equip:38500, hauling:11500, travel:3700, mats:5200,  total:102900, markup:0.07, salesAssoc:"Dan M",   jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Bruce Tanner",       contactEmail:"b.tanner@northgatealum.com", contactPhone:"419-555-1377", equipList:["320","250","SEMI"] },
+  { id:76,  qn:"RIG-2026-013", client:"Northgate Aluminum",          jobSite:"700 Smelter Rd, Lima, OH 45801",               desc:"Furnace hearth replacement lift",                   date:"2026-03-11", status:"Draft",     qtype:"Contract", labor:44000, equip:38500, hauling:11500, travel:3700, mats:5200,  total:102900, markup:0.07, salesAssoc:"Dan M",   job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Bruce Tanner",       contactEmail:"b.tanner@northgatealum.com", contactPhone:"419-555-1377", equipList:["320","250","SEMI"] },
   // Summit Plastics Group
-  { id:77,  qn:"RIG-2026-018", client:"Summit Plastics Group",       jobSite:"3200 Polymer Dr, Akron, OH 44314",             desc:"Extrusion line 2 relocation",                      date:"2026-03-17", status:"Draft",     qtype:"T&M",      labor:28000, equip:23500, hauling:6900,  travel:2200, mats:3100,  total:63700,  markup:0,    salesAssoc:"Sarah K", jobNum:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Pam Rodriguez",       contactEmail:"p.rodriguez@summitplastics.com",contactPhone:"330-555-1832", equipList:["308","SEMI","PICK"] },
+  { id:77,  qn:"RIG-2026-018", client:"Summit Plastics Group",       jobSite:"3200 Polymer Dr, Akron, OH 44314",             desc:"Extrusion line 2 relocation",                      date:"2026-03-17", status:"Draft",     qtype:"T&M",      labor:28000, equip:23500, hauling:6900,  travel:2200, mats:3100,  total:63700,  markup:0,    salesAssoc:"Sarah K", job_num:"",           startDate:"", compDate:"",           locked:false, salesAdjustments:[], notes:"", attachments:[], contactName:"Pam Rodriguez",       contactEmail:"p.rodriguez@summitplastics.com",contactPhone:"330-555-1832", equipList:["308","SEMI","PICK"] },
   // Pinnacle Forge & Stamp
-  { id:78,  qn:"RIG-2026-002", client:"Pinnacle Forge & Stamp",      jobSite:"1100 Forge Rd, Canton, OH 44705",              desc:"Forging press rebuild – Bay 1",                    date:"2026-01-15", status:"Won",       qtype:"Contract", labor:57000, equip:51000, hauling:15200, travel:5000, mats:6900,  total:135100, markup:0.08, salesAssoc:"Sarah K", jobNum:"J-2026-003", startDate:"2026-02-03", compDate:"2026-02-09", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Liz Kowalczyk",      contactEmail:"l.kowalczyk@pinnacleforge.com",contactPhone:"330-555-1599", equipList:["320","250","SEMI"] },
+  { id:78,  qn:"RIG-2026-002", client:"Pinnacle Forge & Stamp",      jobSite:"1100 Forge Rd, Canton, OH 44705",              desc:"Forging press rebuild – Bay 1",                    date:"2026-01-15", status:"Won",       qtype:"Contract", labor:57000, equip:51000, hauling:15200, travel:5000, mats:6900,  total:135100, markup:0.08, salesAssoc:"Sarah K", job_num:"J-2026-003", startDate:"2026-02-03", compDate:"2026-02-09", locked:true,  salesAdjustments:[], notes:"", attachments:[], contactName:"Liz Kowalczyk",      contactEmail:"l.kowalczyk@pinnacleforge.com",contactPhone:"330-555-1599", equipList:["320","250","SEMI"] },
 ];
 
 const SAMPLE_REQS = [
@@ -343,7 +343,7 @@ function blankQuote(req, customerRates, isCO=false, parentQ=null) {
     fromReqId: req?.id    || null,
     parentId:  parentQ?.id || null,
     isChangeOrder: isCO,
-    locked:false, jobNum:"", compDate:"",
+    locked:false, job_num:"", compDate:"",
     notes:"", attachments:[], salesAdjustments:[],
     laborRows:    defLaborRows(client, customerRates),
     travelRows:   [{ id:uid(), label:"First Mobilization", workers:0, days:0, perDiem:false, hotel:false }],
@@ -661,9 +661,9 @@ const BUILT_IN_REPORTS = [
   { id:"rev-by-customer",  name:"Revenue by Customer",      category:"Sales",      desc:"Total won revenue ranked by customer",              scope:"org" },
   { id:"rev-by-estimator", name:"Revenue by Estimator",     category:"Sales",      desc:"Won revenue and win rate per estimator",            scope:"org" },
   { id:"rev-by-month",     name:"Revenue by Month",         category:"Sales",      desc:"Monthly won revenue trend",                        scope:"org" },
-  { id:"pipeline-summary", name:"Pipeline Summary",         category:"Pipeline",   desc:"Open quotes by status with total value",            scope:"org" },
+  { id:"pipeline-summary", name:"Pipeline Summary",         category:"Pipeline",   desc:"Open jobs by status with total value",            scope:"org" },
   { id:"win-loss",         name:"Win / Loss Analysis",      category:"Pipeline",   desc:"Win rate by estimator, customer, and quote type",   scope:"org" },
-  { id:"quote-aging",      name:"Quote Aging",              category:"Pipeline",   desc:"Open quotes ranked by days since created",          scope:"org" },
+  { id:"quote-aging",      name:"Quote Aging",              category:"Pipeline",   desc:"Open jobs ranked by days since created",          scope:"org" },
   { id:"rfq-response",     name:"RFQ Response Time",        category:"Operations", desc:"Days from RFQ received to estimate submitted",      scope:"org" },
   { id:"job-schedule",     name:"Job Schedule",             category:"Operations", desc:"Upcoming and in-progress jobs with dates",          scope:"org" },
   { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Revenue, cost, and gross margin per quote",         scope:"org" },
@@ -673,8 +673,8 @@ const BUILT_IN_REPORTS = [
 const REPORT_CATEGORIES = ["All","Sales","Pipeline","Operations","Finance"];
 
 // rowType: "quote" | "req" | "group-customer" | "group-estimator" | "group-month" | "group-status" | "group-type"
-function buildReportData(reportId, quotes, reqs) {
-  const won = quotes.filter(q=>q.status==="Won");
+function buildReportData(reportId, jobs, reqs) {
+  const won = jobs.filter(q=>q.status==="Won");
   const fmt2 = n => "$"+Math.round(n||0).toLocaleString();
 
   switch(reportId) {
@@ -684,56 +684,56 @@ function buildReportData(reportId, quotes, reqs) {
       const data=Object.values(m).sort((a,b)=>b.revenue-a.revenue);
       return { cols:["Customer","Revenue","Jobs Won","Avg Deal"], clickHint:"Click a row to see individual jobs",
         rows:data.map(r=>[r.customer,fmt2(r.revenue),r.jobs,fmt2(r.jobs?Math.round(r.revenue/r.jobs):0)]),
-        rawRefs:data.map(r=>({type:"group-customer",key:r.customer,quotes:r.qs})),
+        rawRefs:data.map(r=>({type:"group-customer",key:r.customer,jobs:r.qs})),
         summary:`${data.length} customers · Total: ${fmt2(data.reduce((s,r)=>s+r.revenue,0))}` };
     }
     case "rev-by-estimator": {
       const m={};
-      quotes.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,revenue:0,won:0,lost:0,total:0,qs:[]}; m[k].total+=1; m[k].qs.push(q); if(q.status==="Won"){m[k].revenue+=(q.total||0);m[k].won+=1;} if(q.status==="Lost")m[k].lost+=1; });
+      jobs.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,revenue:0,won:0,lost:0,total:0,qs:[]}; m[k].total+=1; m[k].qs.push(q); if(q.status==="Won"){m[k].revenue+=(q.total||0);m[k].won+=1;} if(q.status==="Lost")m[k].lost+=1; });
       const data=Object.values(m).sort((a,b)=>b.revenue-a.revenue);
-      return { cols:["Estimator","Revenue Won","Quotes Won","Quotes Lost","Win Rate"], clickHint:"Click a row to see that estimator's quotes",
+      return { cols:["Estimator","Revenue Won","Quotes Won","Quotes Lost","Win Rate"], clickHint:"Click a row to see that estimator's jobs",
         rows:data.map(r=>[r.estimator,fmt2(r.revenue),r.won,r.lost,r.won+r.lost>0?Math.round(r.won/(r.won+r.lost)*100)+"%":"—"]),
-        rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,quotes:r.qs})),
+        rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,jobs:r.qs})),
         summary:`${data.length} estimators tracked` };
     }
     case "rev-by-month": {
       const m={};
-      won.forEach(q=>{ const mo=q.date?.slice(0,7)||"Unknown"; if(!m[mo])m[mo]={month:mo,revenue:0,jobs:0,qs:[]}; m[mo].revenue+=(q.total||0); m[mo].jobs+=1; m[mo].qs.push(q); });
+      won.forEach(q=>{ const mo=q.start_date?.slice(0,7)||"Unknown"; if(!m[mo])m[mo]={month:mo,revenue:0,jobs:0,qs:[]}; m[mo].revenue+=(q.total||0); m[mo].jobs+=1; m[mo].qs.push(q); });
       const data=Object.keys(m).sort().map(k=>m[k]);
       return { cols:["Month","Revenue","Jobs"], clickHint:"Click a month to see its jobs",
         rows:data.map(r=>[r.month,fmt2(r.revenue),r.jobs]),
-        rawRefs:data.map(r=>({type:"group-month",key:r.month,quotes:r.qs})),
+        rawRefs:data.map(r=>({type:"group-month",key:r.month,jobs:r.qs})),
         summary:`${data.length} months · Peak: ${fmt2(Math.max(...data.map(r=>r.revenue)))}` };
     }
     case "pipeline-summary": {
       const statuses=["In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost"];
-      const data=statuses.map(st=>{ const qs=quotes.filter(q=>q.status===st); return {st,qs,total:qs.reduce((s,q)=>s+(q.total||0),0)}; });
-      return { cols:["Status","Count","Total Value","Avg Deal"], clickHint:"Click a status to see its quotes",
+      const data=statuses.map(st=>{ const qs=jobs.filter(q=>q.status===st); return {st,qs,total:qs.reduce((s,q)=>s+(q.total||0),0)}; });
+      return { cols:["Status","Count","Total Value","Avg Deal"], clickHint:"Click a status to see its jobs",
         rows:data.map(r=>[r.st,r.qs.length,fmt2(r.total),r.qs.length?fmt2(Math.round(r.total/r.qs.length)):"—"]),
-        rawRefs:data.map(r=>({type:"group-status",key:r.st,quotes:r.qs})),
-        summary:`${quotes.length} total quotes · ${fmt2(quotes.reduce((s,q)=>s+(q.total||0),0))} total value` };
+        rawRefs:data.map(r=>({type:"group-status",key:r.st,jobs:r.qs})),
+        summary:`${jobs.length} total jobs · ${fmt2(jobs.reduce((s,q)=>s+(q.total||0),0))} total value` };
     }
     case "win-loss": {
       const byType={};
-      quotes.filter(q=>["Won","Lost"].includes(q.status)).forEach(q=>{ const k=q.qtype||"Other"; if(!byType[k])byType[k]={type:k,won:0,lost:0,qs:[]}; byType[k][q.status==="Won"?"won":"lost"]+=1; byType[k].qs.push(q); });
+      jobs.filter(q=>["Won","Lost"].includes(q.status)).forEach(q=>{ const k=q.qtype||"Other"; if(!byType[k])byType[k]={type:k,won:0,lost:0,qs:[]}; byType[k][q.status==="Won"?"won":"lost"]+=1; byType[k].qs.push(q); });
       const data=Object.values(byType);
-      const totalWon=won.length; const totalLost=quotes.filter(q=>q.status==="Lost").length;
-      return { cols:["Quote Type","Won","Lost","Win Rate"], clickHint:"Click a type to see individual quotes",
+      const totalWon=won.length; const totalLost=jobs.filter(q=>q.status==="Lost").length;
+      return { cols:["Quote Type","Won","Lost","Win Rate"], clickHint:"Click a type to see individual jobs",
         rows:data.map(r=>[r.type,r.won,r.lost,r.won+r.lost>0?Math.round(r.won/(r.won+r.lost)*100)+"%":"—"]),
-        rawRefs:data.map(r=>({type:"group-type",key:r.type,quotes:r.qs})),
+        rawRefs:data.map(r=>({type:"group-type",key:r.type,jobs:r.qs})),
         summary:`Overall win rate: ${totalWon+totalLost>0?Math.round(totalWon/(totalWon+totalLost)*100):0}% (${totalWon}W / ${totalLost}L)` };
     }
     case "quote-aging": {
       const now=new Date();
-      const openQ=quotes.filter(q=>!["Won","Lost","Dead"].includes(q.status));
-      const data=openQ.map(q=>({ q, days:Math.floor((now-new Date(q.date||now))/86400000) })).sort((a,b)=>b.days-a.days);
+      const openQ=jobs.filter(q=>!["Won","Lost","Dead"].includes(q.status));
+      const data=openQ.map(q=>({ q, days:Math.floor((now-new Date(q.start_date||now))/86400000) })).sort((a,b)=>b.days-a.days);
       return { cols:["Quote #","Customer","Status","Age","Value"], clickHint:"Click a quote to open it",
-        rows:data.map(({q,days})=>[q.qn,q.client,q.status,days+" days",fmt2(q.total||0)]),
+        rows:data.map(({q,days})=>[q.job_num,q.client,q.status,days+" days",fmt2(q.total||0)]),
         rawRefs:data.map(({q})=>({type:"quote",quote:q})),
-        summary:`${openQ.length} open quotes · Oldest: ${data[0]?data[0].days+" days":"—"}` };
+        summary:`${openQ.length} open jobs · Oldest: ${data[0]?data[0].days+" days":"—"}` };
     }
     case "rfq-response": {
-      const data=reqs.filter(r=>r.date).map(r=>{ const linked=quotes.find(q=>q.fromReqId===r.id); const days=linked?Math.floor((new Date(linked.date)-new Date(r.date))/86400000):null; return {r,linked,days}; }).sort((a,b)=>{ if(a.days===null)return 1; if(b.days===null)return -1; return a.days-b.days; });
+      const data=reqs.filter(r=>r.date).map(r=>{ const linked=jobs.find(q=>q.fromReqId===r.id); const days=linked?Math.floor((new Date(linked.date)-new Date(r.date))/86400000):null; return {r,linked,days}; }).sort((a,b)=>{ if(a.days===null)return 1; if(b.days===null)return -1; return a.days-b.days; });
       const withResp=data.filter(d=>d.days!==null); const avg=withResp.length?Math.round(withResp.reduce((s,d)=>s+d.days,0)/withResp.length):0;
       return { cols:["RFQ #","Customer","RFQ Date","Est. Date","Response Time"], clickHint:"Click an RFQ to open its Job Folder · Click estimate column to open the quote",
         rows:data.map(({r,linked,days})=>[r.rn,r.company,r.date,linked?linked.date:"No estimate",days!==null?days+" days":"—"]),
@@ -741,9 +741,9 @@ function buildReportData(reportId, quotes, reqs) {
         summary:`${withResp.length} of ${data.length} RFQs have estimates · Avg response: ${avg} days` };
     }
     case "job-schedule": {
-      const jobs=quotes.filter(q=>q.status==="Won"&&q.startDate).sort((a,b)=>a.startDate>b.startDate?1:-1);
+      const jobs=jobs.filter(q=>q.status==="Won"&&q.startDate).sort((a,b)=>a.startDate>b.startDate?1:-1);
       return { cols:["Job #","Customer","Description","Start","End","Value"], clickHint:"Click a job to open its quote",
-        rows:jobs.map(q=>[q.jobNum||q.qn,q.client,q.desc,q.startDate||"—",q.compDate||"TBD",fmt2(q.total||0)]),
+        rows:jobs.map(q=>[q.jobNum||q.job_num,q.client,q.job_description,q.startDate||"—",q.compDate||"TBD",fmt2(q.total||0)]),
         rawRefs:jobs.map(q=>({type:"quote",quote:q})),
         summary:`${jobs.length} scheduled jobs` };
     }
@@ -751,17 +751,17 @@ function buildReportData(reportId, quotes, reqs) {
       const data=won.map(q=>{ const rev=q.total||0; const cost=Math.round((q.labor||0)*0.6+(q.equip||0)*0.7+(q.hauling||0)*0.85+(q.mats||0)*0.85+(q.travel||0)); const margin=rev-cost; const pct=rev>0?Math.round(margin/rev*100):0; return {q,rev,cost,margin,pct}; }).sort((a,b)=>b.pct-a.pct);
       const totRev=won.reduce((s,q)=>s+(q.total||0),0); const avgM=data.length?Math.round(data.reduce((s,d)=>s+d.pct,0)/data.length):0;
       return { cols:["Quote #","Customer","Revenue","Est. Cost","Gross Margin","Margin %"], clickHint:"Click a row to see the full cost breakdown",
-        rows:data.map(({q,rev,cost,margin,pct})=>[q.qn,q.client,fmt2(rev),fmt2(cost),fmt2(margin),pct+"%"]),
+        rows:data.map(({q,rev,cost,margin,pct})=>[q.job_num,q.client,fmt2(rev),fmt2(cost),fmt2(margin),pct+"%"]),
         rawRefs:data.map(({q,rev,cost,margin,pct})=>({type:"cost-detail",quote:q,rev,cost,margin,pct})),
         summary:`${data.length} won jobs · Avg margin: ${avgM}% · Total revenue: ${fmt2(totRev)}` };
     }
     case "estimator-activity": {
       const m={};
-      quotes.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,created:0,submitted:0,won:0,lost:0,revWon:0,qs:[]}; m[k].created+=1; m[k].qs.push(q); if(["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status))m[k].submitted+=1; if(q.status==="Won"){m[k].won+=1;m[k].revWon+=(q.total||0);} if(q.status==="Lost")m[k].lost+=1; });
+      jobs.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,created:0,submitted:0,won:0,lost:0,revWon:0,qs:[]}; m[k].created+=1; m[k].qs.push(q); if(["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status))m[k].submitted+=1; if(q.status==="Won"){m[k].won+=1;m[k].revWon+=(q.total||0);} if(q.status==="Lost")m[k].lost+=1; });
       const data=Object.values(m).sort((a,b)=>b.revWon-a.revWon);
-      return { cols:["Estimator","Total Quotes","In Pipeline","Won","Lost","Revenue Won"], clickHint:"Click an estimator to see their quotes",
+      return { cols:["Estimator","Total Quotes","In Pipeline","Won","Lost","Revenue Won"], clickHint:"Click an estimator to see their jobs",
         rows:data.map(r=>[r.estimator,r.created,r.submitted,r.won,r.lost,fmt2(r.revWon)]),
-        rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,quotes:r.qs})),
+        rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,jobs:r.qs})),
         summary:`${data.length} estimators` };
     }
     default: {
@@ -771,7 +771,7 @@ function buildReportData(reportId, quotes, reqs) {
   }
 }
 
-function runCustomReport(report, quotes) {
+function runCustomReport(report, jobs) {
   const AVAILABLE_COLS = [
     { key:"qn",label:"Quote #"},{key:"client",label:"Customer"},{key:"status",label:"Status"},
     {key:"total",label:"Total Value"},{key:"date",label:"Date"},{key:"salesAssoc",label:"Estimator"},
@@ -783,13 +783,13 @@ function runCustomReport(report, quotes) {
   const fmt2 = n => typeof n==="number" ? "$"+Math.round(n).toLocaleString() : n;
   const {filters={}, columns=[], sortBy="date", sortDir="desc"} = report;
 
-  let rows = [...quotes];
+  let rows = [...jobs];
   if(filters.status)    rows=rows.filter(q=>q.status===filters.status);
   if(filters.qtype)     rows=rows.filter(q=>q.qtype===filters.qtype);
   if(filters.estimator) rows=rows.filter(q=>(q.salesAssoc||"").toLowerCase().includes(filters.estimator.toLowerCase()));
   if(filters.customer)  rows=rows.filter(q=>q.client.toLowerCase().includes(filters.customer.toLowerCase()));
-  if(filters.dateFrom)  rows=rows.filter(q=>q.date>=filters.dateFrom);
-  if(filters.dateTo)    rows=rows.filter(q=>q.date<=filters.dateTo);
+  if(filters.dateFrom)  rows=rows.filter(q=>q.start_date>=filters.dateFrom);
+  if(filters.dateTo)    rows=rows.filter(q=>q.start_date<=filters.dateTo);
 
   rows.sort((a,b)=>{
     const av=a[sortBy]??0, bv=b[sortBy]??0;
@@ -814,12 +814,12 @@ function runCustomReport(report, quotes) {
 
 
 // ── REPORT DRILL-DOWN MODAL ───────────────────────────────────────────────────
-function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, onClose }) {
+function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, onClose }) {
   const fmt2 = n => "$"+Math.round(n||0).toLocaleString();
 
-  // Group rows — show a list of quotes with click-through to individual transaction
+  // Group rows — show a list of jobs with click-through to individual transaction
   if(rawRef.type==="group-customer"||rawRef.type==="group-estimator"||rawRef.type==="group-month"||rawRef.type==="group-status"||rawRef.type==="group-type") {
-    const groupQuotes = rawRef.quotes || [];
+    const groupQuotes = rawRef.jobs || [];
     const groupLabel  = rawRef.key;
     const total = groupQuotes.reduce((s,q)=>s+(q.total||0),0);
     return (
@@ -827,7 +827,7 @@ function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalChe
         <div style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:860, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
           <div style={{ padding:"16px 22px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL, borderTopLeftRadius:12, borderTopRightRadius:12 }}>
             <div>
-              <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Drill-Down · {groupQuotes.length} quotes</div>
+              <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Drill-Down · {groupQuotes.length} jobs</div>
               <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{groupLabel}</div>
               <div style={{ fontSize:12, color:C.acc, fontWeight:600, marginTop:2 }}>Total: {fmt2(total)}</div>
             </div>
@@ -847,10 +847,10 @@ function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalChe
                       onClick={()=>{ onOpenQuote(q); onClose(); }}
                       onMouseEnter={e=>e.currentTarget.style.background=C.accL}
                       onMouseLeave={e=>e.currentTarget.style.background=""}>
-                      <td style={{ ...tdS, padding:"8px 10px", color:C.acc, fontWeight:700 }}>{q.qn}</td>
+                      <td style={{ ...tdS, padding:"8px 10px", color:C.acc, fontWeight:700 }}>{q.job_num}</td>
                       <td style={{ ...tdS, padding:"8px 10px", fontWeight:600 }}>{q.client}</td>
-                      <td style={{ ...tdS, padding:"8px 10px", color:C.txtM, maxWidth:180 }}>{(q.desc||"").slice(0,50)}</td>
-                      <td style={{ ...tdS, padding:"8px 10px", color:C.txtS, whiteSpace:"nowrap" }}>{q.date}</td>
+                      <td style={{ ...tdS, padding:"8px 10px", color:C.txtM, maxWidth:180 }}>{(q.job_description||"").slice(0,50)}</td>
+                      <td style={{ ...tdS, padding:"8px 10px", color:C.txtS, whiteSpace:"nowrap" }}>{q.start_date}</td>
                       <td style={{ ...tdS, padding:"8px 10px" }}><Badge status={q.status}/></td>
                       <td style={{ ...tdS, padding:"8px 10px", fontWeight:700 }}>{fmt2((q.total||0)+adj)}</td>
                       <td style={{ ...tdS, padding:"8px 10px", color:C.txtS }}>{q.salesAssoc||"—"}</td>
@@ -882,7 +882,7 @@ function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalChe
           <div style={{ padding:"16px 22px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL, borderTopLeftRadius:12, borderTopRightRadius:12 }}>
             <div>
               <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Cost Breakdown</div>
-              <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{q.qn} · {q.client}</div>
+              <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{q.job_num} · {q.client}</div>
             </div>
             <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
           </div>
@@ -939,7 +939,7 @@ function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalChe
   // RFQ row — show RFQ info + option to open Job Folder or linked quote
   if(rawRef.type==="rfq") {
     const {req, quote} = rawRef;
-    const rfqDate = new Date(req.date||Date.now());
+    const rfqDate = new Date(req.start_date||Date.now());
     const daysOld = Math.floor((new Date()-rfqDate)/86400000);
     const days = quote ? Math.floor((new Date(quote.date)-rfqDate)/86400000) : null;
     return (
@@ -957,14 +957,14 @@ function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalChe
             <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8, padding:"12px 16px" }}>
               <div style={{ fontSize:9, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>RFQ Information</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                {[["RFQ #",req.rn],["Company",req.company],["Requester",req.requester||"—"],["Phone",req.phone||"—"],["Date Received",req.date||"—"],["Estimator",req.salesAssoc||"Unassigned"],["Status",req.status],["Job Site",req.jobSite||"—"]].map(([k,v])=>(
+                {[["RFQ #",req.rn],["Company",req.company],["Requester",req.requester||"—"],["Phone",req.phone||"—"],["Date Received",req.start_date||"—"],["Estimator",req.salesAssoc||"Unassigned"],["Status",req.status],["Job Site",req.jobSite||"—"]].map(([k,v])=>(
                   <div key={k}>
                     <div style={{ fontSize:10, color:C.txtS, fontWeight:700 }}>{k}</div>
                     <div style={{ fontSize:12, fontWeight:600, color:C.txt }}>{v}</div>
                   </div>
                 ))}
               </div>
-              {req.desc && <div style={{ marginTop:10, padding:"8px 10px", background:C.sur, borderRadius:6, border:`1px solid ${C.bdr}`, fontSize:12, color:C.txtM }}>{req.desc}</div>}
+              {req.job_description && <div style={{ marginTop:10, padding:"8px 10px", background:C.sur, borderRadius:6, border:`1px solid ${C.bdr}`, fontSize:12, color:C.txtM }}>{req.job_description}</div>}
             </div>
             {/* Response time */}
             <div style={{ display:"flex", gap:10 }}>
@@ -1020,13 +1020,13 @@ function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalChe
           <div style={{ padding:"16px 22px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL, borderTopLeftRadius:12, borderTopRightRadius:12 }}>
             <div>
               <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Quote Transaction</div>
-              <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{q.qn} · {q.client}</div>
+              <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{q.job_num} · {q.client}</div>
             </div>
             <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
           </div>
           <div style={{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:12 }}>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-              {[["Quote #",q.qn],["Customer",q.client],["Status",q.status],["Type",q.qtype],["Date",q.date],["Estimator",q.salesAssoc||"—"],["Job Site",q.jobSite||"—"],["Job #",q.jobNum||"—"]].map(([k,v])=>(
+              {[["Quote #",q.job_num],["Customer",q.client],["Status",q.status],["Type",q.qtype],["Date",q.start_date],["Estimator",q.salesAssoc||"—"],["Job Site",q.jobSite||"—"],["Job #",q.jobNum||"—"]].map(([k,v])=>(
                 <div key={k}><div style={{ fontSize:10, color:C.txtS, fontWeight:700 }}>{k}</div><div style={{ fontSize:12, fontWeight:600 }}>{k==="Status"?<Badge status={v}/>:v}</div></div>
               ))}
             </div>
@@ -1044,7 +1044,7 @@ function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalChe
               </div>
               {adj!==0&&<div style={{ fontSize:11, color:adj>0?C.grn:C.red, textAlign:"right" }}>{adj>0?"+":""}{fmt2(adj)} sales adjustments</div>}
             </div>
-            {q.desc&&<div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:6, padding:"8px 12px", fontSize:12, color:C.txtM }}>{q.desc}</div>}
+            {q.job_description&&<div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:6, padding:"8px 12px", fontSize:12, color:C.txtM }}>{q.job_description}</div>}
           </div>
           <div style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between" }}>
             <button style={{ ...mkBtn("primary"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ onOpenQuote(q); onClose(); }}>Open Full Quote →</button>
@@ -1058,7 +1058,7 @@ function ReportDrillDownModal({ ref: rawRef, quotes, reqs, jobFolders, globalChe
   return null;
 }
 
-function ReportsPage({ quotes, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack }) {
+function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack }) {
   const [catFilter,    setCatFilter]    = useState("All");
   const [activeReport, setActiveReport] = useState(() => {
     if(initialReportId) return BUILT_IN_REPORTS.find(r=>r.id===initialReportId) || null;
@@ -1094,9 +1094,9 @@ function ReportsPage({ quotes, reqs, role, username, jobFolders, globalCheck, on
   const reportData = useMemo(() => {
     if(!activeReport) return null;
     const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===activeReport.id);
-    if(isCustom) return runCustomReport(activeReport, quotes);
-    return buildReportData(activeReport.id, quotes, reqs);
-  }, [activeReport, quotes, reqs]);
+    if(isCustom) return runCustomReport(activeReport, jobs);
+    return buildReportData(activeReport.id, jobs, reqs);
+  }, [activeReport, jobs, reqs]);
 
   function deleteCustom(id) {
     if(!window.confirm("Delete this report?")) return;
@@ -1227,7 +1227,7 @@ function ReportsPage({ quotes, reqs, role, username, jobFolders, globalCheck, on
       {drillRef && (
         <ReportDrillDownModal
           ref={drillRef}
-          quotes={quotes}
+          jobs={jobs}
           reqs={reqs}
           jobFolders={jobFolders}
           globalCheck={globalCheck}
@@ -1446,7 +1446,7 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
 }
 
 // ── DASHBOARD METRICS COMPONENT ──────────────────────────────────────────────
-function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqStageFilter }) {
+function DashboardMetrics({ jobs, reqs, onOpenReport, rfqStageFilter, setRfqStageFilter }) {
   const now = new Date();
   const thisYear = now.getFullYear();
 
@@ -1488,23 +1488,22 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
   }
 
   function calcStats(qs, rs, start, end) {
-    const inRange = q => { const d = new Date(q.date||""); return d >= start && d <= end; };
+    const inRange = q => { const d = new Date(q.start_date||""); return d >= start && d <= end; };
     const inRangeR = r => { const d = new Date(r.date||""); return d >= start && d <= end; };
-    const won    = qs.filter(q=>q.status==="Won"&&inRange(q));
-    const openSt = ["In Progress","In Review","Approved","Adjustments Needed","Submitted"];
-    const sub    = qs.filter(q=>openSt.includes(q.status)&&inRange(q));
-    const closed = qs.filter(q=>["Won","Lost"].includes(q.status)&&inRange(q));
+    // Literal Master jobs are won transactions
+    const won    = qs.filter(q=>inRange(q));
+    const closed = qs.filter(q=>inRange(q));
     return {
-      rev:  won.reduce((s,q)=>s+(q.total||0),0),
+      rev:  won.reduce((s,q)=>s+(parseFloat(q.total)||0),0),
       wonN: won.length,
-      pipe: sub.reduce((s,q)=>s+(q.total||0),0),
-      subN: sub.length,
-      wr:   closed.length ? Math.round(won.length/closed.length*100) : 0,
+      pipe: 0,
+      subN: 0,
+      wr:   100,
       rn:   rs.filter(r=>r.status==="New"&&inRangeR(r)).length,
-      draftN: qs.filter(q=>q.status==="In Progress"&&inRange(q)).length,
-      draftV: qs.filter(q=>q.status==="In Progress"&&inRange(q)).reduce((s,q)=>s+(q.total||0),0),
-      lostN:  qs.filter(q=>q.status==="Lost"&&inRange(q)).length,
-      lostV:  qs.filter(q=>q.status==="Lost"&&inRange(q)).reduce((s,q)=>s+(q.total||0),0),
+      draftN: 0,
+      draftV: 0,
+      lostN:  0,
+      lostV:  0,
     };
   }
 
@@ -1515,8 +1514,8 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
 
   const curRange  = getRange(period);
   const prevRange = getPrevRange(period, curRange);
-  const cur  = calcStats(quotes, reqs, curRange.start, curRange.end);
-  const prev = calcStats(quotes, reqs, prevRange.start, prevRange.end);
+  const cur  = calcStats(jobs, reqs, curRange.start, curRange.end);
+  const prev = calcStats(jobs, reqs, prevRange.start, prevRange.end);
 
   const Change = ({ curVal, prevVal }) => {
     const p = pct(curVal, prevVal);
@@ -1578,7 +1577,7 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
         {[
           { l:"Revenue Won",  v:fmt(cur.rev),    s:`${cur.wonN} jobs`,           c:C.grn,  cv:cur.rev,  pv:prev.rev,  report:"rev-by-month"      },
           { l:"Pipeline",     v:fmt(cur.pipe),   s:`${cur.subN} open`,      c:C.blue, cv:cur.pipe, pv:prev.pipe, report:"pipeline-summary"  },
-          { l:"Win Rate",     v:cur.wr+"%",      s:"closed quotes",              c:C.acc,  cv:cur.wr,   pv:prev.wr,   report:"win-loss"           },
+          { l:"Win Rate",     v:cur.wr+"%",      s:"closed jobs",              c:C.acc,  cv:cur.wr,   pv:prev.wr,   report:"win-loss"           },
           { l:"Open RFQs",    v:cur.rn,          s:"need estimates",             c:C.ora,  cv:cur.rn,   pv:prev.rn,   report:"rfq-response"       },
         ].map(x => (
           <Card key={x.l} style={{ marginBottom:0, position:"relative", cursor:"pointer", transition:"box-shadow .15s", display:"flex", flexDirection:"column", height:"100%" }}
@@ -1636,12 +1635,12 @@ function DashboardMetrics({ quotes, reqs, onOpenReport, rfqStageFilter, setRfqSt
 const inp2 = { background:C.sur, border:`1px solid ${C.bdrM}`, borderRadius:5, color:C.txt, fontFamily:"inherit", fontSize:13, padding:"6px 9px", width:"100%", boxSizing:"border-box", outline:"none" };
 
 // ── RECENT QUOTES CARD ────────────────────────────────────────────────────────
-function RecentQuotesCard({ quotes, openEdit, setView }) {
-  const customers = useMemo(() => [...new Set(quotes.map(q=>q.client))].sort(), [quotes]);
+function RecentQuotesCard({ jobs, openEdit, setView }) {
+  const customers = useMemo(() => [...new Set(jobs.map(q=>q.client))].sort(), [jobs]);
   const [custFilter, setCustFilter] = useState("all");
   const [expandedCustFilter, setExpandedCustFilter] = useState(false);
 
-  const filtered = custFilter==="all" ? quotes : quotes.filter(q=>q.client===custFilter);
+  const filtered = custFilter==="all" ? jobs : jobs.filter(q=>q.client===custFilter);
 
   return (
     <Card>
@@ -1677,27 +1676,27 @@ function RecentQuotesCard({ quotes, openEdit, setView }) {
         <table className="rq-table" style={{ width:"100%", borderCollapse:"collapse", minWidth:460 }}>
           <thead>
             <tr>
-              <th style={thS}>Quote #</th>
+              <th style={thS}>Job #</th>
               <th style={thS}>Customer</th>
               <th className="rq-hide-mobile" style={thS}>Description</th>
-              <th className="rq-hide-mobile" style={thS}>Date</th>
+              <th className="rq-hide-mobile" style={thS}>Start Date</th>
               <th style={thS}>Status</th>
               <th className="rq-hide-mobile" style={thS}>Total</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.slice(0,8).map(q=>(
+            {filtered.slice(0,12).map(q=>(
               <tr key={q.id} style={{ cursor:"pointer" }} onClick={()=>openEdit(q)}>
-                <td style={{ ...tdS, color:C.acc, fontWeight:600, whiteSpace:"nowrap" }}>{q.qn}</td>
+                <td style={{ ...tdS, color:C.acc, fontWeight:600, whiteSpace:"nowrap" }}>{q.job_num}</td>
                 <td style={{ ...tdS, fontWeight:600 }}>{q.client}</td>
-                <td className="rq-hide-mobile" style={{ ...tdS, color:C.txtM, maxWidth:180 }}>{q.desc}</td>
-                <td className="rq-hide-mobile" style={{ ...tdS, color:C.txtS, whiteSpace:"nowrap" }}>{q.date}</td>
-                <td style={tdS}><Badge status={q.status}/></td>
-                <td className="rq-hide-mobile" style={{ ...tdS, fontWeight:700, whiteSpace:"nowrap" }}>{fmt(q.total||0)}</td>
+                <td className="rq-hide-mobile" style={{ ...tdS, color:C.txtM, maxWidth:180 }}>{q.job_description}</td>
+                <td className="rq-hide-mobile" style={{ ...tdS, color:C.txtS, whiteSpace:"nowrap" }}>{q.start_date ? new Date(q.start_date).toLocaleDateString() : "Historic"}</td>
+                <td style={tdS}><span style={{ borderRadius:6, background:C.accL, color:C.acc, padding:"2px 8px", fontSize:10, fontWeight:800 }}>HISTORICAL</span></td>
+                <td className="rq-hide-mobile" style={{ ...tdS, fontWeight:700, whiteSpace:"nowrap" }}>{fmt(parseFloat(q.total)||0)}</td>
               </tr>
             ))}
             {filtered.length===0 && (
-              <tr><td colSpan={6} style={{ ...tdS, textAlign:"center", color:C.txtS, padding:"16px" }}>No quotes found for this customer.</td></tr>
+              <tr><td colSpan={6} style={{ ...tdS, textAlign:"center", color:C.txtS, padding:"16px" }}>No jobs found for this customer.</td></tr>
             )}
           </tbody>
         </table>
@@ -1707,7 +1706,7 @@ function RecentQuotesCard({ quotes, openEdit, setView }) {
 }
 
 // ── RFQ DASHBOARD CARD ────────────────────────────────────────────────────────
-function RFQDashCard({ reqs, quotes, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, rfqStageFilter }) {
+function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, rfqStageFilter }) {
   const STAGES_DASH = ["RFQ Received","Client Contact","Viewed Job / Docs","Priced Materials / Rentals","Final Consult"];
   const stageColors = ["#b86b0a","#2563eb","#0d9488","#7c3aed","#16a34a"];
   const [expandedRfq,    setExpandedRfq]    = useState(null);
@@ -1787,7 +1786,7 @@ function RFQDashCard({ reqs, quotes, jobFolders, setJobFolders, setShowJFM, open
           const todayD  = new Date();
           const daysRfq = Math.floor((todayD - rfqDate) / 86400000);
           const daysAct = Math.floor((todayD - actDate) / 86400000);
-          const linkedQ = quotes.find(q=>q.fromReqId===r.id);
+          const linkedQ = jobs.find(q=>q.fromReqId===r.id);
           const isExp   = expandedRfq===r.id;
 
           return (
@@ -1901,7 +1900,7 @@ function RFQDashCard({ reqs, quotes, jobFolders, setJobFolders, setShowJFM, open
 }
 
 // ── RFQ LIST VIEW ─────────────────────────────────────────────────────────────
-function RFQListView({ reqs, quotes, setReqs, openNew, setShowJFM, setEditR, setShowRM, setDeadModal }) {
+function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setShowRM, setDeadModal }) {
   const [rfqView, setRfqView] = useState("active"); // active | all | dead
   const [layoutMode, setLayoutMode] = useState("list"); // list | card
 
@@ -1951,7 +1950,7 @@ function RFQListView({ reqs, quotes, setReqs, openNew, setShowJFM, setEditR, set
         {filtered.map(r => {
           const isDead   = r.status==="Dead";
           const isQuoted = r.status==="Quoted";
-          const linkedQ  = quotes.find(q=>q.fromReqId===r.id);
+          const linkedQ  = jobs.find(q=>q.fromReqId===r.id);
           return (
             <Card key={r.id} style={{ marginBottom:0, opacity:isDead?0.75:1, background:isDead?"#111318":C.sur, border:isDead?`1px solid #374151`:`1px solid ${C.bdr}`, display:"flex", flexDirection:"column", height:"100%" }}>
               <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:layoutMode==="card"?"stretch":"flex-start", flex:1, flexDirection:layoutMode==="card"?"column":"row" }}>
@@ -2001,17 +2000,16 @@ function RFQListView({ reqs, quotes, setReqs, openNew, setShowJFM, setEditR, set
 }
 
 // ── MASTER JOB LIST ───────────────────────────────────────────────────────────
-function MasterJobList({ quotes, reqs, jobFolders, openEdit, setShowJFM, onUpdateJobNum, onViewAttachments }) {
+function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJobNum, onViewAttachments }) {
   const [search,      setSearch]      = useState("");
   const [sortBy,      setSortBy]      = useState("jobNum");
   const [sortDir,     setSortDir]     = useState("asc");
   const [editingJobId,setEditingJobId]= useState(null);
   const [editJobNum,  setEditJobNum]  = useState("");
 
-  // Only Won quotes appear in the Master Job List
+  // Only Won jobs appear in the Master Job List
   const allJobs = useMemo(() => {
-    return quotes
-      .filter(q => q.status === "Won")
+    return jobs
       .map(q => {
         const rfq    = reqs.find(r => r.id===q.fromReqId);
         const folder = rfq ? jobFolders[rfq.id] : null;
@@ -2019,15 +2017,16 @@ function MasterJobList({ quotes, reqs, jobFolders, openEdit, setShowJFM, onUpdat
         const stage  = folder?.stage ?? null;
         return {
           id:        q.id,
-          jobNum:    q.jobNum || "",
-          quoteNum:  q.qn,
-          client:    q.client,
-          desc:      q.desc || "",
+          customer_num: q.customer_num || "—",
+          jobNum:    q.job_num || "",
+          quoteNum:  q.job_num || "",
+          client:    q.client || "",
+          desc:      q.job_description || "",
           jobSite:   q.jobSite || rfq?.jobSite || "",
           estimator: q.salesAssoc || "—",
-          startDate: q.startDate || "",
-          compDate:  q.compDate || "",
-          total:     q.total || 0,
+          startDate: q.start_date || "",
+          compDate:  q.end_date || "",
+          total:     parseFloat(q.total) || 0,
           rfqId:     rfq?.id || null,
           stageName: stage!==null ? STAGES[stage] : "—",
           attachments: q.attachments || [],
@@ -2036,7 +2035,7 @@ function MasterJobList({ quotes, reqs, jobFolders, openEdit, setShowJFM, onUpdat
           rfq:       rfq || null,
         };
       });
-  }, [quotes, reqs, jobFolders]);
+  }, [jobs, reqs, jobFolders]);
 
   const filtered = useMemo(() => {
     let rows = allJobs;
@@ -2095,8 +2094,8 @@ function MasterJobList({ quotes, reqs, jobFolders, openEdit, setShowJFM, onUpdat
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
             <thead style={{ background:C.bg }}>
               <tr>
-                <SortHdr col="jobNum"    label="Job #"       width={120}/>
-                <SortHdr col="quoteNum"  label="Quote #"     width={100}/>
+                <SortHdr col="customer_num" label="Cust. #"    width={90}/>
+                <SortHdr col="jobNum"       label="Job #"      width={120}/>
                 <SortHdr col="client"    label="Customer"    width={160}/>
                 <SortHdr col="desc"      label="Description" width={200}/>
                 <SortHdr col="jobSite"   label="Location"    width={160}/>
@@ -2110,7 +2109,7 @@ function MasterJobList({ quotes, reqs, jobFolders, openEdit, setShowJFM, onUpdat
             <tbody>
               {filtered.length===0 && (
                 <tr><td colSpan={10} style={{ padding:"32px", textAlign:"center", color:C.txtS, fontSize:13 }}>
-                  {allJobs.length===0 ? "No won jobs yet. Jobs appear here when an estimate is marked Won." : "No jobs match your search."}
+                  {allJobs.length===0 ? "No historical jobs found. Jobs appear here from the Master Job Registry." : "No jobs match your search."}
                 </td></tr>
               )}
               {filtered.map(j => (
@@ -2118,6 +2117,8 @@ function MasterJobList({ quotes, reqs, jobFolders, openEdit, setShowJFM, onUpdat
                   style={{ borderBottom:`1px solid ${C.bdr}`, background:C.sur }}
                   onMouseEnter={e=>e.currentTarget.style.background=C.grnB}
                   onMouseLeave={e=>e.currentTarget.style.background=C.sur}>
+
+                  <td style={{ ...tdS, padding:"10px 12px", color:C.acc, fontWeight:700 }}>{j.customer_num}</td>
 
                   {/* Job # — inline editable */}
                   <td style={{ ...tdS, padding:"10px 12px", whiteSpace:"nowrap" }}>
@@ -2145,8 +2146,6 @@ function MasterJobList({ quotes, reqs, jobFolders, openEdit, setShowJFM, onUpdat
                       </div>
                     )}
                   </td>
-
-                  <td style={{ ...tdS, padding:"10px 12px", color:C.acc, fontWeight:600, whiteSpace:"nowrap" }}>{j.quoteNum}</td>
                   <td style={{ ...tdS, padding:"10px 12px", fontWeight:600 }}>{j.client}</td>
                   <td style={{ ...tdS, padding:"10px 12px", color:C.txtM, maxWidth:200 }}>
                     <div style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={j.desc}>{j.desc||"—"}</div>
@@ -2272,18 +2271,18 @@ function ActionBtns({ onReq, onFromReq, onNew }) {
 }
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
-function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData, quotes=[] }) {
+function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData, jobs=[] }) {
   const blank = { id:uid(), rn:nextRN(), company:"", requester:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:"" };
   const [f, setF] = useState(init || blank);
   const u = (k,v) => setF(x => ({ ...x, [k]:v }));
 
   // ── Customer / contact matching ──────────────────────────────────────────
-  // All known company names: from custData keys + CUSTOMERS list + existing quotes
+  // All known company names: from custData keys + CUSTOMERS list + existing jobs
   const allCompanies = useMemo(() => {
     const fromCust = Object.keys(custData);
-    const fromQuotes = [...new Set(quotes.map(q=>q.client).filter(Boolean))];
+    const fromQuotes = [...new Set(jobs.map(q=>q.client).filter(Boolean))];
     return [...new Set([...CUSTOMERS, ...fromCust, ...fromQuotes])].sort();
-  }, [custData, quotes]);
+  }, [custData, jobs]);
 
   // Contacts for the currently selected company
   const companyContacts = useMemo(() => {
@@ -2468,9 +2467,9 @@ function ClockBadge({ label, days, alertThresh }) {
 
 function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq, onCreateEstimate, appUsers=[], globalChecklist, onUpdateGlobalChecklist, linkedQuote=null, liftTonThreshold=10 }) {
   const today = new Date();
-  const rfqDate = new Date(rfq.date || today);
+  const rfqDate = new Date(rfq.start_date || today);
   const daysSinceRfq = Math.floor((today - rfqDate) / 86400000);
-  const blank = { estimatorNotes:"", timelines:[], stage:0, customChecks:globalChecklist.map(c=>({...c,checked:false})), lastActivity: rfq.date||today.toISOString().slice(0,10), attachments:[] };
+  const blank = { estimatorNotes:"", timelines:[], stage:0, customChecks:globalChecklist.map(c=>({...c,checked:false})), lastActivity: rfq.start_date||today.toISOString().slice(0,10), attachments:[] };
   const init = folder || blank;
   const [estimatorNotes, setEstimatorNotes] = useState(init.estimatorNotes||"");
   const [timelines,      setTimelines]      = useState(init.timelines||[]);
@@ -2479,12 +2478,12 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
   const [attachments,    setAttachments]    = useState(init.attachments||[]);
   const [newTL, setNewTL] = useState({ date: today.toISOString().slice(0,10), note:"" });
   const fileInputRef = useRef();
-  const lastActivityDate = new Date(init.lastActivity||rfq.date||today);
+  const lastActivityDate = new Date(init.lastActivity||rfq.start_date||today);
   const daysSinceActivity = Math.floor((today - lastActivityDate) / 86400000);
   const STAGES = ["RFQ Received","Client Contact","Viewed Job / Docs","Priced Materials / Rentals","Final Consult"];
   const stageColors = ["#b86b0a","#2563eb","#0d9488","#7c3aed","#16a34a"];
   const [editingRfq,  setEditingRfq]  = useState(false);
-  const [rfqEdits,    setRfqEdits]    = useState({ requester:rfq.requester||"", phone:rfq.phone||"", email:rfq.email||"", jobSite:rfq.jobSite||"", desc:rfq.desc||"", salesAssoc:rfq.salesAssoc||"", date:rfq.date||"" });
+  const [rfqEdits,    setRfqEdits]    = useState({ requester:rfq.requester||"", phone:rfq.phone||"", email:rfq.email||"", jobSite:rfq.jobSite||"", desc:rfq.job_description||"", salesAssoc:rfq.salesAssoc||"", date:rfq.start_date||"" });
   const [promptInfo,  setPromptInfo]  = useState(null);
   const [mobilePage,  setMobilePage]  = useState(1);
 
@@ -2661,7 +2660,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
                 <div>
                   {[
                     ["RFQ #",     rfq.rn],
-                    ["Date",      rfq.date||"—"],
+                    ["Date",      rfq.start_date||"—"],
                     ["Requester", rfq.requester||"—"],
                     ["Phone",     rfq.phone||"—"],
                     ["Job Site",  rfq.jobSite||"—"],
@@ -2692,7 +2691,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
             {/* RIGHT: Description — read-only in view mode, edit handled in left panel */}
             <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8, padding:"12px 14px" }}>
               <div style={{ fontSize:9, color:C.txtS, fontWeight:700, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Description</div>
-              <div style={{ fontSize:13, color:C.txtM, lineHeight:1.7 }}>{editingRfq ? rfqEdits.desc||"No description." : rfq.desc||"No description."}</div>
+              <div style={{ fontSize:13, color:C.txtM, lineHeight:1.7 }}>{editingRfq ? rfqEdits.desc||"No description." : rfq.job_description||"No description."}</div>
             </div>
           </div>
 
@@ -2818,7 +2817,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
         {/* HIDDEN PRINT AREA */}
         <div id="jfm-printable" style={{ display:"none" }}>
           <div class="header">
-            <div><div class="h1">Job Folder — {rfq.company}</div><div class="h2">{rfq.rn} · {rfq.jobSite||"No site"} · {rfq.date||""}{rfq.salesAssoc?` · Sales: ${rfq.salesAssoc}`:""}</div></div>
+            <div><div class="h1">Job Folder — {rfq.company}</div><div class="h2">{rfq.rn} · {rfq.jobSite||"No site"} · {rfq.start_date||""}{rfq.salesAssoc?` · Sales: ${rfq.salesAssoc}`:""}</div></div>
             <div style={{textAlign:"right"}}><div style={{fontSize:"10px",color:"#8a93a2"}}>Printed: {today.toLocaleDateString()}</div><div style={{fontSize:"10px",color:"#8a93a2"}}>Days since RFQ: {daysSinceRfq}</div></div>
           </div>
           <div class="grid2">
@@ -2829,7 +2828,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
                     <div class="box" key={k}><div class="lbl">{k}</div><div class="val">{v}</div></div>
                   ))}
                 </div>
-                <div style={{marginTop:"8px"}} class="box"><div class="lbl">Description</div><div class="val" style={{fontWeight:400,fontSize:"11px",lineHeight:"1.5"}}>{rfq.desc||"—"}</div></div>
+                <div style={{marginTop:"8px"}} class="box"><div class="lbl">Description</div><div class="val" style={{fontWeight:400,fontSize:"11px",lineHeight:"1.5"}}>{rfq.job_description||"—"}</div></div>
               </div>
               <div class="section"><div class="section-title">Custom Checklist</div>
                 <div class="checks">
@@ -3542,7 +3541,7 @@ function SalesAdjustmentModal({ quote, onSave, onClose }) {
   );
 }
 
-function SearchResultsModal({ search, quotes, reqs, custData, onClose, onOpenQuote, onOpenReq, onOpenCust }) {
+function SearchResultsModal({ search, jobs, reqs, custData, onClose, onOpenQuote, onOpenReq, onOpenCust }) {
   const q = search.toLowerCase().trim();
   
   const results = useMemo(() => {
@@ -3550,7 +3549,7 @@ function SearchResultsModal({ search, quotes, reqs, custData, onClose, onOpenQuo
     const res = [];
     
     // Quotes
-    quotes.forEach(quote => {
+    jobs.forEach(quote => {
       const match = [
         quote.qn,                // Quote Number
         quote.desc,              // Quote Title / Description
@@ -3574,11 +3573,11 @@ function SearchResultsModal({ search, quotes, reqs, custData, onClose, onOpenQuo
         req.email,               // Contact Email
         req.phone,               // Contact Phone
         req.jobSite,             // Location
-        req.desc,                // Description
+        req.job_description,                // Description
         req.notes                // Additional Notes
       ].some(s => s?.toLowerCase().includes(q));
       
-      if (match) res.push({ type: 'RFQ', data: req, label: req.rn, sub: req.company, desc: `${req.desc || req.notes} @ ${req.jobSite}` });
+      if (match) res.push({ type: 'RFQ', data: req, label: req.rn, sub: req.company, desc: `${req.job_description || req.notes} @ ${req.jobSite}` });
     });
     
     // Customers
@@ -3603,7 +3602,7 @@ function SearchResultsModal({ search, quotes, reqs, custData, onClose, onOpenQuo
     });
     
     return res;
-  }, [q, quotes, reqs, custData]);
+  }, [q, jobs, reqs, custData]);
 
   const T_COLORS = { Quote: C.acc, RFQ: C.blue, Customer: C.purp };
 
@@ -4310,7 +4309,7 @@ function ProfileTemplateModal({ template, setTemplate, onClose }) {
 }
 
 // ── CUSTOMER MODAL ─────────────────────────────────────────────────────────────
-function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, setCustData, profileTemplate, onOpenQuote, onOpenJobFolder, onClose }) {
+function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCustData, profileTemplate, onOpenQuote, onOpenJobFolder, onClose }) {
   const data = custData[custName] || { notes:"", contacts:[], locations:[], billingAddr:"", website:"", industry:"", paymentTerms:"", accountNum:"" };
 
   const [notes,       setNotes]       = useState(data.notes || "");
@@ -4332,18 +4331,18 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
   const [newLoc,      setNewLoc]      = useState({ name:"", address:"", notes:"" });
   const [editLoc,     setEditLoc]     = useState({ name:"", address:"", notes:"" });
 
-  const won       = quotes.filter(q => q.status==="Won");
+  const won       = jobs.filter(q => q.status==="Won");
   const revenue   = won.reduce((s,q) => s+(q.total||0), 0);
-  const submitted = quotes.filter(q => ["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status));
+  const submitted = jobs.filter(q => ["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status));
 
-  // Filtered quotes for quotes tab
-  const filteredQ = quotes.filter(q => {
+  // Filtered jobs for jobs tab
+  const filteredQ = jobs.filter(q => {
     const s = search.toLowerCase();
     const locMatch = selLoc==="ALL" || (() => {
       const loc = locations.find(l=>l.id===selLoc);
       return loc && q.jobSite?.toLowerCase().includes(loc.address.split(",")[0].toLowerCase());
     })();
-    const textMatch = !s || [q.jobSite,q.contactName,q.desc,q.qn].some(x=>x?.toLowerCase().includes(s));
+    const textMatch = !s || [q.jobSite,q.contactName,q.job_description,q.job_num].some(x=>x?.toLowerCase().includes(s));
     return locMatch && textMatch;
   });
 
@@ -4427,7 +4426,7 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
             <div>
               <div style={{ fontSize:11, color:"#8a93a2", textTransform:"uppercase", letterSpacing:1 }}>
-                {quotes.some(q=>q.status==="Won") ? "Customer Profile" : "Prospect Profile"}
+                {jobs.some(q=>q.status==="Won") ? "Customer Profile" : "Prospect Profile"}
               </div>
               <div style={{ fontSize:20, fontWeight:700, marginTop:2 }}>{custName}</div>
               {data.accountNum && <div style={{ fontSize:12, color:"#8a93a2", marginTop:1 }}>Account: {data.accountNum}</div>}
@@ -4441,7 +4440,7 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
             return (
               <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" }}>
                 {[
-                  { l:"Total Quotes", v:quotes.length,   c:"#4a5060" },
+                  { l:"Total Quotes", v:jobs.length,   c:"#4a5060" },
                   { l:"Won",          v:won.length,       c:"#16a34a" },
                   { l:"In Pipeline",  v:submitted.length, c:"#2563eb" },
                   { l:"Revenue",      v:"$"+Math.round(revenue).toLocaleString(), c:"#b86b0a" },
@@ -4461,7 +4460,7 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
             {tabBtn("overview",  "Overview",  null)}
             {tabBtn("locations", "Locations", locations.length)}
             {tabBtn("rfqs",      "RFQs",      reqs.filter(r=>r.company===custName).length)}
-            {tabBtn("quotes",    "Quotes",    quotes.length)}
+            {tabBtn("jobs",    "Quotes",    jobs.length)}
             {tabBtn("activity",  "Activity",  null)}
           </div>
         </div>
@@ -4611,7 +4610,7 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 {locations.map(loc => {
                   const locContacts = contacts.filter(c=>c.locationId===loc.id);
-                  const locQuotes   = quotes.filter(q=>q.jobSite?.toLowerCase().includes((loc.address||"").split(",")[0].toLowerCase()));
+                  const locQuotes   = jobs.filter(q=>q.jobSite?.toLowerCase().includes((loc.address||"").split(",")[0].toLowerCase()));
                   const isEdit      = editLocId === loc.id;
                   return (
                     <div key={loc.id} style={{ border:"1px solid #e2e5ea",borderRadius:8,overflow:"hidden" }}>
@@ -4677,9 +4676,9 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
                               return(
                                 <div key={q.id} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 10px",background:"#f9fafb",border:"1px solid #e2e5ea",borderRadius:6 }}>
                                   <div>
-                                    <span style={{ fontWeight:700,color:"#b86b0a",fontSize:12,marginRight:8 }}>{q.qn}</span>
+                                    <span style={{ fontWeight:700,color:"#b86b0a",fontSize:12,marginRight:8 }}>{q.job_num}</span>
                                     <span style={{ background:st.bg,color:st.cl,border:`1px solid ${st.bd}`,borderRadius:3,padding:"1px 6px",fontSize:10,fontWeight:600 }}>{q.status}</span>
-                                    <div style={{ fontSize:12,color:"#4a5060",marginTop:2 }}>{q.desc}</div>
+                                    <div style={{ fontSize:12,color:"#4a5060",marginTop:2 }}>{q.job_description}</div>
                                   </div>
                                   <div style={{ textAlign:"right" }}>
                                     <div style={{ fontWeight:700,color:"#b86b0a",fontSize:13 }}>${Math.round(q.total||0).toLocaleString()}</div>
@@ -4699,7 +4698,7 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
           )}
 
           {/* ════ QUOTES TAB ════ */}
-          {tab==="quotes" && (
+          {tab==="jobs" && (
             <div>
               <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap", alignItems:"center" }}>
                 <input style={{ ...inp2, flex:1, minWidth:200 }}
@@ -4714,7 +4713,7 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
                   </div>
                 )}
               </div>
-              {filteredQ.length===0 && <div style={{ textAlign:"center",color:"#8a93a2",padding:"24px 0",fontSize:13 }}>No quotes match your filter.</div>}
+              {filteredQ.length===0 && <div style={{ textAlign:"center",color:"#8a93a2",padding:"24px 0",fontSize:13 }}>No jobs match your filter.</div>}
               <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
                 {filteredQ.map(q=>{
                   const ss={"In Progress":{bg:C.yelB,cl:C.yel,bd:C.yelBdr},"In Review":{bg:C.bluB,cl:C.blue,bd:C.bluBdr},"Approved":{bg:"#f0fdfa",cl:"#0d9488",bd:"#99f6e4"},"Adjustments Needed":{bg:"#fff1f2",cl:"#e11d48",bd:"#fecdd3"},Submitted:{bg:"#eff6ff",cl:"#2563eb",bd:"#bfdbfe"},Won:{bg:"#f0fdf4",cl:"#16a34a",bd:"#bbf7d0"},Lost:{bg:"#fef2f2",cl:"#dc2626",bd:"#fecaca"},Dead:{bg:"#1c1f26",cl:"#9ca3af",bd:"#374151"},Draft:{bg:"#f1f5f9",cl:"#475569",bd:"#cbd5e1"},"Change Order":{bg:"#f5f3ff",cl:"#6d28d9",bd:"#ddd6fe"}};
@@ -4724,15 +4723,15 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
                       <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8 }}>
                         <div style={{ flex:1,minWidth:0 }}>
                           <div style={{ display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginBottom:3 }}>
-                            <span style={{ fontWeight:700,color:"#b86b0a",fontSize:12 }}>{q.qn}</span>
+                            <span style={{ fontWeight:700,color:"#b86b0a",fontSize:12 }}>{q.job_num}</span>
                             <span style={{ background:st.bg,color:st.cl,border:`1px solid ${st.bd}`,borderRadius:4,padding:"1px 7px",fontSize:11,fontWeight:600 }}>{q.status}</span>
                             {q.isChangeOrder&&<span style={{ fontSize:11,color:"#6d28d9",fontWeight:600 }}>Change Order</span>}
                             {q.locked&&<span style={{ fontSize:11,color:"#16a34a" }}>{q.jobNum}</span>}
                           </div>
-                          <div style={{ fontWeight:600,fontSize:13 }}>{q.desc}</div>
+                          <div style={{ fontWeight:600,fontSize:13 }}>{q.job_description}</div>
                           {q.jobSite&&<div style={{ fontSize:12,color:"#4a5060",marginTop:1 }}>{q.jobSite}</div>}
                           {q.contactName&&<div style={{ fontSize:12,color:"#4a5060" }}>Contact: {q.contactName}</div>}
-                          <div style={{ fontSize:11,color:"#8a93a2",marginTop:2 }}>{q.date} · {q.qtype}{q.salesAssoc?" · SA: "+q.salesAssoc:""}</div>
+                          <div style={{ fontSize:11,color:"#8a93a2",marginTop:2 }}>{q.start_date} · {q.qtype}{q.salesAssoc?" · SA: "+q.salesAssoc:""}</div>
                         </div>
                         <div style={{ textAlign:"right",flexShrink:0 }}>
                           <div style={{ fontSize:18,fontWeight:700,color:"#1c1f26" }}>${Math.round(q.total||0).toLocaleString()}</div>
@@ -4760,7 +4759,7 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
             };
 
             const RFQCard = ({r}) => {
-              const linked = quotes.find(q=>q.fromReqId===r.id);
+              const linked = jobs.find(q=>q.fromReqId===r.id);
               const st     = RFQ_BADGE[r.status] || RFQ_BADGE["New"];
               const isDead = r.status==="Dead";
               return (
@@ -4898,9 +4897,9 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
               allEvents.push({ date:r.date, note:`RFQ received (${r.rn})`, source:"rfq", rfqRn:r.rn, rfqId:r.id, color:C.ora });
             });
 
-            // From quotes
-            quotes.forEach(q=>{
-              allEvents.push({ date:q.date, note:`Estimate ${q.qn} — ${q.status} — $${Math.round(q.total||0).toLocaleString()}`, source:"quote", rfqRn:null, rfqId:null, color:q.status==="Won"?C.grn:q.status==="Lost"?C.red:C.txtM });
+            // From jobs
+            jobs.forEach(q=>{
+              allEvents.push({ date:q.start_date, note:`Estimate ${q.job_num} — ${q.status} — $${Math.round(q.total||0).toLocaleString()}`, source:"quote", rfqRn:null, rfqId:null, color:q.status==="Won"?C.grn:q.status==="Lost"?C.red:C.txtM });
             });
 
             // Sort newest first
@@ -4910,7 +4909,7 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
               <div style={{ textAlign:"center", color:C.txtS, padding:"36px 0" }}>
                 <div style={{ fontSize:28, marginBottom:8 }}>📅</div>
                 <div style={{ fontSize:14, fontWeight:600, marginBottom:3 }}>No activity yet</div>
-                <div style={{ fontSize:12 }}>Activity from quotes and job folders will appear here.</div>
+                <div style={{ fontSize:12 }}>Activity from jobs and job folders will appear here.</div>
               </div>
             );
 
@@ -4924,7 +4923,7 @@ function CustomerModal({ custName, quotes, reqs=[], jobFolders={}, custData, set
 
             return (
               <div>
-                <div style={{ fontSize:12, color:C.txtS, marginBottom:14 }}>{allEvents.length} events across all quotes and RFQs</div>
+                <div style={{ fontSize:12, color:C.txtS, marginBottom:14 }}>{allEvents.length} events across all jobs and RFQs</div>
                 {Object.keys(grouped).sort((a,b)=>b>a?1:-1).map(mo=>(
                   <div key={mo} style={{ marginBottom:20 }}>
                     {/* Month header */}
@@ -5098,7 +5097,7 @@ function ChartDetailModal({ chart, onClose }) {
 
 const PIE_COLORS = ["#b86b0a","#2563eb","#16a34a","#dc2626","#7c3aed","#0d9488","#ea580c","#b45309","#6d28d9","#0e7490"];
 
-function SalesmanCharts({ quotes, reqs }) {
+function SalesmanCharts({ jobs, reqs }) {
   const [detail, setDetail] = useState(null);
 
   const getSA = (item) => item.salesAssoc || item.estimator || "Unassigned";
@@ -5106,7 +5105,7 @@ function SalesmanCharts({ quotes, reqs }) {
   // Build salesman sets
   const allSA = [...new Set([
     ...reqs.map(r=>getSA(r)),
-    ...quotes.map(q=>q.salesAssoc||"Unassigned"),
+    ...jobs.map(q=>q.salesAssoc||"Unassigned"),
   ])].filter(Boolean);
 
   function buildData(items, getSAFn, getValFn=null) {
@@ -5123,9 +5122,9 @@ function SalesmanCharts({ quotes, reqs }) {
   }
 
   const pendingReqs  = reqs.filter(r=>r.status!=="Quoted");
-  const submittedQ   = quotes.filter(q=>q.status==="Submitted");
-  const wonQ         = quotes.filter(q=>q.status==="Won");
-  const lostQ        = quotes.filter(q=>q.status==="Lost");
+  const submittedQ   = jobs.filter(q=>q.status==="Submitted");
+  const wonQ         = jobs.filter(q=>q.status==="Won");
+  const lostQ        = jobs.filter(q=>q.status==="Lost");
 
   const pendingData  = buildData(pendingReqs,  r=>getSA(r),                        r=>0);
   const submitData   = buildData(submittedQ,   q=>q.salesAssoc||"Unassigned", q=>q.total);
@@ -5167,7 +5166,7 @@ function SalesmanCharts({ quotes, reqs }) {
 
 
 // ── CALENDAR PAGE ─────────────────────────────────────────────────────────────
-function CalendarPage({ quotes, setQuotes, eqMap, onOpenQuote }) {
+function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
   const eqLookup = eqMap || EQ_MAP;
   const [curDate,       setCurDate]       = useState(new Date(2026, 2, 1));
   const [calView,       setCalView]       = useState("job");      // "job" | "equipment"
@@ -5187,7 +5186,7 @@ function CalendarPage({ quotes, setQuotes, eqMap, onOpenQuote }) {
 
   // ── Active jobs (won or submitted with a startDate) ───────────────────────
   const activeJobs = useMemo(() =>
-    quotes
+    jobs
       .filter(q => q.startDate && (q.status === "Won" || q.status === "Submitted"))
       .map(q => ({
         ...q,
@@ -5195,7 +5194,7 @@ function CalendarPage({ quotes, setQuotes, eqMap, onOpenQuote }) {
         endObj:   q.compDate ? new Date(q.compDate + "T12:00:00")
                              : new Date(q.startDate + "T12:00:00"),
       })),
-    [quotes]
+    [jobs]
   );
 
   // ── Equipment conflict detection ──────────────────────────────────────────
@@ -5256,10 +5255,10 @@ function CalendarPage({ quotes, setQuotes, eqMap, onOpenQuote }) {
   const isToday = d =>
     d === todayDate.getDate() && month === todayDate.getMonth() && year === todayDate.getFullYear();
 
-  // ── Save edited dates back to quotes array ────────────────────────────────
+  // ── Save edited dates back to jobs array ────────────────────────────────
   function saveDates() {
     if (!detailJob || !editDates) return;
-    setQuotes(prev => prev.map(q =>
+    setJobs(prev => prev.map(q =>
       q.id === detailJob.id
         ? { ...q, startDate: editDates.startDate, compDate: editDates.compDate }
         : q
@@ -5920,7 +5919,7 @@ function DatabaseBrowser({ token }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const tables = ['users', 'estimators', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
+  const tables = ['users', 'estimators', 'admin_tasks', 'jobs', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
 
   useEffect(() => {
     if (!selectedTable || !token) return;
@@ -6660,7 +6659,7 @@ export default function App() {
   const [view,       setView]       = useState(localStorage.getItem("token") ? "dash" : "landing");
   const [rfqStageFilter, setRfqStageFilter] = useState("all");
   const [appUsers,   setAppUsers]   = useState([]);
-  const [quotes,     setQuotes]     = useState(SAMPLE_QUOTES);
+  const [jobs,       setJobs]       = useState([]);
   const [reqs,       setReqs]       = useState(SAMPLE_REQS);
   const [dbStatus,   setDbStatus]   = useState("Local Mode");
   const [active,     setActive]     = useState(null);
@@ -6745,8 +6744,8 @@ export default function App() {
         const data = await resp.json();
 
         if (data.users && Array.isArray(data.users)) setAppUsers(data.users);
-        if (data.quotes && data.quotes.length > 0) {
-          setQuotes(data.quotes);
+        if (data.jobs && data.jobs.length > 0) {
+          setJobs(data.jobs);
           if (data.rfqs) setReqs(data.rfqs);
           if (data.customers) setCustData(data.customers);
           setDbStatus("MySQL Live");
@@ -6761,7 +6760,7 @@ export default function App() {
               'Authorization': `Bearer ${token}` 
             },
             body: JSON.stringify({ 
-              quotes: SAMPLE_QUOTES, 
+              jobs: SAMPLE_QUOTES, 
               rfqs: SAMPLE_REQS, 
               customers: INIT_CUST_DATA 
             })
@@ -6770,7 +6769,7 @@ export default function App() {
             localStorage.setItem("rigpro_db_seeded", "true");
             const r2 = await fetch("/api/data", { headers: { 'Authorization': `Bearer ${token}` } });
             const d2 = await r2.json();
-            setQuotes(d2.quotes);
+            setJobs(d2.jobs);
             setReqs(d2.rfqs);
             setCustData(d2.customers);
             if (d2.users) setAppUsers(d2.users);
@@ -6785,27 +6784,25 @@ export default function App() {
   }, [token, role]);
 
   const stats = useMemo(() => {
-    const won    = quotes.filter(q => q.status==="Won");
-    const sub    = quotes.filter(q => q.status==="Submitted");
-    const closed = quotes.filter(q => ["Won","Lost"].includes(q.status));
     return {
-      rev:  won.reduce((s,q)=>s+(q.total||0),0),
-      pipe: sub.reduce((s,q)=>s+(q.total||0),0),
-      wr:   closed.length ? Math.round(won.length/closed.length*100) : 0,
+      rev:  jobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0),
+      pipe: 0,
+      wr:   100,
       rn:   reqs.filter(r=>r.status==="New").length,
     };
-  }, [quotes, reqs]);
+  }, [jobs, reqs]);
 
   const customers = useMemo(() => {
+    const qList = jobs; 
     const m = {};
-    // Build from quotes first
-    quotes.forEach(q => { if(q.client){ if(!m[q.client]) m[q.client]={name:q.client,quotes:[]}; m[q.client].quotes.push(q); } });
-    // Also include any custData entries that have no quotes yet (new prospects)
-    Object.keys(custData).forEach(name => { if(!m[name]) m[name]={name,quotes:[]}; });
+    // Build from jobs first using 'client' (mismatch with jobs key, aliased in server.js)
+    qList.forEach(q => { if(q.client){ if(!m[q.client]) m[q.client]={name:q.client,jobs:[]}; m[q.client].jobs.push(q); } });
+    // Also include any custData entries that have no jobs yet (new prospects)
+    Object.keys(custData).forEach(name => { if(!m[name]) m[name]={name,jobs:[]}; });
     return Object.values(m)
-      .map(c => ({ ...c, isProspect: !c.quotes.some(q=>q.status==="Won") }))
+      .map(c => ({ ...c, isProspect: c.jobs.length === 0 }))
       .sort((a,b) => a.name.localeCompare(b.name));
-  }, [quotes, custData]);
+  }, [jobs, custData]);
 
   function openNew(req=null, isCO=false, parentQ=null) {
     setActive(blankQuote(req, customerRates, isCO, parentQ));
@@ -6841,7 +6838,7 @@ export default function App() {
 
 
   function saveAdjustment(quoteId, adj) {
-    setQuotes(prev => prev.map(q =>
+    setJobs(prev => prev.map(q =>
       q.id === quoteId
         ? { ...q, salesAdjustments: [...(q.salesAdjustments||[]), adj] }
         : q
@@ -6860,7 +6857,7 @@ export default function App() {
       (upd.laborRows||[]).forEach(r => { if(r.special) newRates[r.role]={ reg:Number(r.overReg), ot:Number(r.overOT) }; });
       if (Object.keys(newRates).length > 0) setCustomerRates(prev=>({...prev,[upd.client]:{...(prev[upd.client]||{}),...newRates}}));
     }
-    setQuotes(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
+    setJobs(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
     if (upd.fromReqId) {
       if (upd.status==="Dead") {
         setReqs(prev=>prev.map(r=>r.id===upd.fromReqId?{...r,status:"Dead",deadNote:upd.deadNote||"Estimate marked dead"}:r));
@@ -6873,10 +6870,10 @@ export default function App() {
   }
 
   function markWon(jn, cd) {
-    const upd = { ...active, status:"Won", jobNum:jn, compDate:cd, locked:true };
+    const upd = { ...active, status:"Won", job_num:jn, compDate:cd, locked:true };
     const cv  = calcQuote(upd, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     const fin = { ...upd, ...cv };
-    setQuotes(prev => { const ix=prev.findIndex(q=>q.id===fin.id); return ix>=0?prev.map((q,i)=>i===ix?fin:q):[fin,...prev]; });
+    setJobs(prev => { const ix=prev.findIndex(q=>q.id===fin.id); return ix>=0?prev.map((q,i)=>i===ix?fin:q):[fin,...prev]; });
     setShowWM(false);
     setView("dash");
   }
@@ -6884,7 +6881,7 @@ export default function App() {
   function submitQuote() {
     const cv  = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     const upd = { ...active, ...cv, status:"In Review" };
-    setQuotes(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
+    setJobs(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
     setNotifs(p => [{ id:uid(), qn:upd.qn, client:upd.client, total:upd.total, at:new Date().toLocaleTimeString(), status:"Pending Review" }, ...p]);
     setView("dash");
   }
@@ -7006,14 +7003,14 @@ export default function App() {
           <span style={{ fontSize: 18 }}>💡</span> {SYSTEM_PROMPT}
         </div>
       )}
-      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} quotes={quotes} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
-      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={quotes.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
+      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
+      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
-        itemType={deadModal.type==="rfq"?"RFQ":"Quote"}
-        itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.qn+" · "+deadModal.item.client}
+        itemType={deadModal.type==="rfq"?"RFQ":"Job"}
+        itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client}
         onConfirm={note=>{
           if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
-          else setQuotes(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
+          else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
           setDeadModal(null);
         }}
         onClose={()=>setDeadModal(null)}
@@ -7058,12 +7055,12 @@ export default function App() {
           }
         `}</style>
         <div className="mobile-act-btns">{actBtns}</div>
-        <DashboardMetrics quotes={quotes} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
+        <DashboardMetrics jobs={jobs} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
         {/* ── SALESMAN TRACKING CHARTS ─────────────────────────────────── */}
-        <SalesmanCharts quotes={quotes} reqs={reqs}/>
+        <SalesmanCharts jobs={jobs} reqs={reqs}/>
 
-        <RFQDashCard reqs={reqs} quotes={quotes} jobFolders={jobFolders} setJobFolders={setJobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal} rfqStageFilter={rfqStageFilter}/>
-        <RecentQuotesCard quotes={quotes} openEdit={openEdit} setView={setView}/>
+        <RFQDashCard reqs={reqs} jobs={jobs} jobFolders={jobFolders} setJobFolders={setJobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal} rfqStageFilter={rfqStageFilter}/>
+        <RecentQuotesCard jobs={jobs} openEdit={openEdit} setView={setView}/>
       </div>
     </div>
   );
@@ -7076,12 +7073,12 @@ export default function App() {
         view, setView, token, setToken, role, setRole,
         customers, custData, setCustData, CUSTOMERS,
         selC, setSelC, custView, setCustView, search, setSearch, wonOnly, setWonOnly, custFilter, setCustFilter,
-        quotes, reqs, jobFolders, showCustModal, setShowCustModal, adjModal, setAdjModal, showSearchModal, setShowSearchModal,
+        jobs, reqs, jobFolders, showCustModal, setShowCustModal, adjModal, setAdjModal, showSearchModal, setShowSearchModal,
         showRM, setShowRM, setEditR, editR, saveReq, saveAdjustment, saveJobFolder,
         showJFM, setShowJFM, deadModal, setDeadModal,
         profileTemplate, showProfileTempl, setShowProfileTempl,
         openEdit, openNew, liftTonThreshold, globalCheck, setGlobalCheck, appUsers,
-        setReqs, setQuotes,
+        setReqs, setJobs,
         Header, RFQModal, JobFolderModal, MarkDeadModal, CustomerModal, SearchResultsModal, SalesAdjustmentModal, ProfileTemplateModal
       }}
     />
@@ -7090,21 +7087,21 @@ export default function App() {
   // ── RFQs ───────────────────────────────────────────────────────────────
   if (view==="rfqs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize:14 }}>
-      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} quotes={quotes} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
-      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={quotes.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
+      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
+      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
-        itemType={deadModal.type==="rfq"?"RFQ":"Quote"}
-        itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.qn+" · "+deadModal.item.client}
+        itemType={deadModal.type==="rfq"?"RFQ":"Job"}
+        itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client}
         onConfirm={note=>{
           if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
-          else setQuotes(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
+          else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
           setDeadModal(null);
         }}
         onClose={()=>setDeadModal(null)}
       />}
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
-        <RFQListView reqs={reqs} quotes={quotes} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal}/>
+        <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal}/>
       </div>
     </div>
   );
@@ -7130,11 +7127,11 @@ export default function App() {
   if (view==="jobs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
-      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={quotes.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
-      {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Quote"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.qn+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else setQuotes(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
+      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
+      {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Job"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
       <MasterJobList
-        quotes={quotes} reqs={reqs} jobFolders={jobFolders} openEdit={openEdit} setShowJFM={setShowJFM}
-        onUpdateJobNum={(id, num) => setQuotes(p=>p.map(q=>q.id===id?{...q,jobNum:num}:q))}
+        jobs={jobs} reqs={reqs} jobFolders={jobFolders} openEdit={openEdit} setShowJFM={setShowJFM}
+        onUpdateJobNum={(id, num) => setJobs(p=>p.map(q=>q.id===id?{...q,job_num:num}:q))}
         onViewAttachments={j=>setAttachModal(j)}
       />
       {attachModal && (
@@ -7192,7 +7189,7 @@ export default function App() {
   if (view==="calendar") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
-      <CalendarPage quotes={quotes} setQuotes={setQuotes} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
+      <CalendarPage jobs={jobs} setJobs={setJobs} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
     </div>
   );
 
@@ -7201,7 +7198,7 @@ export default function App() {
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <ReportsPage
-        quotes={quotes}
+        jobs={jobs}
         reqs={reqs}
         role={role}
         username={token}
@@ -7213,13 +7210,13 @@ export default function App() {
         onClearInitialReport={()=>setTimeout(()=>setDashReportId(null),100)}
         onBack={()=>{ setDashReportId(null); setView("dash"); }}
       />
-      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={quotes.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
+      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
-        itemType={deadModal.type==="rfq"?"RFQ":"Quote"}
-        itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.qn+" · "+deadModal.item.client}
+        itemType={deadModal.type==="rfq"?"RFQ":"Job"}
+        itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client}
         onConfirm={note=>{
           if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
-          else setQuotes(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
+          else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
           setDeadModal(null);
         }}
         onClose={()=>setDeadModal(null)}
@@ -7392,7 +7389,7 @@ export default function App() {
       <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
         {adjModal&&<SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
         {showWM && <WonModal quote={active} onSave={markWon} onClose={()=>setShowWM(false)}/>}
-        {deadModal && <MarkDeadModal itemType="Quote" itemLabel={deadModal.item.qn+" · "+deadModal.item.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
+        {deadModal && <MarkDeadModal itemType="Quote" itemLabel={deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d=>{ u("discounts",[...(active.discounts||[]),d]); setShowDiscModal(false); }} onClose={()=>setShowDiscModal(false)}/>}
         {showCustDoc && <CustomerDocModal quote={{...active, total:cv.total}} onClose={()=>setShowCustDoc(false)}/>}
         <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
@@ -7457,7 +7454,7 @@ export default function App() {
                 {active.isHistorical && (
                   <div style={{ marginTop:6 }}>
                     <div style={{ fontSize:10, color:C.acc, fontStyle:"italic", marginBottom:8 }}>
-                      ⚠️ Quote will be instantly locked upon closing unless historical quotes are being bulk entered.
+                      ⚠️ Quote will be instantly locked upon closing unless historical jobs are being bulk entered.
                     </div>
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, padding:12, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, alignItems:"end", marginBottom:10 }}>
                       <div><Lbl c="TOTAL ESTIMATE AMOUNT"/><input type="number" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.histTotal||""} onChange={e=>u("histTotal",e.target.value)} disabled={active.locked}/></div>

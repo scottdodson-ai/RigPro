@@ -6,7 +6,7 @@ const CustomerCRMBoard = (props) => {
     view, setView, token, setToken, role, setRole, actBtns,
     customers, custData, setCustData, CUSTOMERS,
     selC, setSelC, custView, setCustView, search, setSearch, wonOnly, setWonOnly, custFilter, setCustFilter,
-    quotes, reqs, jobFolders, 
+    jobs, reqs, jobFolders, 
     showCustModal, setShowCustModal, adjModal, setAdjModal, showSearchModal, setShowSearchModal,
     showRM, setShowRM, setEditR, editR, saveReq, saveAdjustment, saveJobFolder,
     showJFM, setShowJFM, deadModal, setDeadModal,
@@ -46,10 +46,10 @@ const CustomerCRMBoard = (props) => {
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {adjModal && <SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
-      {showCustModal && <CustomerModal custName={showCustModal} quotes={quotes.filter(q=>q.client===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)}/>}
-      {showSearchModal && <SearchResultsModal search={search} quotes={quotes} reqs={reqs} custData={custData} onClose={()=>setShowSearchModal(false)} onOpenQuote={openEdit} onOpenReq={r=>{setEditR(r);setShowRM(true);}} onOpenCust={setSelC}/>}
-      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} quotes={quotes} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
-      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>props.setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={quotes.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
+      {showCustModal && <CustomerModal custName={showCustModal} quotes={jobs.filter(q=>q.customer_name===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)}/>}
+      {showSearchModal && <SearchResultsModal search={search} quotes={jobs} reqs={reqs} custData={custData} onClose={()=>setShowSearchModal(false)} onOpenQuote={openEdit} onOpenReq={r=>{setEditR(r);setShowRM(true);}} onOpenCust={setSelC}/>}
+      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} quotes={jobs} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
+      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>props.setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Quote"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.qn+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") props.setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else props.setQuotes(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)} />}
       
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
@@ -85,7 +85,7 @@ const CustomerCRMBoard = (props) => {
                 {customers.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).map(c => (
                   <div key={c.name} onClick={()=>setSelC(c.name)} style={{ padding:"18px 25px", cursor:"pointer", borderBottom:`1px solid ${C.bdrL}`, background:selC===c.name?C.accL:"transparent", borderLeft:selC===c.name?`6px solid ${C.acc}`:"6px solid transparent", transition:"0.15s" }}>
                     <div style={{ fontSize:14, fontWeight:selC===c.name?800:600, color:selC===c.name?C.acc:C.txt }}>{c.name}</div>
-                    <div style={{ fontSize:10, color:C.txtS, fontWeight:700, marginTop:4, opacity:0.6 }}>ACCOUNT ID: {custData[c.name]?.accountNum || "PENDING"}</div>
+                    <div style={{ fontSize:10, color:C.txtS, fontWeight:700, marginTop:4, opacity:0.6 }}>CUSTOMER ID: # {custData[c.name]?.customer_num || "N/A"}</div>
                   </div>
                 ))}
               </div>
@@ -97,7 +97,7 @@ const CustomerCRMBoard = (props) => {
                 <div style={{ maxWidth:950, margin:"0 auto" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
                     <div>
-                      <div style={{ fontSize:11, fontWeight:900, color:C.acc, letterSpacing:2, marginBottom:12 }}>MASTER DATA PROFILE</div>
+                      <div style={{ fontSize:11, fontWeight:900, color:C.acc, letterSpacing:2, marginBottom:12 }}>MASTER DATA PROFILE [ ID: # {currentSelectionData?.customer_num || "N/A"} ]</div>
                       <div style={{ fontSize:44, fontWeight:900, color:C.txt, letterSpacing:"-1px", lineHeight:1 }}>{selC}</div>
                       <div style={{ display:"flex", gap:20, marginTop:18 }}>
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>{currentSelectionData?.industry || "Industrial Sector"}</div>
@@ -132,26 +132,40 @@ const CustomerCRMBoard = (props) => {
 
                     <div>
                       <Sec c="Authorized Personnel Directory"/>
-                      <div style={{ display:"flex", flexDirection:"column", gap:15, marginTop:20 }}>
+                      <div style={{ display:"flex", flexDirection:"column", gap:15, marginTop:20, marginBottom:50 }}>
                         {contacts.length > 0 ? contacts.map((con, idx) => (
-                          <div key={idx} style={{ padding:30, border:`1px solid ${con.primary?C.grnBdr:C.bdr}`, borderRadius:22, background:con.primary?"#f0fdf4":"#fff", boxShadow:con.primary?"0 10px 30px rgba(34,197,94,0.1)":"none", transition:"0.3s" }}>
-                             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:18 }}>
-                                <div style={{ fontSize:20, fontWeight:900, color:C.txt, letterSpacing:"-0.3px" }}>{con.name}</div>
-                                {con.primary && <span style={{ fontSize:10, background:C.grn, color:"#fff", borderRadius:10, padding:"5px 15px", fontWeight:900, letterSpacing:1 }}>PRIMARY CONTACT</span>}
+                          <div key={idx} style={{ padding:25, border:`1px solid ${con.primary?C.grnBdr:C.bdr}`, borderRadius:18, background:con.primary?"#f0fdf4":"#fff", boxShadow:con.primary?"0 5px 15px rgba(34,197,94,0.05)":"none" }}>
+                             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:15 }}>
+                                <div style={{ fontSize:18, fontWeight:900, color:C.txt }}>{con.name}</div>
+                                {con.primary && <span style={{ fontSize:9, background:C.grn, color:"#fff", borderRadius:8, padding:"3px 10px", fontWeight:900 }}>PRIMARY</span>}
                              </div>
-                             <div style={{ display:"flex", flexDirection:"column", gap:12, borderTop:`1px solid ${C.bdrL}`, paddingTop:22 }}>
-                                <div style={{ fontSize:15, display:"flex", gap:15 }}><span style={{ width:100, fontWeight:900, fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:0.5 }}>Official Title</span> <span style={{fontWeight:700}}>{con.title || "—"}</span></div>
-                                <div style={{ fontSize:15, display:"flex", gap:15, color:C.blue }}><span style={{ width:100, fontWeight:900, fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:0.5 }}>Corporate Email</span> <span style={{fontWeight:700, borderBottom:`1.5px solid ${C.accL}`}}>{con.email?.toLowerCase() || "—"}</span></div>
-                                <div style={{ fontSize:15, display:"flex", gap:15 }}><span style={{ width:100, fontWeight:900, fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:0.5 }}>Mobile Phone</span> <span style={{fontWeight:700}}>{con.mobile || "—"}</span></div>
-                                <div style={{ fontSize:15, display:"flex", gap:15 }}><span style={{ width:100, fontWeight:900, fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:0.5 }}>Direct Phone</span> <span style={{fontWeight:700}}>{con.phone || "—"}</span></div>
+                             <div style={{ fontSize:13, display:"flex", flexDirection:"column", gap:6 }}>
+                                <div><span style={{ color:C.txtS, fontWeight:700, marginRight:8 }}>TITLE:</span> {con.title || "—"}</div>
+                                <div style={{ color:C.acc, fontWeight:800 }}>{con.email?.toLowerCase() || "—"}</div>
+                                <div><span style={{ color:C.txtS, fontWeight:700, marginRight:8 }}>DIRECT:</span> {con.phone || con.mobile || "—"}</div>
                              </div>
                           </div>
-                        )) : (
-                          <div style={{ padding:60, textAlign:"center", background:C.bg, borderRadius:25, color:C.txtS, fontSize:16, border:`2px dashed ${C.bdr}` }}>
-                            <div style={{ fontSize:50, marginBottom:20 }}>👥</div>
-                            No authorized personnel records found in database.
-                          </div>
-                        )}
+                        )) : <div style={{ padding:30, textAlign:"center", background:C.bg, borderRadius:20, color:C.txtS, fontSize:13 }}>No active contact records.</div>}
+                      </div>
+
+                      <Sec c="Master Transaction History"/>
+                      <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:15 }}>
+                        {jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).slice(0, 50).map((q, idx) => (
+                           <div key={idx} style={{ padding:18, border:`1px solid ${C.bdrL}`, borderRadius:14, background:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                              <div style={{ flex:1 }}>
+                                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                    <div style={{ fontSize:10, fontWeight:900, color:C.acc }}>JOB #: {q.job_number}</div>
+                                    <div style={{ fontSize:9, background:C.accL, color:C.acc, padding:"2px 8px", borderRadius:6, fontWeight:800 }}>ID: # {q.customer_num}</div>
+                                 </div>
+                                 <div style={{ fontSize:14, fontWeight:700, color:C.txtM, marginTop:3 }}>{q.job_description}</div>
+                              </div>
+                              <div style={{ textAlign:"right" }}>
+                                 <div style={{ fontSize:15, fontWeight:800, color:C.txt }}>{fmt(q.total_billings)}</div>
+                                 <div style={{ fontSize:10, color:C.txtS, fontWeight:700 }}>{q.start_date ? new Date(q.start_date).toLocaleDateString() : "Historical"}</div>
+                              </div>
+                           </div>
+                        ))}
+                        {jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 && <div style={{ padding:30, textAlign:"center", background:C.bg, borderRadius:20, color:C.txtS, fontSize:13 }}>No historical job transactions found.</div>}
                       </div>
                     </div>
                   </div>
@@ -180,8 +194,8 @@ const CustomerCRMBoard = (props) => {
             boxShadow:"inset 0 2px 10px rgba(0,0,0,0.02)"
           }}>
             {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).map(c => {
-              const won = c.quotes.filter(q=>q.status==="Won");
-              const tot = wonOnly ? won.reduce((s,q)=>s+(q.total||0)+((q.salesAdjustments||[]).reduce((ss,a)=>ss+a.amount,0)),0) : c.quotes.reduce((s,q)=>s+(q.total||0),0);
+              const custJobs = c.quotes || []; 
+              const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
               return (
                 <Card key={c.name} style={{ cursor:"pointer", padding:25, borderRadius:20, transition:"0.2s", border: selC === c.name ? `2.5px solid ${C.acc}` : `1px solid ${C.bdrL}` }} onClick={()=>{ 
                   if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
@@ -194,8 +208,8 @@ const CustomerCRMBoard = (props) => {
                   </div>
                   <div style={{ fontSize:22, fontWeight:900, color:C.acc, marginBottom:15 }}>{fmt(tot)}</div>
                   <div style={{ display:"flex", gap:20, borderTop:`1px solid ${C.bdrL}`, paddingTop:15 }}>
-                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>TOTAL QUOTES</div><div style={{fontSize:15, fontWeight:800}}>{c.quotes.length}</div></div>
-                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>WON JOBS</div><div style={{fontSize:15, fontWeight:800, color:C.grn}}>{won.length}</div></div>
+                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>MASTER JOBS</div><div style={{fontSize:15, fontWeight:800}}>{custJobs.length}</div></div>
+                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>TOTAL BILLINGS</div><div style={{fontSize:15, fontWeight:800, color:C.grn}}>{fmt(tot)}</div></div>
                   </div>
                 </Card>
               );

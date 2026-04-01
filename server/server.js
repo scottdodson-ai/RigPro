@@ -85,7 +85,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const [equipment] = await db.query('SELECT * FROM equipment');
     const [customers] = await db.query('SELECT * FROM customers');
     const [contacts] = await db.query('SELECT * FROM customer_contacts');
-    const [quotes] = await db.query('SELECT *, quote_number as qn, customer_name as client, is_locked as locked FROM quotes');
+    const [master_jobs] = await db.query('SELECT *, customer_name as client, job_number as job_num, total_billings as total FROM master_jobs');
     const [rfqs] = await db.query('SELECT *, rfq_number as rn FROM rfqs');
     const [users] = await db.query('SELECT id, username, email, role, created_at FROM users');
     const [estimators] = await db.query('SELECT * FROM estimators');
@@ -95,6 +95,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     customers.forEach(c => {
       custData[c.name] = {
         ...c,
+        customer_num: c.customer_num,
         billingAddr: c.billing_address || c.address || "",
         billing_address: c.billing_address || "",
         paymentTerms: c.payment_terms || "",
@@ -118,7 +119,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       labor,
       equipment,
       customers: custData,
-      quotes,
+      jobs: master_jobs,
       rfqs,
       users,
       estimators
