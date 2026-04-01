@@ -59,7 +59,11 @@ const CustomerCRMBoard = (props) => {
         {/* CRM CONTROLS PANEL */}
         <div style={{ display:"flex", alignItems:"flex-end", gap:12, marginBottom:16, flexWrap:"wrap" }}>
           <div style={{ display:"flex", gap:1, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:10, padding:3, height:42, boxSizing:"border-box" }}>
-            <button style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>setCustView("card")}>Card View</button>
+            <button style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>{ 
+              if (gridRef.current) gridRef.current.scrollTop = 0;
+              setGridScroll(0);
+              setCustView("card"); 
+            }}>Card View</button>
             <button style={{ background:custView==="list"?"#fff":"transparent", color:custView==="list"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>setCustView("list")}>List View</button>
           </div>
           <div style={{ flex:1 }}>
