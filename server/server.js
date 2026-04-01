@@ -95,15 +95,24 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     customers.forEach(c => {
       custData[c.name] = {
         ...c,
-        billingAddr: c.billing_address,
-        paymentTerms: c.payment_terms,
-        accountNum: c.account_num,
+        billingAddr: c.billing_address || c.address || "",
+        billing_address: c.billing_address || "",
+        paymentTerms: c.payment_terms || "",
+        accountNum: c.account_num || "",
+        locations: c.billing_address ? [{ id: 'hq', name: 'HQ / Billing', address: c.billing_address, notes: 'Imported address' }] : [],
         contacts: contacts.filter(con => con.customer_id === c.id).map(con => ({
           ...con,
+          mobile: con.mobile || "",
           primary: !!con.is_primary
         }))
       };
     });
+
+    if (Object.keys(custData).length > 0) {
+      const sample = Object.values(custData)[0];
+      console.log('[API/DATA] Raw row keys:', Object.keys(sample));
+      console.log('[API/DATA] Sample customer mapping (with HQ location):', sample);
+    }
 
     res.json({
       labor,
@@ -298,8 +307,8 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
       if (c.contacts) {
         for (const contact of c.contacts) {
           await connection.query(
-            'INSERT INTO customer_contacts (customer_id, name, title, email, phone, is_primary) VALUES (?, ?, ?, ?, ?, ?)',
-            [customerId, passStr(contact.name), passStr(contact.title), passStr(contact.email), passStr(contact.phone), contact.primary ? 1 : 0]
+            'INSERT INTO customer_contacts (customer_id, name, title, email, mobile, phone, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [customerId, passStr(contact.name), passStr(contact.title), passStr(contact.email), passStr(contact.mobile), passStr(contact.phone), contact.primary ? 1 : 0]
           );
         }
       }
