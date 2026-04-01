@@ -1,0 +1,27 @@
+{
+  "starred": false,
+  "editors_can_edit_access": true,
+  "last_modified_by_any_user": "2017-04-18T13:39:00.807Z",
+  "last_modified_by_me": "2017-04-18T13:39:00.807Z",
+  "content_last_modified": "2017-04-18T13:39:00.807Z",
+  "created": "2016-11-16T19:35:20.147Z",
+  "permissions": [
+    {
+      "id": "18087703309284886524",
+      "name": "Scott Dodson",
+      "type": "user",
+      "role": "owner",
+      "value": "scott.dodson@shoemakerrigging.com",
+      "kind": "drive#permission",
+      "photo_link": "https://lh3.googleusercontent.com/a/ACg8ocIa4xCGil1gNRBIkIAwBAdaXhGVk8NF-fpV15-RCqT7PpD-4DQ=s64",
+      "email_address": "scott.dodson@shoemakerrigging.com",
+      "domain": "shoemakerrigging.com",
+      "deleted": false,
+      "pending_owner": false
+    }
+  ],
+  "title": "QUOTES.pdf",
+  "drive_id": "1Uq6MkOQd5swewyQrMpPrkbewk-2maaRxaTqWcd35LI0",
+  "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "download_url": "https://docs.google.com/document/d/1Uq6MkOQd5swewyQrMpPrkbewk-2maaRxaTqWcd35LI0/edit?usp=drive_web"
+}

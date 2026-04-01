@@ -53,6 +53,16 @@ services:
     networks:
       - rigpro-network
 
+  ai:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    ports:
+      - "8080:8080"
+    volumes:
+      - /Users/peterlindsay/Documents/Projects/Rigpro_Data:/models
+    command: -m /models/llama-3.1-8b-instruct-q4_k_m.gguf -ngl 99 --port 8080 --host 0.0.0.0 --flash-attn --cache-type-k turbo4 --cache-type-v turbo4
+    networks:
+      - rigpro-network
+
 networks:
   rigpro-network:
     driver: bridge
