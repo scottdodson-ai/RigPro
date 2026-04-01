@@ -56,18 +56,20 @@ const CustomerCRMBoard = (props) => {
       
       <div style={{ padding:"14px", maxWidth:1280, margin:"0 auto" }}>
         
-        {/* CRM CONTROLS PANEL */}
-        <div style={{ display:"flex", alignItems:"flex-end", gap:12, marginBottom:16, flexWrap:"wrap" }}>
-          <div style={{ display:"flex", gap:1, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:10, padding:3, height:42, boxSizing:"border-box" }}>
-            <button style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>{ 
-              if (gridRef.current) gridRef.current.scrollTop = 0;
-              setGridScroll(0);
-              setCustView("card"); 
-            }}>Card View</button>
-            <button style={{ background:custView==="list"?"#fff":"transparent", color:custView==="list"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>setCustView("list")}>List View</button>
-          </div>
-          <div style={{ flex:1 }}>
-             <Lbl c="CUSTOMER DIRECT SEARCH"/><input style={{ ...inp, width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px", boxSizing:"border-box" }} placeholder="Search for a customer name..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        {/* CRM CONTROLS PANEL (STICKY) */}
+        <div style={{ position:"sticky", top:0, zIndex:1000, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
+          <div style={{ display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", maxWidth:1280, margin:"0 auto" }}>
+            <div style={{ display:"flex", gap:1, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:10, padding:3, height:42, boxSizing:"border-box" }}>
+              <button style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>{ 
+                if (gridRef.current) gridRef.current.scrollTop = 0;
+                setGridScroll(0);
+                setCustView("card"); 
+              }}>Card View</button>
+              <button style={{ background:custView==="list"?"#fff":"transparent", color:custView==="list"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>setCustView("list")}>List View</button>
+            </div>
+            <div style={{ flex:1 }}>
+               <Lbl c="CUSTOMER DIRECT SEARCH"/><input style={{ ...inp, width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px", boxSizing:"border-box" }} placeholder="Search for a customer name..." value={search} onChange={e=>setSearch(e.target.value)}/>
+            </div>
           </div>
         </div>
 
@@ -98,21 +100,22 @@ const CustomerCRMBoard = (props) => {
                   <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
                     <div style={{ display:"flex", gap:15, alignItems:"center", justifyContent:"flex-end" }}>
                       <button style={{ ...mkBtn("outline"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.acc}`, color:C.acc, fontWeight:800 }} onClick={()=>{ setCustView("card"); }}>← Return to Search Grid</button>
-                      <button 
-                        style={{ ...mkBtn("ghost"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.blu}`, color:C.blu, fontWeight:800, opacity:jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? 0.3 : 1, cursor: jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? "not-allowed" : "pointer" }} 
-                        disabled={jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0}
-                        onClick={()=>{ 
-                          props.setJobListFilter(selC);
-                          setView("jobs"); 
-                        }}
-                      >📊 Job List ({jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length})</button>
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                        <button 
+                          style={{ ...mkBtn("ghost"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.blu}`, color:C.blu, fontWeight:800, opacity:jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? 0.75 : 1, cursor: jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? "not-allowed" : "pointer" }} 
+                          disabled={jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0}
+                          onClick={()=>{ 
+                            props.setJobListFilter(selC);
+                            setView("jobs"); 
+                          }}
+                        >📊 Job List ({jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length})</button>
+                        <div style={{ height:15, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          {jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 && (
+                            <div style={{ fontSize:10, color:C.red, fontWeight:900, textTransform:"uppercase", letterSpacing:0.8 }}>No historical data exists for this account</div>
+                          )}
+                        </div>
+                      </div>
                       <button style={{ ...mkBtn("primary"), padding:"16px 25px", borderRadius:14, fontSize:15 }} onClick={()=>setShowCustModal(selC)}>Edit Company Profile</button>
-                    </div>
-
-                    <div style={{ height:15, display:"flex", alignItems:"center", justifyContent:"center", width:"100%" }}>
-                      {jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 && (
-                        <div style={{ fontSize:10, color:C.red, fontWeight:900, textTransform:"uppercase", letterSpacing:0.8 }}>No historical jobs exist for this account</div>
-                      )}
                     </div>
 
                     <div>
