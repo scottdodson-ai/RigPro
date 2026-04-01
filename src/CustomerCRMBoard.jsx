@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const CustomerCRMBoard = (props) => {
   const { 
@@ -14,6 +14,9 @@ const CustomerCRMBoard = (props) => {
     openEdit, openNew, liftTonThreshold, globalCheck, setGlobalCheck, appUsers
   } = props;
 
+  const [gridScroll, setGridScroll] = useState(0);
+  const gridRef = useRef(null);
+
   // Modals...
   const Header = props.Header;
   const RFQModal = props.RFQModal;
@@ -26,6 +29,19 @@ const CustomerCRMBoard = (props) => {
 
   const currentSelectionData = selC ? custData[selC] : null;
   const contacts = currentSelectionData?.contacts || [];
+
+  // RESTORE SCROLL POSITION WITH ROBUST TIMING
+  useEffect(() => {
+    if (custView === "card" && gridRef.current) {
+      const timer = setTimeout(() => {
+        if (gridRef.current) {
+          gridRef.current.scrollTop = gridScroll;
+          console.log("Restored scroll position to:", gridScroll);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [custView]);
 
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
@@ -43,14 +59,11 @@ const CustomerCRMBoard = (props) => {
         {/* CRM CONTROLS PANEL */}
         <div style={{ display:"flex", alignItems:"flex-end", gap:12, marginBottom:16, flexWrap:"wrap" }}>
           <div style={{ display:"flex", gap:1, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:10, padding:3, height:42, boxSizing:"border-box" }}>
-            <button style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>setCustView("card")}>Grid Access</button>
-            <button style={{ background:custView==="list"?"#fff":"transparent", color:custView==="list"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>setCustView("list")}>Directory Panel</button>
+            <button style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>setCustView("card")}>Card View</button>
+            <button style={{ background:custView==="list"?"#fff":"transparent", color:custView==="list"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>setCustView("list")}>List View</button>
           </div>
-          <div style={{ flex:1, minWidth:250 }}>
-             <Lbl c="CLIENT SELECTOR"/><select style={{ ...sel, width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px" }} value={selC || ""} onChange={e => setSelC(e.target.value || null)}><option value="">--- All Database Companies ---</option>{customers.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}</select>
-          </div>
-          <div style={{ width:240 }}>
-             <Lbl c="DIRECTORY SEARCH"/><input style={{ ...inp, minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px" }} placeholder="Quick company lookup..." value={search} onChange={e=>setSearch(e.target.value)}/>
+          <div style={{ flex:1 }}>
+             <Lbl c="CUSTOMER DIRECT SEARCH"/><input style={{ ...inp, width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px", boxSizing:"border-box" }} placeholder="Search for a customer name..." value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
         </div>
 
@@ -61,7 +74,7 @@ const CustomerCRMBoard = (props) => {
             {/* SIDEBAR DIRECTORY */}
             <div style={{ width:340, borderRight:`1px solid ${C.bdr}`, background:"#f8fafc", display:"flex", flexDirection:"column" }}>
               <div style={{ padding:"22px 25px", background:"#fff", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <div style={{ fontSize:11, fontWeight:900, color:C.acc, letterSpacing:1.5 }}>CORPORATE DIRECTORY</div>
+                <div style={{ fontSize:11, fontWeight:900, color:C.acc, letterSpacing:1.5 }}>CUSTOMERS</div>
                 <div style={{ background:C.acc, color:"#fff", borderRadius:12, padding:"3px 12px", fontSize:11, fontWeight:900 }}>{customers.length}</div>
               </div>
               <div style={{ flex:1, overflowY:"auto" }}>
@@ -87,7 +100,8 @@ const CustomerCRMBoard = (props) => {
                         <div style={{ fontSize:13, color:C.ora, fontWeight:800, background:"#fff7ed", padding:"5px 12px", borderRadius:8 }}>PAYMENT TERMS: {currentSelectionData?.paymentTerms || "Net 30"}</div>
                       </div>
                     </div>
-                    <div style={{ display:"flex", gap:15 }}>
+                    <div style={{ display:"flex", gap:15, alignItems:"center" }}>
+                      <button style={{ ...mkBtn("outline"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.acc}`, color:C.acc, fontWeight:800 }} onClick={()=>{ setCustView("card"); }}>← Return to Search Grid</button>
                       <button style={{ ...mkBtn("primary"), padding:"16px 40px", borderRadius:14, fontSize:16 }} onClick={()=>setShowCustModal(selC)}>Edit Corporate Profile</button>
                     </div>
                   </div>
@@ -141,20 +155,35 @@ const CustomerCRMBoard = (props) => {
               ) : (
                 <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", color:C.txtS, opacity:0.6 }}>
                   <div style={{ fontSize:120, marginBottom:30 }}>🏢</div>
-                  <div style={{ fontSize:32, fontWeight:900, color:C.txt, letterSpacing:"-1px" }}>CORPORATE MASTER DATABASE</div>
+                  <div style={{ fontSize:32, fontWeight:900, color:C.txt, letterSpacing:"-1px" }}>CUSTOMER MASTER DATABASE</div>
                   <div style={{ fontSize:18, marginTop:12 }}>Select a directory entry to initialize profile data visualization</div>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          /* CARD VIEW (LEGACY STYLE) */
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:20 }}>
+          <div ref={gridRef} style={{ 
+            display:"grid", 
+            gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))", 
+            gap:25, 
+            height:"78vh", 
+            minHeight:650, 
+            overflowY:"auto", 
+            padding:30, 
+            background:"#f8fafc", 
+            borderRadius:16, 
+            border:`1px solid ${C.bdr}`,
+            boxShadow:"inset 0 2px 10px rgba(0,0,0,0.02)"
+          }}>
             {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).map(c => {
               const won = c.quotes.filter(q=>q.status==="Won");
               const tot = wonOnly ? won.reduce((s,q)=>s+(q.total||0)+((q.salesAdjustments||[]).reduce((ss,a)=>ss+a.amount,0)),0) : c.quotes.reduce((s,q)=>s+(q.total||0),0);
               return (
-                <Card key={c.name} style={{ cursor:"pointer", padding:25, borderRadius:18, transition:"0.2s" }} onClick={()=>{setSelC(c.name);setCustView("list");}}>
+                <Card key={c.name} style={{ cursor:"pointer", padding:25, borderRadius:20, transition:"0.2s", border: selC === c.name ? `2.5px solid ${C.acc}` : `1px solid ${C.bdrL}` }} onClick={()=>{ 
+                  if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
+                  setSelC(c.name); 
+                  setCustView("list"); 
+                }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
                     <div style={{ fontWeight:900, fontSize:17 }}>{c.name}</div>
                     {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>CUSTOMER</span>}

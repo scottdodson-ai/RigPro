@@ -469,7 +469,7 @@ const Badge = ({ status }) => { const x = SS[status]||SS.Draft; return <span sty
 const Lbl   = ({ c }) => <div style={{ fontSize:11, color:C.txtM, marginBottom:3, fontWeight:600 }}>{c}</div>;
 const Sec   = ({ c }) => <div style={{ color:C.acc, fontSize:11, letterSpacing:1, marginBottom:10, fontWeight:700, textTransform:"uppercase" }}>{c}</div>;
 const XBtn  = ({ on }) => <button onClick={on} style={{ background:"none", border:"none", color:C.txtS, cursor:"pointer", fontSize:17, padding:"0 3px", lineHeight:1 }}>×</button>;
-const Card  = ({ children, style={} }) => <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:16, marginBottom:12, ...style }}>{children}</div>;
+const Card  = ({ children, style={}, onClick }) => <div onClick={onClick} style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:16, marginBottom:12, ...style }}>{children}</div>;
 const DollarInput = ({ val, on, w=80 }) => (
   <div style={{ display:"flex", alignItems:"center", border:`1px solid ${C.bdrM}`, borderRadius:5, overflow:"hidden", background:C.sur }}>
     <span style={{ padding:"0 6px", color:C.txtS, fontSize:13, borderRight:`1px solid ${C.bdrM}`, background:"#f9fafb", display:"flex", alignItems:"center" }}>$</span>
