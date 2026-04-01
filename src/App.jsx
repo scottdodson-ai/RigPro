@@ -14,33 +14,33 @@ const DEFAULT_LABOR = [
 ];
 
 const EQUIPMENT = [
-  { code:"242",    cat:"Forklift",    name:"2000 Gradall 534D-9",                        cap:"9,000 lb",   daily:790  },
-  { code:"300",    cat:"Forklift",    name:"Caterpillar GC35K",                          cap:"15,500 lb",  daily:840  },
-  { code:"301",    cat:"Forklift",    name:"HysterS80XLBCS",                             cap:"8,000 lb",   daily:530  },
-  { code:"302",    cat:"Forklift",    name:"Cat125D 12,500 LB Forklift",                 cap:"12,500 lb",  daily:850  },
-  { code:"308",    cat:"Forklift",    name:"Cat T150D 15,000 LB Forklift",               cap:"15,000 lb",  daily:950  },
-  { code:"320",    cat:"Forklift",    name:"Royal T300B 30,000 lb",                      cap:"30,000 lb",  daily:1100 },
-  { code:"322",    cat:"Forklift",    name:"Rigger's Special 80-100k",                   cap:"100,000 lb", daily:1200 },
-  { code:"237",    cat:"Aerial Lift", name:"Skyjack SJ3226",                             cap:"–",          daily:250  },
-  { code:"251",    cat:"Aerial Lift", name:"JLG 450AJ Lift",                             cap:"–",          daily:525  },
-  { code:"254",    cat:"Aerial Lift", name:"JLG 600S Boom",                              cap:"–",          daily:650  },
-  { code:"255",    cat:"Aerial Lift", name:"2013 Skyjack SJ4632",                        cap:"–",          daily:375  },
-  { code:"259",    cat:"Aerial Lift", name:"2015 Skyjack SJ3219",                        cap:"–",          daily:155  },
-  { code:"250",    cat:"Crane",       name:"2005 Broderson IC-200-3F 30-Ton Carry Deck", cap:"30,000 lb",  daily:1000 },
-  { code:"257",    cat:"Crane",       name:"Broderson IC80-2D 17,000 lb Carry Deck",     cap:"17,000 lb",  daily:750  },
-  { code:"RP8x10", cat:"Misc",        name:"8'×10' Steel Road Plates",                   cap:"–",          daily:90   },
-  { code:"RP4x10", cat:"Misc",        name:"4'×10' Steel Road Plates",                   cap:"–",          daily:90   },
-  { code:"RP8x12", cat:"Misc",        name:"8'×12' Steel Road Plates",                   cap:"–",          daily:90   },
-  { code:"RP8x20", cat:"Misc",        name:"8'×20' Steel Road Plates",                   cap:"–",          daily:100  },
-  { code:"GANG",   cat:"Tools",       name:"Gang Box Charge",                             cap:"–",          daily:50   },
-  { code:"CONEX",  cat:"Tools",       name:"Conex Job Trailer",                           cap:"–",          daily:50   },
-  { code:"TORCH",  cat:"Tools",       name:"Torch Outfit",                                cap:"–",          daily:50   },
-  { code:"100D",   cat:"Truck",       name:"2007 Inter 9200 Tractor",                     cap:"–",          daily:1000 },
-  { code:"110D",   cat:"Truck",       name:"2008 Landall Trailer",                        cap:"–",          daily:1000 },
-  { code:"111D",   cat:"Truck",       name:"1999 Fontaine Flatbed Trailer",               cap:"–",          daily:1000 },
-  { code:"SEMI",   cat:"Truck",       name:"Semi Truck and Trailer",                      cap:"–",          daily:1000 },
-  { code:"CONE",   cat:"Truck",       name:"Semi Truck and Conestoga",                    cap:"–",          daily:1500 },
-  { code:"PICK",   cat:"Truck",       name:"Pickup Truck",                                cap:"–",          daily:125  },
+  { code:"242",    category:"Forklift",    name:"2000 Gradall 534D-9",                        capacity:"9,000 lb",   daily_rate:790  },
+  { code:"300",    category:"Forklift",    name:"Caterpillar GC35K",                          capacity:"15,500 lb",  daily_rate:840  },
+  { code:"301",    category:"Forklift",    name:"HysterS80XLBCS",                             capacity:"8,000 lb",   daily_rate:530  },
+  { code:"302",    category:"Forklift",    name:"Cat125D 12,500 LB Forklift",                 capacity:"12,500 lb",  daily_rate:850  },
+  { code:"308",    category:"Forklift",    name:"Cat T150D 15,000 LB Forklift",               capacity:"15,000 lb",  daily_rate:950  },
+  { code:"320",    category:"Forklift",    name:"Royal T300B 30,000 lb",                      capacity:"30,000 lb",  daily_rate:1100 },
+  { code:"322",    category:"Forklift",    name:"Rigger's Special 80-100k",                   capacity:"100,000 lb", daily_rate:1200 },
+  { code:"237",    category:"Aerial Lift", name:"Skyjack SJ3226",                             capacity:"–",          daily_rate:250  },
+  { code:"251",    category:"Aerial Lift", name:"JLG 450AJ Lift",                             capacity:"–",          daily_rate:525  },
+  { code:"254",    category:"Aerial Lift", name:"JLG 600S Boom",                              capacity:"–",          daily_rate:650  },
+  { code:"255",    category:"Aerial Lift", name:"2013 Skyjack SJ4632",                        capacity:"–",          daily_rate:375  },
+  { code:"259",    category:"Aerial Lift", name:"2015 Skyjack SJ3219",                        capacity:"–",          daily_rate:155  },
+  { code:"250",    category:"Crane",       name:"2005 Broderson IC-200-3F 30-Ton Carry Deck", capacity:"30,000 lb",  daily_rate:1000 },
+  { code:"257",    category:"Crane",       name:"Broderson IC80-2D 17,000 lb Carry Deck",     capacity:"17,000 lb",  daily_rate:750  },
+  { code:"RP8x10", category:"Misc",        name:"8'×10' Steel Road Plates",                   capacity:"–",          daily_rate:90   },
+  { code:"RP4x10", category:"Misc",        name:"4'×10' Steel Road Plates",                   capacity:"–",          daily_rate:90   },
+  { code:"RP8x12", category:"Misc",        name:"8'×12' Steel Road Plates",                   capacity:"–",          daily_rate:90   },
+  { code:"RP8x20", category:"Misc",        name:"8'×20' Steel Road Plates",                   capacity:"–",          daily_rate:100  },
+  { code:"GANG",   category:"Tools",       name:"Gang Box Charge",                             capacity:"–",          daily_rate:50   },
+  { code:"CONEX",  category:"Tools",       name:"Conex Job Trailer",                           capacity:"–",          daily_rate:50   },
+  { code:"TORCH",  category:"Tools",       name:"Torch Outfit",                                capacity:"–",          daily_rate:50   },
+  { code:"100D",   category:"Truck",       name:"2007 Inter 9200 Tractor",                     capacity:"–",          daily_rate:1000 },
+  { code:"110D",   category:"Truck",       name:"2008 Landall Trailer",                        capacity:"–",          daily_rate:1000 },
+  { code:"111D",   category:"Truck",       name:"1999 Fontaine Flatbed Trailer",               capacity:"–",          daily_rate:1000 },
+  { code:"SEMI",   category:"Truck",       name:"Semi Truck and Trailer",                      capacity:"–",          daily_rate:1000 },
+  { code:"CONE",   category:"Truck",       name:"Semi Truck and Conestoga",                    capacity:"–",          daily_rate:1500 },
+  { code:"PICK",   category:"Truck",       name:"Pickup Truck",                                capacity:"–",          daily_rate:125  },
 ];
 
 const EQ_MAP = {};
@@ -3687,32 +3687,32 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
   const [en, setEn]     = useState("");
 
   // ── Inline edit state for equipment records ────────────────────────────────
-  const [editRow, setEditRow] = useState(null); // { code, name, cap, daily, cost, cat } — original
+  const [editRow, setEditRow] = useState(null); // { code, name, capacity, daily_rate, daily_cost, category } — original
   const [editVal, setEditVal] = useState({});    // live field values while editing
 
   // ── Add new equipment state ────────────────────────────────────────────────
   const [showAdd,  setShowAdd]  = useState(false);
-  const [newEquip, setNewEquip] = useState({ code:"", cat:"Forklift", name:"", cap:"—", daily:0, daily_cost:0 });
+  const [newEquip, setNewEquip] = useState({ code:"", category:"Forklift", name:"", capacity:"—", daily_rate:0, daily_cost:0 });
   const [addError, setAddError] = useState("");
 
   const KNOWN_CATS = [...new Set([...eqCats, "Forklift","Aerial Lift","Crane","Misc","Tools","Truck"])];
 
   // ── Rate override helpers (original behaviour) ────────────────────────────
-  const startOv = code => { const o=eqOv[code]; setEc(code); setEv(o?o.daily:(eqMap[code]?.daily||0)); setEn(o?o.note:""); };
+  const startOv = code => { const o=eqOv[code]; setEc(code); setEv(o?o.daily:(eqMap[code]?.daily_rate||0)); setEn(o?o.note:""); };
   const saveOv  = ()   => { setEqOv(p=>({...p,[ec]:{daily:Number(ev),note:en}})); setEc(null); };
   const clearOv = code => setEqOv(p => { const n={...p}; delete n[code]; return n; });
 
   // ── Equipment record edit helpers ─────────────────────────────────────────
   function startEdit(e) {
     setEditRow(e.code);
-    setEditVal({ code:e.code, cat:e.cat, name:e.name, cap:e.cap, daily:e.daily, daily_cost:e.daily_cost || (e.daily * 0.6) });
+    setEditVal({ code:e.code, category:e.category, name:e.name, capacity:e.capacity, daily_rate:e.daily_rate, daily_cost:e.daily_cost || (e.daily_rate * 0.6) });
     setEc(null); // close any rate override
   }
   function saveEdit() {
     if (!editVal.name || !editVal.code) return;
     setEquipment(prev => prev.map(e =>
       e.code === editRow
-        ? { ...e, code:editVal.code, cat:editVal.cat, name:editVal.name, cap:editVal.cap, daily:Number(editVal.daily), daily_cost:Number(editVal.daily_cost) }
+        ? { ...e, code:editVal.code, category:editVal.category, name:editVal.name, capacity:editVal.capacity, daily_rate:Number(editVal.daily_rate), daily_cost:Number(editVal.daily_cost) }
         : e
     ));
     // If code changed, migrate rate override
@@ -3735,13 +3735,13 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
     if (eqMap[newEquip.code.trim()]) { setAddError(`Code "${newEquip.code}" already exists.`); return; }
     setEquipment(prev => [...prev, {
       code: newEquip.code.trim().toUpperCase(),
-      cat:  newEquip.cat,
+      category:  newEquip.category,
       name: newEquip.name.trim(),
-      cap:  newEquip.cap.trim() || "—",
-      daily: Number(newEquip.daily) || 0,
-      daily_cost: Number(newEquip.daily_cost) || (newEquip.daily * 0.6),
+      capacity:  newEquip.capacity.trim() || "—",
+      daily_rate: Number(newEquip.daily_rate) || 0,
+      daily_cost: Number(newEquip.daily_cost) || (newEquip.daily_rate * 0.6),
     }]);
-    setNewEquip({ code:"", cat:"Forklift", name:"", cap:"—", daily:0, daily_cost:0 });
+    setNewEquip({ code:"", category:"Forklift", name:"", capacity:"—", daily_rate:0, daily_cost:0 });
     setShowAdd(false);
   }
 
@@ -3829,13 +3829,13 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
             <table style={{ width:"100%", borderCollapse:"collapse", minWidth:640 }}>
               <thead>
                 <tr>
-                  {["Code","Category","Equipment Name","Capacity","Base/Day", (role === "admin" ? "Cost/Day" : null), "Override Rate","Override Note",""].filter(Boolean).map(h => (
+                  {["Code","Category","Equipment Name","Capacity","Daily Rate", (role === "admin" ? "Daily Cost" : null), "Override Rate","Override Note",""].filter(Boolean).map(h => (
                     <th key={h} style={thS}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {equipment.filter(e => e.cat === cat).map(e => {
+                {equipment.filter(e => e.category === cat).map(e => {
                   const ov       = eqOv[e.code];
                   const isOv     = ec === e.code;      // rate override mode
                   const isEdit   = editRow === e.code; // full row edit mode
@@ -3849,8 +3849,8 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
                             onChange={x => setEditVal(v=>({...v, code:x.target.value}))}/>
                         </td>
                         <td style={tdS}>
-                          <select style={{ ...fi, width:100 }} value={editVal.cat}
-                            onChange={x => setEditVal(v=>({...v, cat:x.target.value}))}>
+                          <select style={{ ...fi, width:100 }} value={editVal.category}
+                            onChange={x => setEditVal(v=>({...v, category:x.target.value}))}>
                             {KNOWN_CATS.map(ct => <option key={ct}>{ct}</option>)}
                           </select>
                         </td>
@@ -3859,14 +3859,14 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
                             onChange={x => setEditVal(v=>({...v, name:x.target.value}))}/>
                         </td>
                         <td style={tdS}>
-                          <input style={{ ...fi, width:90 }} value={editVal.cap}
-                            onChange={x => setEditVal(v=>({...v, cap:x.target.value}))}/>
+                          <input style={{ ...fi, width:90 }} value={editVal.capacity}
+                            onChange={x => setEditVal(v=>({...v, capacity:x.target.value}))}/>
                         </td>
                         <td style={tdS}>
                           <div style={{ display:"flex", alignItems:"center", gap:4 }}>
                             <span style={{ fontSize:13, color:C.txtS }}>$</span>
-                            <input style={{ ...fi, width:70 }} type="number" min={0} value={editVal.daily}
-                              onChange={x => setEditVal(v=>({...v, daily:x.target.value}))}/>
+                            <input style={{ ...fi, width:70 }} type="number" min={0} value={editVal.daily_rate}
+                              onChange={x => setEditVal(v=>({...v, daily_rate:x.target.value}))}/>
                           </div>
                         </td>
                         <td style={tdS}>
@@ -3891,19 +3891,19 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
                     );
                   }
 
-                  // ── Normal row ───────────────────────────────────────────
+                   // ── Normal row ───────────────────────────────────────────
                   return (
                     <tr key={e.code} style={{ opacity: isEdit ? .4 : 1 }}>
                       <td style={{ ...tdS, color:C.txtS, fontSize:11, fontWeight:600 }}>{e.code}</td>
-                      <td style={{ ...tdS, fontSize:12, color:C.txtM }}>{e.cat}</td>
+                      <td style={{ ...tdS, fontSize:12, color:C.txtM }}>{e.category}</td>
                       <td style={{ ...tdS, fontWeight:500 }}>{e.name}</td>
-                      <td style={{ ...tdS, color:C.txtS, fontSize:12 }}>{e.cap}</td>
+                      <td style={{ ...tdS, color:C.txtS, fontSize:12 }}>{e.capacity}</td>
                       <td style={{ ...tdS, color:ov?C.txtS:C.txt, textDecoration:ov?"line-through":"none", fontSize:13 }}>
-                        ${Number(e.daily).toLocaleString()}/day
+                        ${Number(e.daily_rate).toLocaleString()}/day
                       </td>
                       {role === "admin" && (
                         <td style={{ ...tdS, color:C.txtS, fontSize:13 }}>
-                          ${Number(e.daily_cost || (e.daily * 0.6)).toLocaleString()}
+                          ${Number(e.daily_cost || (e.daily_rate * 0.6)).toLocaleString()}
                         </td>
                       )}
                       <td style={tdS}>
@@ -6696,7 +6696,7 @@ export default function App() {
   const [baseLabor,     setBaseLabor]     = useState(DEFAULT_LABOR);
   const [equipment,     setEquipment]     = useState(EQUIPMENT);
   const eqMap  = useMemo(() => { const m={}; equipment.forEach(e=>{m[e.code]=e;}); return m; }, [equipment]);
-  const eqCats = useMemo(() => [...new Set(equipment.map(e=>e.cat))], [equipment]);
+  const eqCats = useMemo(() => [...new Set(equipment.map(e=>e.category))], [equipment]);
   const [eqOv,       setEqOv]       = useState({});
   const [custData,         setCustData]         = useState(INIT_CUST_DATA);
   const [showCustModal,    setShowCustModal]    = useState(false);
@@ -6759,6 +6759,7 @@ export default function App() {
         const data = await resp.json();
 
         if (data.users && Array.isArray(data.users)) setAppUsers(data.users);
+        if (data.equipment) setEquipment(data.equipment);
         if (data.jobs && data.jobs.length > 0) {
           setJobs(data.jobs);
           if (data.rfqs) setReqs(data.rfqs);
@@ -7636,8 +7637,8 @@ export default function App() {
                     const sub   = daily*row.days + Number(row.ship||0);
                     return (
                       <tr key={row.id}>
-                        <td style={tdS}><select style={{ ...sel, maxWidth:210 }} value={row.code} onChange={e=>{ const ne=eqMap[e.target.value]||EQUIPMENT[0]; const go=eqOv[e.target.value]; updR("equipRows",row.id,"code",e.target.value); updR("equipRows",row.id,"overDaily",go?go.daily:ne.daily); }} disabled={active.locked}>{eqCats.map(cat=><optgroup key={cat} label={cat}>{equipment.filter(e=>e.cat===cat).map(e=><option key={e.code} value={e.code}>{e.name}</option>)}</optgroup>)}</select></td>
-                        <td style={{ ...tdS, fontSize:11, color:C.txtS }}>{eq.cap}</td>
+                        <td style={tdS}><select style={{ ...sel, maxWidth:210 }} value={row.code} onChange={e=>{ const ne=eqMap[e.target.value]||EQUIPMENT[0]; const go=eqOv[e.target.value]; updR("equipRows",row.id,"code",e.target.value); updR("equipRows",row.id,"overDaily",go?go.daily:ne.daily_rate); }} disabled={active.locked}>{eqCats.map(cat=><optgroup key={cat} label={cat}>{equipment.filter(e=>e.category===cat).map(e=><option key={e.code} value={e.code}>{e.name}</option>)}</optgroup>)}</select></td>
+                        <td style={{ ...tdS, fontSize:11, color:C.txtS }}>{eq.capacity}</td>
                         <td style={tdS}>{row.overRate ? <DollarInput val={row.overDaily} on={e=>updR("equipRows",row.id,"overDaily",Number(e.target.value))} w={65}/> : <span style={{ fontSize:13, color:gOv?C.yel:C.txtM }}>${daily.toLocaleString()}/day{gOv?" ⚡":""}</span>}</td>
                         <td style={tdS}><input style={{ ...inp, width:50 }} type="number" min={0} value={row.days} onChange={e=>updR("equipRows",row.id,"days",Number(e.target.value))} disabled={active.locked}/></td>
                         <td style={tdS}><DollarInput val={row.ship||0} on={e=>updR("equipRows",row.id,"ship",Number(e.target.value))} w={65}/></td>
