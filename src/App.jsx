@@ -4429,7 +4429,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
   const enabledFields = (profileTemplate||[]).filter(f=>f.enabled);
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:500,
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:2000,
                   display:"flex", alignItems:"flex-start", justifyContent:"center",
                   padding:"16px 12px", overflowY:"auto" }}>
       <div style={{ background:"#fff", borderRadius:10, width:"100%", maxWidth:900,
