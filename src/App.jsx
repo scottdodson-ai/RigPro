@@ -681,6 +681,25 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
             {crumb && <><span style={{ color:C.bdr, margin:"0 2px" }}>›</span><span style={{ color:C.txtS, fontSize:12, whiteSpace:"nowrap" }}>{crumb}</span></>}
           </div>
 
+          {token && profileUser && view === "dash" && (
+            <div className="desktop-nav" style={{ display:"flex", marginLeft:"auto" }}>
+              <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => setProfileOpen(true)}>
+                <span aria-hidden="true">👤</span>
+                <span>{displayName} (@{profileUser.username})</span>
+              </button>
+            </div>
+          )}
+
+          {view === "dash" && (
+            <div className="desktop-nav" style={{ display:"flex", marginLeft:8 }}>
+              {token ? (
+                <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
+              ) : (
+                view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px" }} onClick={() => setView("login")}>Login</button>
+              )}
+            </div>
+          )}
+
           {/* Mobile inline actions (same top line as logo + hamburger) */}
           <div
             className="mobile-inline"
@@ -710,16 +729,16 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
 
         {/* Second row: actions far-right (desktop) */}
         <div className="desktop-nav" style={{ display:"flex", justifyContent:"flex-end", gap:10, flexWrap:"wrap" }}>
-          {token && profileUser && (
+          {token && profileUser && view !== "dash" && (
             <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px" }} onClick={() => setProfileOpen(true)}>
               {displayName} (@{profileUser.username})
             </button>
           )}
           {extra}
-          {token ? (
+          {view !== "dash" && token ? (
             <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
           ) : (
-            view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px" }} onClick={() => setView("login")}>Login</button>
+            view !== "dash" && view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px" }} onClick={() => setView("login")}>Login</button>
           )}
         </div>
       </div>
