@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "import:quotes:qdrant": "node import_quotes_to_qdrant.js",
+    "import:tables:qdrant": "node import_tables_to_qdrant.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

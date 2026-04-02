@@ -30,6 +30,55 @@ app.use(express.json());
 app.use(express.text({ type: 'application/sql', limit: '50mb' }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_for_rigpro';
+const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const EMBED_MODEL = process.env.EMBED_MODEL || 'nomic-embed-text:latest';
+
+const SEARCH_COLLECTIONS = ['quotes', 'rigpro_tables'];
+
+const getQueryEmbedding = async (text) => {
+  const response = await fetch(`${OLLAMA_URL}/api/embeddings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: EMBED_MODEL,
+      prompt: text
+    })
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Embedding request failed (${response.status}): ${body}`);
+  }
+
+  const data = await response.json();
+  if (!Array.isArray(data.embedding) || data.embedding.length === 0) {
+    throw new Error('Embedding response did not include a valid vector');
+  }
+
+  return data.embedding;
+};
+
+const qdrantSearch = async (collection, vector, limit) => {
+  const response = await fetch(`${QDRANT_URL}/collections/${collection}/points/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      vector,
+      limit,
+      with_payload: true,
+      with_vector: false
+    })
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Qdrant search failed for ${collection} (${response.status}): ${body}`);
+  }
+
+  const data = await response.json();
+  return Array.isArray(data.result) ? data.result : [];
+};
 
 // Create a database connection pool
 const db = mysql.createPool({
@@ -42,22 +91,95 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
+const USERNAME_REGEX = /^[a-z]{1,16}$/;
+
+function normalizeUsername(username) {
+  return String(username || '').trim().toLowerCase();
+}
+
+function isValidUsername(username) {
+  return USERNAME_REGEX.test(normalizeUsername(username));
+}
+
+async function ensureUserProfileColumns() {
+  const columnsToAdd = [
+    { name: 'first_name',  def: 'VARCHAR(100)' },
+    { name: 'last_name',   def: 'VARCHAR(100)' },
+    { name: 'cell_phone',  def: 'VARCHAR(50)' },
+    { name: 'is_disabled', def: 'TINYINT(1) NOT NULL DEFAULT 0' },
+  ];
+  for (const { name, def } of columnsToAdd) {
+    const [rows] = await db.query(
+      `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = ?`,
+      [name]
+    );
+    if (rows.length === 0) {
+      await db.query(`ALTER TABLE users ADD COLUMN ${name} ${def}`);
+    }
+  }
+}
+
+async function ensureAuthAuditTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS user_auth_audit (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT,
+      username VARCHAR(50),
+      event_type VARCHAR(20) NOT NULL,
+      ip_address VARCHAR(64),
+      user_agent VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_user_id (user_id),
+      INDEX idx_event_type (event_type),
+      INDEX idx_created_at (created_at)
+    )
+  `);
+}
+
+async function recordAuthEvent({ userId, username, eventType, ipAddress, userAgent }) {
+  await ensureAuthAuditTable();
+  await db.query(
+    'INSERT INTO user_auth_audit (user_id, username, event_type, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)',
+    [userId || null, username || null, eventType, ipAddress || null, (userAgent || '').slice(0, 255)]
+  );
+}
+
 // LOGIN ENDPOINT
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+  const normalizedUsername = normalizeUsername(username);
+  if (!normalizedUsername || !password) return res.status(400).json({ error: 'Username and password required' });
 
   try {
-    const [rows] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+    await ensureUserProfileColumns();
+    const [rows] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, password_hash FROM users WHERE username = ?', [normalizedUsername]);
     const user = rows[0];
 
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
     if (!passwordMatch) return res.status(401).json({ error: 'Invalid credentials' });
+    if (Number(user.is_disabled) === 1) return res.status(403).json({ error: 'Account is disabled. Contact an administrator.' });
+
+    await recordAuthEvent({
+      userId: user.id,
+      username: user.username,
+      eventType: 'login',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
 
     const token = jwt.sign({ userId: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
-    res.json({ token, user: { id: user.id, username: user.username, role: user.role, email: user.email } });
+    res.json({ token, user: {
+      id: user.id,
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      username: user.username,
+      role: user.role,
+      email: user.email || '',
+      cell_phone: user.cell_phone || '',
+      is_disabled: Number(user.is_disabled) === 1
+    } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
@@ -73,21 +195,30 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: 'Invalid or expired token' });
-    req.user = user;
-    next();
+
+    db.query('SELECT id, role, is_disabled FROM users WHERE id = ? LIMIT 1', [user.userId])
+      .then(([rows]) => {
+        if (!rows.length) return res.status(401).json({ error: 'User not found' });
+        if (Number(rows[0].is_disabled) === 1) return res.status(403).json({ error: 'Account is disabled' });
+
+        req.user = { ...user, role: rows[0].role };
+        next();
+      })
+      .catch(() => res.status(500).json({ error: 'Authentication check failed' }));
   });
 };
 
 // GET BASE DATA (Protected)
 app.get('/api/data', authenticateToken, async (req, res) => {
   try {
+    await ensureUserProfileColumns();
     const [labor] = await db.query('SELECT * FROM base_labor');
     const [equipment] = await db.query('SELECT * FROM equipment');
     const [customers] = await db.query('SELECT * FROM customers');
     const [contacts] = await db.query('SELECT * FROM customer_contacts');
     const [master_jobs] = await db.query('SELECT *, customer_name as client, job_number as job_num, total_billings as total FROM master_jobs');
     const [rfqs] = await db.query('SELECT *, rfq_number as rn FROM rfqs');
-    const [users] = await db.query('SELECT id, username, email, role, created_at FROM users');
+    const [users] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, created_at FROM users');
     const [estimators] = await db.query('SELECT * FROM estimators');
 
     // Map customers array back to the object structure expected by App.jsx
@@ -109,12 +240,6 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       };
     });
 
-    if (Object.keys(custData).length > 0) {
-      const sample = Object.values(custData)[0];
-      console.log('[API/DATA] Raw row keys:', Object.keys(sample));
-      console.log('[API/DATA] Sample customer mapping (with HQ location):', sample);
-    }
-
     res.json({
       labor,
       equipment,
@@ -125,13 +250,78 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       estimators
     });
   } catch (error) {
-    console.error('[API/DATA] Error:', error);
+    console.error('[API] /api/data error:', error);
     // If the tables don't exist yet (e.g. after a failed restore wipe), return empty data
     // so the frontend can automatically trigger the DB re-initialization routine.
     if (error.code === 'ER_NO_SUCH_TABLE') {
       return res.json({ labor: [], equipment: [], customers: {}, quotes: [], rfqs: [], users: [] });
     }
     res.status(500).json({ error: 'Failed to fetch data', details: error.message });
+  }
+});
+
+// CURRENT USER PROFILE
+app.get('/api/me', authenticateToken, async (req, res) => {
+  try {
+    await ensureUserProfileColumns();
+    const [rows] = await db.query(
+      'SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled FROM users WHERE id = ? LIMIT 1',
+      [req.user.userId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+app.put('/api/me', authenticateToken, async (req, res) => {
+  const { email, cell_phone, password, role } = req.body || {};
+  try {
+    await ensureUserProfileColumns();
+    const [rows] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled FROM users WHERE id = ? LIMIT 1', [req.user.userId]);
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+
+    const existing = rows[0];
+    const nextRole = req.user.role === 'admin' && role ? role : existing.role;
+
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      await db.query(
+        'UPDATE users SET email = ?, cell_phone = ?, role = ?, password_hash = ? WHERE id = ?',
+        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextRole, passwordHash, req.user.userId]
+      );
+    } else {
+      await db.query(
+        'UPDATE users SET email = ?, cell_phone = ?, role = ? WHERE id = ?',
+        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextRole, req.user.userId]
+      );
+    }
+
+    const [updatedRows] = await db.query(
+      'SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled FROM users WHERE id = ? LIMIT 1',
+      [req.user.userId]
+    );
+    res.json(updatedRows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+app.post('/api/logout', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT username FROM users WHERE id = ? LIMIT 1', [req.user.userId]);
+    const username = rows[0]?.username || req.user.username || null;
+    await recordAuthEvent({
+      userId: req.user.userId,
+      username,
+      eventType: 'logout',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to record logout event' });
   }
 });
 
@@ -174,6 +364,9 @@ app.post('/api/users', authenticateToken, authenticateAdmin, async (req, res) =>
 });
 
 app.delete('/api/users/:id', authenticateToken, authenticateAdmin, async (req, res) => {
+  if (Number(req.params.id) === Number(req.user.userId)) {
+    return res.status(400).json({ error: 'You cannot delete your own account.' });
+  }
   try {
     await db.query('DELETE FROM users WHERE id = ?', [req.params.id]);
     res.json({ message: 'User deleted' });
@@ -200,7 +393,8 @@ app.get('/api/admin/tables', authenticateToken, authenticateAdmin, async (req, r
 // GET ALL USERS (Admin Only)
 app.get('/api/admin/users', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
-    const [users] = await db.query('SELECT id, username, email, role, created_at FROM users');
+    await ensureUserProfileColumns();
+    const [users] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, created_at FROM users');
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch users' });
@@ -209,16 +403,24 @@ app.get('/api/admin/users', authenticateToken, authenticateAdmin, async (req, re
 
 // CREATE USER (Admin Only)
 app.post('/api/admin/users', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { username, email, password, role } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+  const { first_name, last_name, username, email, cell_phone, password, role, is_disabled } = req.body;
+  const normalizedUsername = normalizeUsername(username);
+  if (!normalizedUsername || !password) return res.status(400).json({ error: 'Username and password required' });
+  if (!isValidUsername(normalizedUsername)) {
+    return res.status(400).json({ error: 'Username must be lowercase letters only, one word, max 16 characters, and no numbers.' });
+  }
   
   try {
+    await ensureUserProfileColumns();
     const passwordHash = await bcrypt.hash(password, 10);
     const [result] = await db.query(
-      'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      [username, email, passwordHash, role || 'user']
+      'INSERT INTO users (first_name, last_name, username, email, cell_phone, password_hash, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', passwordHash, role || 'user']
     );
-    res.json({ id: result.insertId, username, email, role: role || 'user' });
+    if (is_disabled) {
+      await db.query('UPDATE users SET is_disabled = 1 WHERE id = ?', [result.insertId]);
+    }
+    res.json({ id: result.insertId, first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', role: role || 'user', is_disabled: !!is_disabled });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Username already exists' });
     res.status(500).json({ error: 'Failed to create user' });
@@ -227,11 +429,74 @@ app.post('/api/admin/users', authenticateToken, authenticateAdmin, async (req, r
 
 // DELETE USER (Admin Only)
 app.delete('/api/admin/users/:id', authenticateToken, authenticateAdmin, async (req, res) => {
+  if (Number(req.params.id) === Number(req.user.userId)) {
+    return res.status(400).json({ error: 'You cannot delete your own account.' });
+  }
   try {
     await db.query('DELETE FROM users WHERE id = ?', [req.params.id]);
     res.json({ message: 'User deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// UPDATE USER (Admin Only)
+app.put('/api/admin/users/:id', authenticateToken, authenticateAdmin, async (req, res) => {
+  const { first_name, last_name, username, email, cell_phone, password, role, is_disabled } = req.body;
+  const userId = req.params.id;
+  const normalizedUsername = normalizeUsername(username);
+
+  if (!normalizedUsername) return res.status(400).json({ error: 'Username is required' });
+  if (!isValidUsername(normalizedUsername)) {
+    return res.status(400).json({ error: 'Username must be lowercase letters only, one word, max 16 characters, and no numbers.' });
+  }
+
+  try {
+    await ensureUserProfileColumns();
+    const [targetRows] = await db.query('SELECT id, is_disabled FROM users WHERE id = ? LIMIT 1', [userId]);
+    if (!targetRows.length) return res.status(404).json({ error: 'User not found' });
+    if (Number(userId) === Number(req.user.userId) && typeof is_disabled !== 'undefined' && Number(is_disabled) === 1) {
+      return res.status(400).json({ error: 'You cannot disable your own account.' });
+    }
+
+    const nextDisabled = typeof is_disabled === 'undefined' ? Number(targetRows[0].is_disabled) : (Number(is_disabled) === 1 ? 1 : 0);
+
+    if (password) {
+      // Update with new password
+      const passwordHash = await bcrypt.hash(password, 10);
+      await db.query(
+        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, password_hash = ?, role = ?, is_disabled = ? WHERE id = ?',
+        [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', passwordHash, role, nextDisabled, userId]
+      );
+    } else {
+      // Update without changing password
+      await db.query(
+        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, role = ?, is_disabled = ? WHERE id = ?',
+        [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', role, nextDisabled, userId]
+      );
+    }
+    res.json({ id: Number(userId), first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', role, is_disabled: nextDisabled === 1 });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Username already exists' });
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, async (req, res) => {
+  const userId = Number(req.params.id);
+  const isDisabled = Number(req.body?.is_disabled) === 1;
+
+  if (userId === Number(req.user.userId) && isDisabled) {
+    return res.status(400).json({ error: 'You cannot disable your own account.' });
+  }
+
+  try {
+    await ensureUserProfileColumns();
+    const [result] = await db.query('UPDATE users SET is_disabled = ? WHERE id = ?', [isDisabled ? 1 : 0, userId]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'User not found' });
+    res.json({ id: userId, is_disabled: isDisabled });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update account status' });
   }
 });
 
@@ -628,17 +893,235 @@ app.delete('/api/admin/tasks/:id', authenticateToken, authenticateAdmin, async (
   }
 });
 
+// CUSTOMER MANAGEMENT ENDPOINTS
+// Get all customers
+app.get('/api/admin/customers', authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    const [customers] = await db.query('SELECT * FROM customers');
+    res.json(customers);
+  } catch (error) {
+    console.error('Failed to fetch customers:', error);
+    res.status(500).json({ error: 'Failed to fetch customers' });
+  }
+});
+
+// Add a new customer
+app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (req, res) => {
+  const { name, notes, billing_address, website, industry, payment_terms, account_num } = req.body;
+  
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Customer name is required' });
+  }
+
+  try {
+    const [result] = await db.query(
+      'INSERT INTO customers (name, notes, billing_address, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name.trim(), notes || '', billing_address || '', website || '', industry || '', payment_terms || '', account_num || '']
+    );
+    
+    const [newCustomer] = await db.query('SELECT * FROM customers WHERE id = ?', [result.insertId]);
+    res.status(201).json(newCustomer[0]);
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Customer name already exists' });
+    }
+    console.error('Failed to create customer:', error);
+    res.status(500).json({ error: 'Failed to create customer' });
+  }
+});
+
+// Edit existing customer
+app.put('/api/admin/customers/:id', authenticateToken, authenticateAdmin, async (req, res) => {
+  const { name, notes, billing_address, website, industry, payment_terms, account_num } = req.body;
+  const customerId = req.params.id;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Customer name is required' });
+  }
+
+  try {
+    // Check if new name is already taken by another customer
+    const [existing] = await db.query(
+      'SELECT id FROM customers WHERE name = ? AND id != ?',
+      [name.trim(), customerId]
+    );
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Customer name already exists' });
+    }
+
+    await db.query(
+      'UPDATE customers SET name = ?, notes = ?, billing_address = ?, website = ?, industry = ?, payment_terms = ?, account_num = ? WHERE id = ?',
+      [name.trim(), notes || '', billing_address || '', website || '', industry || '', payment_terms || '', account_num || '', customerId]
+    );
+    
+    const [updated] = await db.query('SELECT * FROM customers WHERE id = ?', [customerId]);
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+    
+    res.json(updated[0]);
+  } catch (error) {
+    console.error('Failed to update customer:', error);
+    res.status(500).json({ error: 'Failed to update customer' });
+  }
+});
+
+// Delete a customer
+app.delete('/api/admin/customers/:id', authenticateToken, authenticateAdmin, async (req, res) => {
+  const customerId = req.params.id;
+
+  try {
+    // Check if customer has related contacts or jobs
+    const [contacts] = await db.query(
+      'SELECT COUNT(*) as count FROM customer_contacts WHERE customer_id = ?',
+      [customerId]
+    );
+    
+    if (contacts[0].count > 0) {
+      return res.status(400).json({ error: 'Cannot delete customer with associated contacts. Please remove contacts first.' });
+    }
+
+    const [result] = await db.query('DELETE FROM customers WHERE id = ?', [customerId]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+    
+    res.json({ message: 'Customer deleted successfully' });
+  } catch (error) {
+    console.error('Failed to delete customer:', error);
+    res.status(500).json({ error: 'Failed to delete customer' });
+  }
+});
+
+async function ensureCompanyInfoTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS company_info (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255),
+      address TEXT,
+      services TEXT,
+      logo_src LONGTEXT,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+  // GET COMPANY INFO
+  app.get('/api/admin/company-info', authenticateToken, authenticateAdmin, async (req, res) => {
+    try {
+      await ensureCompanyInfoTable();
+      const [rows] = await db.query('SELECT * FROM company_info ORDER BY id DESC LIMIT 1');
+      if (rows.length === 0) {
+        return res.json({ id: null, name: '', address: '', services: '', logo_src: null });
+      }
+      res.json(rows[0]);
+    } catch (error) {
+      console.error('Failed to fetch company info:', error);
+      res.status(500).json({ error: 'Failed to fetch company info' });
+    }
+  });
+
+  // UPDATE COMPANY INFO
+  app.put('/api/admin/company-info', authenticateToken, authenticateAdmin, async (req, res) => {
+    const { name, address, services, logo_src } = req.body;
+
+    try {
+      await ensureCompanyInfoTable();
+      const [existing] = await db.query('SELECT id FROM company_info LIMIT 1');
+    
+      if (existing.length > 0) {
+        // Update existing record
+        await db.query(
+          'UPDATE company_info SET name = ?, address = ?, services = ?, logo_src = ? WHERE id = ?',
+          [name, address, services, logo_src, existing[0].id]
+        );
+        res.json({ id: existing[0].id, name, address, services, logo_src });
+      } else {
+        // Create new record
+        const [result] = await db.query(
+          'INSERT INTO company_info (name, address, services, logo_src) VALUES (?, ?, ?, ?)',
+          [name, address, services, logo_src]
+        );
+        res.json({ id: result.insertId, name, address, services, logo_src });
+      }
+    } catch (error) {
+      console.error('Failed to update company info:', error);
+      res.status(500).json({ error: 'Failed to update company info' });
+    }
+  });
+
+// VECTOR SEARCH (Protected)
+app.post('/api/search/vector', authenticateToken, async (req, res) => {
+  const { query, collection = 'all', limit = 8 } = req.body || {};
+
+  if (!query || typeof query !== 'string' || !query.trim()) {
+    return res.status(400).json({ error: 'Query is required' });
+  }
+
+  const trimmedQuery = query.trim();
+  const normalizedLimit = Math.max(1, Math.min(Number(limit) || 8, 25));
+
+  let collections;
+  if (collection === 'all') {
+    collections = SEARCH_COLLECTIONS;
+  } else if (SEARCH_COLLECTIONS.includes(collection)) {
+    collections = [collection];
+  } else {
+    return res.status(400).json({ error: `Invalid collection. Allowed: all, ${SEARCH_COLLECTIONS.join(', ')}` });
+  }
+
+  try {
+    const vector = await getQueryEmbedding(trimmedQuery);
+
+    const allResults = [];
+    for (const col of collections) {
+      try {
+        const results = await qdrantSearch(col, vector, normalizedLimit);
+        results.forEach((r) => {
+          allResults.push({
+            collection: col,
+            score: r.score,
+            id: r.id,
+            payload: r.payload || {}
+          });
+        });
+      } catch (err) {
+        // Collection might not exist yet; skip that collection but keep others.
+        console.warn(`[VECTOR SEARCH] Skipping collection ${col}:`, err.message);
+      }
+    }
+
+    allResults.sort((a, b) => (b.score || 0) - (a.score || 0));
+    const top = allResults.slice(0, normalizedLimit);
+
+    res.json({
+      query: trimmedQuery,
+      limit: normalizedLimit,
+      searchedCollections: collections,
+      count: top.length,
+      results: top
+    });
+  } catch (error) {
+    console.error('[VECTOR SEARCH] Error:', error.message);
+    res.status(500).json({ error: 'Vector search failed', details: error.message });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 // Ensure admin account exists and has known password (dev/seed behavior).
 const initAdmin = async () => {
   try {
+    await ensureUserProfileColumns();
+    await ensureCompanyInfoTable();
     const hash = await bcrypt.hash('pass', 10);
     await db.query(
-      `INSERT INTO users (username, password_hash, role)
-       VALUES (?, ?, 'admin')
+      `INSERT INTO users (first_name, last_name, username, email, cell_phone, password_hash, role)
+       VALUES (?, ?, ?, ?, ?, ?, 'admin')
        ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), role = 'admin'`,
-      ['scott', hash]
+      ['Scott', 'Admin', 'scott', 'scott@shoemakerrigging.com', '', hash]
     );
     console.log('Admin account (scott) ensured.');
   } catch (error) {

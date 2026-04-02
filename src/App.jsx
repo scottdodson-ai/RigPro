@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
 import CustomerCRMBoard from "./CustomerCRMBoard";
+import VectorSearchPanel from "./VectorSearchPanel";
 const InvestorDashboard = () => <div style={{padding:40,color:"#fff",textAlign:"center",fontSize:18}}>Investor Dashboard — coming soon.</div>;
 
 
@@ -510,6 +511,11 @@ function AutoInput({ val, on, list, ph }) {
 // ── HEADER ────────────────────────────────────────────────────────────────────
 function Header({ view, setView, extra, crumb, role, token, setToken, setRole }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileUser, setProfileUser] = useState(null);
+  const [profileForm, setProfileForm] = useState({ first_name:"", last_name:"", username:"", email:"", cell_phone:"", role:"user", password:"" });
+  const [profileErr, setProfileErr] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
   const compStr = localStorage.getItem("rigpro_company");
   const comp = compStr ? JSON.parse(compStr) : { name: "Shoemaker Rigging & Transport LLC", logoSrc: null };
 
@@ -539,13 +545,89 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
     };
   }, []);
 
-  const handleLogout = () => { 
-    localStorage.removeItem("token"); 
-    localStorage.removeItem("role"); 
+  useEffect(() => {
+    if (!token) {
+      setProfileUser(null);
+      return;
+    }
+    fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return;
+        setProfileUser(d);
+        setProfileForm({
+          first_name: d.first_name || "",
+          last_name: d.last_name || "",
+          username: d.username || "",
+          email: d.email || "",
+          cell_phone: d.cell_phone || "",
+          role: d.role || "user",
+          password: ""
+        });
+      })
+      .catch(() => {});
+  }, [token]);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setProfileErr("");
+    setProfileSaving(true);
+    try {
+      const payload = {
+        email: profileForm.email,
+        cell_phone: profileForm.cell_phone,
+        password: profileForm.password || undefined,
+      };
+      if (profileUser?.role === "admin") payload.role = profileForm.role;
+
+      const res = await fetch("/api/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update profile");
+
+      setProfileUser(data);
+      setProfileForm({
+        first_name: data.first_name || "",
+        last_name: data.last_name || "",
+        username: data.username || "",
+        email: data.email || "",
+        cell_phone: data.cell_phone || "",
+        role: data.role || "user",
+        password: ""
+      });
+      localStorage.setItem("role", data.role || "user");
+      if (setRole) setRole(data.role || "user");
+      setProfileOpen(false);
+    } catch (err) {
+      setProfileErr(err.message);
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      if (token) {
+        await fetch("/api/logout", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (_) {}
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("user");
     if (setToken) setToken("");
     if (setRole) setRole("user");
     setView("landing");
   };
+
+  const displayName = profileUser
+    ? (`${profileUser.first_name || ""} ${profileUser.last_name || ""}`.trim() || profileUser.username)
+    : "";
 
   return (
     <>
@@ -628,6 +710,11 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
 
         {/* Second row: actions far-right (desktop) */}
         <div className="desktop-nav" style={{ display:"flex", justifyContent:"flex-end", gap:10, flexWrap:"wrap" }}>
+          {token && profileUser && (
+            <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px" }} onClick={() => setProfileOpen(true)}>
+              {displayName} (@{profileUser.username})
+            </button>
+          )}
           {extra}
           {token ? (
             <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
@@ -649,6 +736,56 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
           ) : (
             view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:13, padding:"10px", marginTop:5, justifyContent:"center" }} onClick={() => { setView("login"); setMenuOpen(false); }}>Login</button>
           )}
+        </div>
+      )}
+
+      {profileOpen && profileUser && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:12000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:C.sur, width:"100%", maxWidth:520, borderRadius:12, padding:24, border:`1px solid ${C.bdr}`, boxShadow:"0 20px 60px rgba(0,0,0,.35)" }}>
+            <div style={{ fontSize:18, fontWeight:800, color:C.acc, marginBottom:14 }}>Edit Profile</div>
+            <form onSubmit={handleSaveProfile} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <div>
+                  <Lbl c="FIRST NAME"/>
+                  <input id="profile-first-name" name="first_name" autoComplete="given-name" style={{ ...inp, background:C.bg, color:C.txtS }} value={profileForm.first_name} disabled />
+                </div>
+                <div>
+                  <Lbl c="LAST NAME"/>
+                  <input id="profile-last-name" name="last_name" autoComplete="family-name" style={{ ...inp, background:C.bg, color:C.txtS }} value={profileForm.last_name} disabled />
+                </div>
+              </div>
+              <div>
+                <Lbl c="USERNAME"/>
+                <input id="profile-username" name="username" autoComplete="username" style={{ ...inp, background:C.bg, color:C.txtS }} value={profileForm.username} disabled />
+              </div>
+              <div>
+                <Lbl c="EMAIL"/>
+                <input id="profile-email" name="email" autoComplete="email" style={inp} type="email" value={profileForm.email} onChange={(e)=>setProfileForm(p=>({ ...p, email:e.target.value }))} />
+              </div>
+              <div>
+                <Lbl c="CELL PHONE"/>
+                <input id="profile-cell-phone" name="cell_phone" autoComplete="tel" style={inp} value={profileForm.cell_phone} onChange={(e)=>setProfileForm(p=>({ ...p, cell_phone:e.target.value }))} />
+              </div>
+              <div>
+                <Lbl c="ROLE"/>
+                <select style={{ ...sel, width:"100%", ...(profileUser.role !== "admin" ? { background:C.bg, color:C.txtS } : {}) }} value={profileForm.role} disabled={profileUser.role !== "admin"} onChange={(e)=>setProfileForm(p=>({ ...p, role:e.target.value }))}>
+                  <option value="estimator">Estimator</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Administrator</option>
+                  <option value="user">User</option>
+                </select>
+              </div>
+              <div>
+                <Lbl c="NEW PASSWORD (OPTIONAL)"/>
+                <input id="profile-password" name="new_password" autoComplete="new-password" style={inp} type="password" value={profileForm.password} onChange={(e)=>setProfileForm(p=>({ ...p, password:e.target.value }))} />
+              </div>
+              {profileErr && <div style={{ fontSize:12, color:C.red, fontWeight:700 }}>⚠ {profileErr}</div>}
+              <div style={{ display:"flex", justifyContent:"flex-end", gap:10, marginTop:4 }}>
+                <button type="button" style={{ ...mkBtn("ghost"), padding:"8px 14px" }} onClick={() => setProfileOpen(false)}>Cancel</button>
+                <button type="submit" style={{ ...mkBtn("primary"), padding:"8px 16px" }} disabled={profileSaving}>{profileSaving ? "Saving..." : "Save"}</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </>
@@ -6007,6 +6144,14 @@ function DatabaseBrowser({ token }) {
 function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInfo }) {
   const users = appUsers;
   const setUsers = setAppUsers;
+  const currentUserId = (() => {
+    try {
+      const payload = JSON.parse(atob((token || "").split(".")[1] || ""));
+      return Number(payload.userId);
+    } catch {
+      return null;
+    }
+  })();
   const [confirm, setConfirm] = useState(null); // { title, msg, onOk, btn:"Restore"|"Delete" }
 
   const handleLogoUpload = (e) => {
@@ -6017,10 +6162,27 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       rd.readAsDataURL(file);
     }
   };
-  const [newUser, setNewUser] = useState({ username: "", password: "", role: "estimator", email: "" });
+  const [newUser, setNewUser] = useState({ first_name: "", last_name: "", username: "", password: "", role: "estimator", email: "", cell_phone: "" });
+  const [editingUser, setEditingUser] = useState(null);
   const [formErr, setFormErr] = useState("");
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
+  
+  // Customer management state
+  const [customers, setCustomers] = useState([]);
+  const [newCustomer, setNewCustomer] = useState({ name: "", billing_address: "", website: "", industry: "", payment_terms: "", account_num: "", notes: "" });
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [custFormErr, setCustFormErr] = useState("");
+  const [selectedCustId, setSelectedCustId] = useState(null);
+  const [custSearch, setCustSearch] = useState("");
+  const USERNAME_RULE_TEXT = "Username must be lowercase letters only, one word, max 16 characters, and no numbers.";
+  const normalizeUsername = (value) => String(value || "").toLowerCase().replace(/\s+/g, "");
+  const isValidUsername = (value) => /^[a-z]{1,16}$/.test(normalizeUsername(value));
+  const selectedCust = customers.find(c => c.id === selectedCustId);
+  const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(custSearch.toLowerCase()) || (c.account_num && c.account_num.includes(custSearch)));
+  const customerDropdownOptions = selectedCust && !filteredCustomers.some(c => c.id === selectedCust.id)
+    ? [selectedCust, ...filteredCustomers]
+    : filteredCustomers;
 
   useEffect(() => {
     if (!token) return;
@@ -6035,6 +6197,23 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       .then(r => r.json())
       .then(d => setUsers(Array.isArray(d) ? d : []))
       .catch(e => console.error("Load users err:", e));
+    
+    // Load Customers
+    fetch("/api/admin/customers", { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setCustomers(Array.isArray(d) ? d : []))
+      .catch(e => console.error("Load customers err:", e));
+
+      // Load Company Info
+      fetch("/api/admin/company-info", { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => setCompanyInfo({
+          name: d?.name || "",
+          address: d?.address || "",
+          services: d?.services || "",
+          logoSrc: d?.logo_src ?? d?.logoSrc ?? null
+        }))
+        .catch(e => console.error("Load company info err:", e));
   }, [token]);
 
   const addTask = async (e) => {
@@ -6110,13 +6289,15 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setFormErr("");
-    if (!newUser.username.trim() || !newUser.password.trim()) { setFormErr("Username and password are required."); return; }
+    const normalizedUsername = normalizeUsername(newUser.username);
+    if (!normalizedUsername || !newUser.password.trim()) { setFormErr("Username and password are required."); return; }
+    if (!isValidUsername(normalizedUsername)) { setFormErr(USERNAME_RULE_TEXT); return; }
     
     try {
       const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(newUser)
+        body: JSON.stringify({ ...newUser, username: normalizedUsername })
       });
       if (!res.ok) {
         const d = await res.json();
@@ -6124,11 +6305,48 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       }
       const created = await res.json();
       setUsers(prev => [...prev, created]);
-      setNewUser({ username:"", password:"", role:"estimator", email:"" });
+      setNewUser({ first_name:"", last_name:"", username:"", password:"", role:"estimator", email:"", cell_phone:"" });
     } catch (err) {
       setFormErr(err.message);
     }
   };
+
+  const handleEditUser = async (e) => {
+    e.preventDefault();
+    setFormErr("");
+    const normalizedUsername = normalizeUsername(editingUser.username);
+    if (!normalizedUsername) { setFormErr("Username is required."); return; }
+    if (!isValidUsername(normalizedUsername)) { setFormErr(USERNAME_RULE_TEXT); return; }
+    
+    try {
+      const updateData = {
+        first_name: editingUser.first_name || "",
+        last_name: editingUser.last_name || "",
+        username: normalizedUsername,
+        email: editingUser.email || "",
+        cell_phone: editingUser.cell_phone || "",
+        role: editingUser.role
+      };
+      if (editingUser.password) updateData.password = editingUser.password;
+      
+      const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: "PUT",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(updateData)
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to update user");
+      }
+      const updated = await res.json();
+      setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+      setEditingUser(null);
+    } catch (err) {
+      setFormErr(err.message);
+    }
+  };
+
+  const editUsernameInvalid = editingUser ? !isValidUsername(editingUser.username || "") : false;
 
   const updateUserRole = async (id, role) => {
     try {
@@ -6151,10 +6369,129 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
         method: "DELETE",
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error("Delete failed");
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Delete failed");
+      }
       setUsers(prev => prev.filter(u=>u.id!==id));
     } catch (err) {
-      alert("Failed to delete user");
+      alert("Failed to delete user: " + err.message);
+    }
+  };
+
+  const toggleUserDisabled = async (u) => {
+    if (Number(u.id) === currentUserId) return;
+    const nextDisabled = !u.is_disabled;
+    const actionText = nextDisabled ? "disable" : "enable";
+    if (!window.confirm(`Are you sure you want to ${actionText} this account?`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/users/${u.id}/status`, {
+        method: "PATCH",
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_disabled: nextDisabled ? 1 : 0 })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Failed to update account status");
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_disabled: nextDisabled } : x));
+    } catch (err) {
+      alert("Failed to update account status: " + err.message);
+    }
+  };
+
+  // Customer Management Functions
+  const handleAddCustomer = async (e) => {
+    e.preventDefault();
+    setCustFormErr("");
+    if (!newCustomer.name.trim()) { setCustFormErr("Customer name is required."); return; }
+    
+    try {
+      const res = await fetch("/api/admin/customers", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(newCustomer)
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to create customer");
+      }
+      const created = await res.json();
+      setCustomers(prev => [...prev, created]);
+      setNewCustomer({ name: "", billing_address: "", website: "", industry: "", payment_terms: "", account_num: "", notes: "" });
+      setSelectedCustId(created.id);
+    } catch (err) {
+      setCustFormErr(err.message);
+    }
+  };
+
+  const handleEditCustomer = async (e) => {
+    e.preventDefault();
+    setCustFormErr("");
+    if (!editingCustomer.name.trim()) { setCustFormErr("Customer name is required."); return; }
+    
+    try {
+      const res = await fetch(`/api/admin/customers/${editingCustomer.id}`, {
+        method: "PUT",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(editingCustomer)
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to update customer");
+      }
+      const updated = await res.json();
+      setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
+      setEditingCustomer(null);
+      setSelectedCustId(updated.id);
+    } catch (err) {
+      setCustFormErr(err.message);
+    }
+  };
+
+  const handleSaveCompanyInfo = async () => {
+    try {
+      const res = await fetch("/api/admin/company-info", {
+        method: "PUT",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          name: companyInfo.name || "",
+          address: companyInfo.address || "",
+          services: companyInfo.services || "",
+          logo_src: companyInfo.logoSrc || null
+        })
+      });
+      if (!res.ok) throw new Error("Failed to save company info");
+      const saved = await res.json();
+      setCompanyInfo({
+        name: saved?.name || "",
+        address: saved?.address || "",
+        services: saved?.services || "",
+        logoSrc: saved?.logo_src ?? saved?.logoSrc ?? null
+      });
+      alert("Company profile saved successfully!");
+    } catch (err) {
+      alert("Failed to save company info: " + err.message);
+    }
+  };
+
+  const handleDeleteCustomer = async (id) => {
+    if (!window.confirm("Delete this customer? This action cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/admin/customers/${id}`, {
+        method: "DELETE",
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to delete customer");
+      }
+      setCustomers(prev => prev.filter(c => c.id !== id));
+      if (selectedCustId === id) setSelectedCustId(null);
+    } catch (err) {
+      alert("Failed to delete customer: " + err.message);
     }
   };
 
@@ -6271,15 +6608,17 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:20, marginBottom:30 }}>
           {/* USER LIST */}
           <div style={{ flex:1 }}>
-            <Sec c="Active Accounts"/>
+            <Sec c="Accounts"/>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 {users.map(u => (
-                  <div key={u.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:C.sur, border:`1px solid ${C.bdr}`, padding:"12px 16px", borderRadius:8 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                      <div style={{ width:28, height:28, background:C.accL, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, color:C.acc, fontSize:10 }}>{u.username?.[0].toUpperCase() || "?"}</div>
-                      <div>
-                        <div style={{ fontWeight:700, fontSize:13 }}>{u.username}</div>
-                        {u.email && <a href={`mailto:${u.email}`} style={{ fontSize:11, color:C.blue, textDecoration:"none" }} onClick={e=>e.stopPropagation()}>{u.email}</a>}
+                  <div key={u.id} style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-start", justifyContent:"space-between", gap:10, background:u.is_disabled ? "#fff1f2" : C.sur, border:`1px solid ${u.is_disabled ? C.redBdr : C.bdr}`, padding:"12px 16px", borderRadius:8 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, flex:"1 1 180px", minWidth:0 }}>
+                                      <div style={{ width:28, height:28, background:C.accL, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, color:C.acc, fontSize:10 }}>{(u.first_name?.[0] || u.username?.[0] || "?").toUpperCase()}</div>
+                      <div style={{ minWidth:0 }}>
+                                        <div style={{ fontWeight:700, fontSize:13 }}>{`${u.first_name || ""} ${u.last_name || ""}`.trim() || u.username}</div>
+                                        <div style={{ fontSize:11, color:C.txtS }}>@{u.username}</div>
+                                        {u.email && <a href={`mailto:${u.email}`} style={{ fontSize:11, color:C.blue, textDecoration:"none", display:"block" }} onClick={e=>e.stopPropagation()}>{u.email}</a>}
+                                        {u.cell_phone && <div style={{ fontSize:11, color:C.txtM }}>{u.cell_phone}</div>}
                         <div style={{ display:"flex", gap:4, marginTop:2 }}>
                           {u.role==="admin" && <span style={{ background:C.redB, color:C.red, border:`1px solid ${C.redBdr}`, borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700 }}>ADMIN</span>}
                           {u.role==="manager" && <span style={{ background:C.bluB, color:C.blue, border:`1px solid ${C.bluBdr}`, borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700 }}>MANAGER</span>}
@@ -6288,9 +6627,9 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                         </div>
                       </div>
                     </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", justifyContent:"flex-end", gap:6, marginLeft:"auto" }}>
                       <select
-                        style={{ ...sel, padding:"2px 4px", fontSize:11 }}
+                        style={{ ...sel, padding:"2px 4px", fontSize:11, minWidth:108 }}
                         value={u.role}
                         onChange={(e) => updateUserRole(u.id, e.target.value)}
                       >
@@ -6298,15 +6637,184 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                         <option value="manager">Manager</option>
                         <option value="admin">Admin</option>
                       </select>
-                      <button style={{ ...mkBtn("danger"), padding:"4px 8px", fontSize:10 }} onClick={() => deleteUser(u.id)}>Delete</button>
+                      <button style={{ ...mkBtn("blue"), padding:"4px 8px", fontSize:10 }} onClick={() => setEditingUser({ ...u, password: "" })}>Edit</button>
+                      <button
+                        style={{ ...mkBtn(u.is_disabled ? "won" : "danger"), padding:"4px 8px", fontSize:10, opacity: Number(u.id) === currentUserId ? 0.4 : 1 }}
+                        onClick={() => toggleUserDisabled(u)}
+                        disabled={Number(u.id) === currentUserId}
+                      >
+                        {u.is_disabled ? "Enable" : "Disable"}
+                      </button>
+                      <button style={{ ...mkBtn("danger"), padding:"4px 8px", fontSize:10, opacity: Number(u.id) === currentUserId ? 0.55 : 1 }} onClick={() => deleteUser(u.id)} disabled={Number(u.id) === currentUserId}>Delete</button>
                     </div>
                   </div>
                 ))}
             </div>
           </div>
 
+          {/* CUSTOMER LIST & MANAGEMENT */}
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+              <Sec c="Customer Management"/>
+              <div style={{ display:"flex", gap:6 }}>
+                <button style={{ ...mkBtn("blue"), padding:"4px 8px", fontSize:10 }} onClick={() => { if (selectedCust) setEditingCustomer(selectedCust); }} disabled={!selectedCust}>Edit</button>
+                <button style={{ ...mkBtn("danger"), padding:"4px 8px", fontSize:10 }} onClick={() => { if (selectedCust) handleDeleteCustomer(selectedCust.id); }} disabled={!selectedCust}>Delete</button>
+              </div>
+            </div>
+            <div style={{ position:"relative", marginBottom:8 }}>
+              <input
+                type="text"
+                style={{ ...inp, width:"100%", paddingRight:30 }}
+                placeholder="Search by name or account #..."
+                value={custSearch}
+                onChange={(e) => setCustSearch(e.target.value)}
+              />
+              {custSearch && (
+                <button
+                  type="button"
+                  onClick={() => setCustSearch("")}
+                  aria-label="Clear search"
+                  style={{
+                    position:"absolute",
+                    right:8,
+                    top:"50%",
+                    transform:"translateY(-50%)",
+                    width:18,
+                    height:18,
+                    border:"none",
+                    borderRadius:"50%",
+                    cursor:"pointer",
+                    background:C.bdr,
+                    color:C.txt,
+                    fontSize:11,
+                    fontWeight:800,
+                    display:"flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    lineHeight:1
+                  }}
+                >
+                  x
+                </button>
+              )}
+            </div>
+            <select style={{...sel, width:"100%", marginBottom:12}} value={selectedCustId || ""} onChange={(e) => setSelectedCustId(e.target.value ? parseInt(e.target.value) : null)}>
+              <option value="">-- Select a customer --</option>
+              {customerDropdownOptions.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            {selectedCust && (
+              <div style={{ background:C.surL, border:`1px solid ${C.bdr}`, borderRadius:8, padding:12 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, fontSize:12, marginBottom:8 }}>
+                  {selectedCust.account_num && <div><strong>Account #:</strong> {selectedCust.account_num}</div>}
+                  {selectedCust.industry && <div><strong>Industry:</strong> {selectedCust.industry}</div>}
+                  {selectedCust.billing_address && <div><strong>Address:</strong> {selectedCust.billing_address}</div>}
+                  {selectedCust.website && <div><strong>Website:</strong> {selectedCust.website}</div>}
+                  {selectedCust.payment_terms && <div><strong>Terms:</strong> {selectedCust.payment_terms}</div>}
+                </div>
+                {selectedCust.notes && <div style={{ fontSize:11, color:C.txtM, fontStyle:"italic" }}>Notes: {selectedCust.notes}</div>}
+              </div>
+            )}
+          </div>
+
           {/* CREATE FORM & SETTINGS */}
           <div style={{ display: "flex", flexDirection:"column", gap:20 }}>
+            <div style={{ background:C.sur, border:`1.5px dashed ${C.bdr}`, borderRadius:10, padding:20 }}>
+              <Sec c={editingCustomer ? "Edit Customer" : "Add New Customer"}/>
+              <form onSubmit={editingCustomer ? handleEditCustomer : handleAddCustomer} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                <div>
+                  <Lbl c="CUSTOMER NAME"/>
+                  <input 
+                    id="customer-name"
+                    name="name"
+                    type="text"
+                    style={inp} 
+                    value={editingCustomer ? editingCustomer.name : newCustomer.name} 
+                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, name: e.target.value}) : setNewCustomer(p=>({...p, name: e.target.value}))} 
+                    required 
+                    placeholder="Enter customer name"
+                  />
+                </div>
+                <div>
+                  <Lbl c="BILLING ADDRESS"/>
+                  <input 
+                    id="customer-address"
+                    name="billing_address"
+                    type="text"
+                    style={inp} 
+                    value={editingCustomer ? editingCustomer.billing_address : newCustomer.billing_address} 
+                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, billing_address: e.target.value}) : setNewCustomer(p=>({...p, billing_address: e.target.value}))} 
+                    placeholder="Enter billing address"
+                  />
+                </div>
+                <div>
+                  <Lbl c="WEBSITE"/>
+                  <input 
+                    id="customer-website"
+                    name="website"
+                    type="text"
+                    style={inp} 
+                    value={editingCustomer ? editingCustomer.website : newCustomer.website} 
+                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, website: e.target.value}) : setNewCustomer(p=>({...p, website: e.target.value}))} 
+                    placeholder="www.example.com"
+                  />
+                </div>
+                <div>
+                  <Lbl c="INDUSTRY"/>
+                  <input 
+                    id="customer-industry"
+                    name="industry"
+                    type="text"
+                    style={inp} 
+                    value={editingCustomer ? editingCustomer.industry : newCustomer.industry} 
+                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, industry: e.target.value}) : setNewCustomer(p=>({...p, industry: e.target.value}))} 
+                    placeholder="e.g., Manufacturing, Construction"
+                  />
+                </div>
+                <div>
+                  <Lbl c="PAYMENT TERMS"/>
+                  <input 
+                    id="customer-payment-terms"
+                    name="payment_terms"
+                    type="text"
+                    style={inp} 
+                    value={editingCustomer ? editingCustomer.payment_terms : newCustomer.payment_terms} 
+                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, payment_terms: e.target.value}) : setNewCustomer(p=>({...p, payment_terms: e.target.value}))} 
+                    placeholder="e.g., Net 30, Net 45"
+                  />
+                </div>
+                <div>
+                  <Lbl c="ACCOUNT NUMBER"/>
+                  <input 
+                    id="customer-account-num"
+                    name="account_num"
+                    type="text"
+                    style={inp} 
+                    value={editingCustomer ? editingCustomer.account_num : newCustomer.account_num} 
+                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, account_num: e.target.value}) : setNewCustomer(p=>({...p, account_num: e.target.value}))} 
+                    placeholder="Internal account number"
+                  />
+                </div>
+                <div>
+                  <Lbl c="NOTES"/>
+                  <textarea 
+                    id="customer-notes"
+                    name="notes"
+                    style={{...inp, minHeight: 60, fontFamily: "inherit", resize: "vertical"}} 
+                    value={editingCustomer ? editingCustomer.notes : newCustomer.notes} 
+                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, notes: e.target.value}) : setNewCustomer(p=>({...p, notes: e.target.value}))} 
+                    placeholder="Internal notes about this customer"
+                  />
+                </div>
+                {custFormErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {custFormErr}</div>}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="submit" style={{ ...mkBtn("primary"), flex:1, justifyContent:"center", padding:"10px", marginTop:6 }}>{editingCustomer ? "Update Customer" : "Add Customer"}</button>
+                  {editingCustomer && <button type="button" onClick={() => setEditingCustomer(null)} style={{ ...mkBtn("ghost"), flex:1, justifyContent:"center", padding:"10px", marginTop:6 }}>Cancel</button>}
+                </div>
+              </form>
+            </div>
+
             <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20 }}>
               <Sec c="Company Profile"/>
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
@@ -6337,11 +6845,36 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   </div>
                 </div>
               </div>
+                <button onClick={handleSaveCompanyInfo} style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:16 }}>Save Company Profile</button>
             </div>
 
             <div style={{ background:C.sur, border:`1.5px dashed ${C.bdr}`, borderRadius:10, padding:20 }}>
               <Sec c="Add New Account"/>
               <form onSubmit={handleCreateUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                <div>
+                  <Lbl c="FIRST NAME"/>
+                  <input 
+                    id="new-account-first-name"
+                    name="first_name"
+                    type="text"
+                    style={inp} 
+                    value={newUser.first_name} 
+                    onChange={e=>setNewUser(p=>({...p,first_name:e.target.value}))}
+                    placeholder="Enter first name"
+                  />
+                </div>
+                <div>
+                  <Lbl c="LAST NAME"/>
+                  <input 
+                    id="new-account-last-name"
+                    name="last_name"
+                    type="text"
+                    style={inp} 
+                    value={newUser.last_name} 
+                    onChange={e=>setNewUser(p=>({...p,last_name:e.target.value}))}
+                    placeholder="Enter last name"
+                  />
+                </div>
                 <div>
                   <Lbl c="USERNAME"/>
                   <input 
@@ -6351,7 +6884,8 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                     autoComplete="username"
                     style={inp} 
                     value={newUser.username} 
-                    onChange={e=>setNewUser(p=>({...p,username:e.target.value}))} 
+                    onChange={e=>setNewUser(p=>({...p,username:normalizeUsername(e.target.value)}))} 
+                    maxLength={16}
                     required 
                     placeholder="Enter unique username"
                   />
@@ -6367,6 +6901,18 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                     value={newUser.email} 
                     onChange={e=>setNewUser(p=>({...p,email:e.target.value}))} 
                     placeholder="user@shoemakerrigging.com"
+                  />
+                </div>
+                <div>
+                  <Lbl c="CELL PHONE"/>
+                  <input 
+                    id="new-account-cell-phone"
+                    name="cell_phone"
+                    type="text"
+                    style={inp} 
+                    value={newUser.cell_phone} 
+                    onChange={e=>setNewUser(p=>({...p,cell_phone:e.target.value}))}
+                    placeholder="e.g., 330-555-0101"
                   />
                 </div>
                 <div>
@@ -6553,6 +7099,57 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 
         {/* DATA BROWSER SECTION */}
         <DatabaseBrowser token={token} />
+
+        {/* EDIT USER MODAL */}
+        {editingUser && (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.65)", zIndex:10001, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+            <div style={{ background:C.sur, width:"100%", maxWidth:520, borderRadius:12, padding:24, boxShadow:"0 20px 60px rgba(0,0,0,0.35)", border:`1.5px solid ${C.bdr}` }}>
+              <div style={{ fontSize:18, fontWeight:800, color:C.acc, marginBottom:14 }}>Edit Account</div>
+              <form onSubmit={handleEditUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <div>
+                    <Lbl c="FIRST NAME"/>
+                    <input id="edit-account-first-name" name="first_name" type="text" style={inp} value={editingUser.first_name || ""} onChange={e=>setEditingUser({...editingUser, first_name:e.target.value})} />
+                  </div>
+                  <div>
+                    <Lbl c="LAST NAME"/>
+                    <input id="edit-account-last-name" name="last_name" type="text" style={inp} value={editingUser.last_name || ""} onChange={e=>setEditingUser({...editingUser, last_name:e.target.value})} />
+                  </div>
+                </div>
+                <div>
+                  <Lbl c="USERNAME"/>
+                  <input id="edit-account-username" name="username" type="text" style={inp} value={editingUser.username || ""} onChange={e=>setEditingUser({...editingUser, username:normalizeUsername(e.target.value)})} maxLength={16} required />
+                  <div style={{ fontSize:11, marginTop:4, color:editUsernameInvalid ? C.red : C.txtS }}>{USERNAME_RULE_TEXT}</div>
+                </div>
+                <div>
+                  <Lbl c="EMAIL"/>
+                  <input id="edit-account-email" name="email" autoComplete="email" type="email" style={inp} value={editingUser.email || ""} onChange={e=>setEditingUser({...editingUser, email:e.target.value})} />
+                </div>
+                <div>
+                  <Lbl c="CELL PHONE"/>
+                  <input id="edit-account-cell-phone" name="cell_phone" type="text" style={inp} value={editingUser.cell_phone || ""} onChange={e=>setEditingUser({...editingUser, cell_phone:e.target.value})} />
+                </div>
+                <div>
+                  <Lbl c="ROLE"/>
+                  <select style={{ ...sel, width:"100%" }} value={editingUser.role} onChange={e=>setEditingUser({...editingUser, role:e.target.value})}>
+                    <option value="estimator">Estimator</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div>
+                  <Lbl c="PASSWORD (leave blank to keep current)"/>
+                  <input id="edit-account-password" name="password" autoComplete="new-password" type="password" style={inp} value={editingUser.password || ""} onChange={e=>setEditingUser({...editingUser, password:e.target.value})} placeholder="Leave blank to keep current password" />
+                </div>
+                {formErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {formErr}</div>}
+                <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:4 }}>
+                  <button type="button" style={{ ...mkBtn("ghost"), padding:"8px 14px" }} onClick={() => setEditingUser(null)}>Cancel</button>
+                  <button type="submit" style={{ ...mkBtn("primary"), padding:"8px 18px", opacity: editUsernameInvalid ? 0.6 : 1 }} disabled={editUsernameInvalid}>Save</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
         
         {/* CUSTOM CONFIRM DIALOG */}
         {confirm && (
@@ -6957,6 +7554,28 @@ export default function App() {
     }
   }, [view, token]);
 
+  // Force logout quickly if account becomes disabled server-side.
+  useEffect(() => {
+    if (!token) return;
+
+    const checkSession = async () => {
+      try {
+        const res = await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } });
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          setToken("");
+          setRole("user");
+          setView("login");
+        }
+      } catch (_) {}
+    };
+
+    checkSession();
+    const id = setInterval(checkSession, 10000);
+    return () => clearInterval(id);
+  }, [token]);
+
   // ── LANDING PAGE ───────────────────────────────────────────────────────────
   if (view==="landing") return (
     <div style={{ minHeight:"100vh", background:C.sur, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", display:"flex", flexDirection:"column" }}>
@@ -7071,6 +7690,16 @@ export default function App() {
           }
         `}</style>
         <div className="mobile-act-btns">{actBtns}</div>
+        <VectorSearchPanel
+          token={token}
+          setView={setView}
+          C={C}
+          inp={inp}
+          sel={sel}
+          mkBtn={mkBtn}
+          Card={Card}
+          Sec={Sec}
+        />
         <DashboardMetrics jobs={jobs} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
         {/* ── SALESMAN TRACKING CHARTS ─────────────────────────────────── */}
         <SalesmanCharts jobs={jobs} reqs={reqs}/>

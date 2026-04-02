@@ -1,0 +1,4 @@
+{
+  "$comment": "Deprecated in favor of .continue/config.yaml. Keep this file only as a marker for older setups.",
+  "models": []
+}

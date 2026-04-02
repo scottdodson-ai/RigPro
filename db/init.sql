@@ -1,6 +1,8 @@
 CREATE DATABASE IF NOT EXISTS rigpro;
 USE rigpro;
 
+DROP TABLE IF EXISTS company_info;
+DROP TABLE IF EXISTS user_auth_audit;
 DROP TABLE IF EXISTS admin_tasks;
 DROP TABLE IF EXISTS job_folders;
 DROP TABLE IF EXISTS rfqs;
@@ -15,11 +17,41 @@ DROP TABLE IF EXISTS users;
 -- 1. Users table for login
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100),
+    cell_phone VARCHAR(50),
+    is_disabled BOOLEAN NOT NULL DEFAULT FALSE,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.5. Company Info
+CREATE TABLE IF NOT EXISTS company_info (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    address TEXT,
+    services TEXT,
+    logo_src LONGTEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO company_info (name, address, services) VALUES ('Shoemaker Rigging Inc.', '', '');
+
+-- 1.6. User Authentication Audit
+CREATE TABLE IF NOT EXISTS user_auth_audit (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    username VARCHAR(50),
+    event_type VARCHAR(20) NOT NULL,
+    ip_address VARCHAR(64),
+    user_agent VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_event_type (event_type),
+    INDEX idx_created_at (created_at)
 );
 
 -- 2. Admin Tasks table
@@ -33,12 +65,12 @@ CREATE TABLE IF NOT EXISTS admin_tasks (
 
 -- Note: The hashes below are for the password: 'pass'
 -- Note: The hashes below are for the password: 'pass'
-INSERT INTO users (username, email, password_hash, role) VALUES 
-('scott', 'scott@shoemakerrigging.com', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
-('admin', 'admin@shoemakerrigging.com', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
-('Dan M',   'dan.m@shoemakerrigging.com',   '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
-('Sarah K', 'sarah.k@shoemakerrigging.com', '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
-('Mike R',  'mike.r@shoemakerrigging.com',  '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator');
+INSERT INTO users (first_name, last_name, username, email, cell_phone, is_disabled, password_hash, role) VALUES 
+('Scott', 'Admin', 'scott', 'scott@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
+('System', 'Admin', 'admin', 'admin@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
+('Dan', 'M', 'Dan M', 'dan.m@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
+('Sarah', 'K', 'Sarah K', 'sarah.k@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
+('Mike', 'R', 'Mike R', 'mike.r@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator');
 
 -- Estimators table
 CREATE TABLE IF NOT EXISTS estimators (

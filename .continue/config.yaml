@@ -1,0 +1,54 @@
+name: RigPro Local
+version: 1.0.0
+schema: v1
+
+models:
+  - name: Mistral
+    provider: ollama
+    model: mistral
+    apiBase: http://localhost:11434
+    roles:
+      - chat
+      - edit
+      - apply
+    defaultCompletionOptions:
+      temperature: 0.1
+      contextLength: 32768
+      maxTokens: 4096
+
+  - name: Qwen 2.5 Coder Autocomplete
+    provider: ollama
+    model: qwen2.5-coder:7b
+    apiBase: http://localhost:11434
+    roles:
+      - autocomplete
+    autocompleteOptions:
+      onlyMyCode: true
+      debounceDelay: 300
+      maxPromptTokens: 1024
+
+  - name: Nomic Embed
+    provider: ollama
+    model: nomic-embed-text:latest
+    apiBase: http://localhost:11434
+    roles:
+      - embed
+
+context:
+  - provider: code
+  - provider: file
+  - provider: diff
+  - provider: currentFile
+  - provider: open
+  - provider: terminal
+  - provider: tree
+  - provider: repo-map
+    params:
+      includeSignatures: true
+  - provider: problems
+
+docs:
+  - name: Continue
+    startUrl: https://docs.continue.dev/reference
+
+data: []
