@@ -60,7 +60,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - /Users/peterlindsay/Documents/Projects/Rigpro_Data:/models
+      - ${RIGPRO_MODEL_PATH:-./models}:/models
     command: -m /models/llama-3.1-8b-instruct-q4_k_m.gguf -ngl 99 --port 8080 --host 0.0.0.0 -c 8192 -np 1 -b 512 -ub 128 --flash-attn auto --cache-type-k q4_0 --cache-type-v q4_0
     networks:
       - rigpro-network

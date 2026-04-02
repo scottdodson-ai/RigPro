@@ -4566,7 +4566,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
   const enabledFields = (profileTemplate||[]).filter(f=>f.enabled);
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:500,
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:2000,
                   display:"flex", alignItems:"flex-start", justifyContent:"center",
                   padding:"16px 12px", overflowY:"auto" }}>
       <div style={{ background:"#fff", borderRadius:10, width:"100%", maxWidth:900,
@@ -6064,6 +6064,213 @@ function LoginForm({ setToken, setRole, onBack }) {
   );
 }
 
+// ── VECTOR DATABASE BROWSER ─────────────────────────────────────────────────
+function VectorBrowser({ token }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  const load = async () => {
+    setLoading(true); setErr("");
+    try {
+      const r = await fetch("/api/admin/vector-db", { headers: { Authorization: `Bearer ${token}` } });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Failed");
+      setData(d);
+    } catch (e) { setErr(e.message); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, [token]);
+
+  const online  = data?.modelLoaded === true;
+  const offline = data?.status === "offline" || !data?.modelLoaded;
+
+  const statDot = (ok) => (
+    <span style={{
+      display: "inline-block", width: 10, height: 10, borderRadius: "50%",
+      background: ok ? C.grn : C.red,
+      boxShadow: ok ? `0 0 6px ${C.grn}` : `0 0 6px ${C.red}`,
+      marginRight: 6, flexShrink: 0,
+    }}/>
+  );
+
+  const modelName = data?.props?.default_generation_settings?.model ||
+                    data?.props?.model_alias ||
+                    (data?.props ? Object.values(data.props).find(v => typeof v === "string" && v.includes(".gguf")) : null) ||
+                    "llama-3.1-8b-instruct-q4_k_m";
+
+  const ctxSize    = data?.props?.default_generation_settings?.n_ctx || data?.props?.n_ctx || "—";
+  const slotCount  = data?.slots?.length ?? 0;
+  const busySlots  = (data?.slots || []).filter(s => s.state === 1 || s.is_processing).length;
+
+  const corpus = [
+    { label: "Customers",  icon: "🏢", count: data?.indexedCounts?.customers  ?? "—", desc: "Company profiles & contacts" },
+    { label: "Quotes",     icon: "📋", count: data?.indexedCounts?.quotes     ?? "—", desc: "Estimates & bid history" },
+    { label: "RFQs",       icon: "📩", count: data?.indexedCounts?.rfqs       ?? "—", desc: "Incoming requests for quote" },
+    { label: "Equipment",  icon: "🔩", count: data?.indexedCounts?.equipment  ?? "—", desc: "Rigging & equipment catalog" },
+  ];
+
+  const totalDocs = Object.values(data?.indexedCounts || {}).reduce((a, b) => a + (Number(b) || 0), 0);
+
+  return (
+    <div style={{ marginTop: 40, borderTop: `1px solid ${C.bdr}`, paddingTop: 30 }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: C.acc, marginBottom: 2, display: "flex", alignItems: "center", gap: 8 }}>
+            🧠 Vector Database
+          </div>
+          <div style={{ fontSize: 12, color: C.txtS }}>AI model context, slots, and embeddable corpus overview.</div>
+        </div>
+        <button onClick={load} disabled={loading}
+          style={{ ...mkBtn("ghost"), padding: "6px 14px", fontSize: 12, gap: 6 }}>
+          {loading ? "⏳ Loading..." : "↻ Refresh"}
+        </button>
+      </div>
+
+      {err && <div style={{ background: C.redB, color: C.red, border: `1px solid ${C.redBdr}`, borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>⚠ {err}</div>}
+
+      {/* Status bar */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
+        {[
+          {
+            label: "AI Engine",
+            value: online ? "Online" : "Offline",
+            sub: online ? "llama.cpp server" : "Model not loaded",
+            ok: online,
+            icon: "🤖",
+          },
+          {
+            label: "Context Window",
+            value: ctxSize === "—" ? "—" : `${Number(ctxSize).toLocaleString()} tokens`,
+            sub: "Max input context",
+            ok: online,
+            icon: "📏",
+          },
+          {
+            label: "Inference Slots",
+            value: slotCount > 0 ? `${busySlots} / ${slotCount} busy` : (online ? "0" : "—"),
+            sub: slotCount > 0 ? "Parallel inference capacity" : "No slots active",
+            ok: online && slotCount > 0,
+            icon: "⚡",
+          },
+          {
+            label: "Corpus Size",
+            value: loading ? "…" : `${totalDocs.toLocaleString()} records`,
+            sub: "Total embeddable documents",
+            ok: totalDocs > 0,
+            icon: "📚",
+          },
+        ].map(stat => (
+          <div key={stat.label} style={{
+            background: C.sur, border: `1px solid ${stat.ok ? C.bdr : C.bdr}`,
+            borderRadius: 10, padding: "14px 16px",
+            borderLeft: `3px solid ${stat.ok ? C.grn : (offline ? C.red : C.bdr)}`,
+          }}>
+            <div style={{ fontSize: 20, marginBottom: 4 }}>{stat.icon}</div>
+            <div style={{ fontSize: 12, color: C.txtS, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{stat.label}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              {statDot(stat.ok)}
+              <span style={{ fontSize: 15, fontWeight: 800, color: C.txt }}>{stat.value}</span>
+            </div>
+            <div style={{ fontSize: 11, color: C.txtS, marginTop: 3 }}>{stat.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Model card */}
+      <div style={{ background: online ? C.accL : C.redB, border: `1px solid ${online ? C.accB : C.redBdr}`, borderRadius: 10, padding: "14px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ fontSize: 32 }}>{online ? "✅" : "❌"}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: online ? C.acc : C.red, marginBottom: 2 }}>
+            {online ? "Model Ready" : "No Model Loaded"}
+          </div>
+          <div style={{ fontSize: 12, color: online ? C.acc : C.red, fontFamily: "monospace", wordBreak: "break-all" }}>
+            {modelName}
+          </div>
+          {data?.aiHost && (
+            <div style={{ fontSize: 11, color: C.txtS, marginTop: 4, fontFamily: "monospace" }}>
+              Endpoint: {data.aiHost}
+            </div>
+          )}
+        </div>
+        {!online && (
+          <div style={{ fontSize: 12, color: C.red, maxWidth: 220, lineHeight: 1.5 }}>
+            Download the model file and place it at <code style={{ background: "rgba(0,0,0,.06)", borderRadius: 3, padding: "1px 4px" }}>./models/llama-3.1-8b-instruct-q4_k_m.gguf</code> to activate AI features.
+          </div>
+        )}
+      </div>
+
+      {/* Inference Slots */}
+      {slotCount > 0 && (
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 10, padding: "14px 18px", marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: C.txt }}>Inference Slots</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {(data?.slots || []).map((slot, i) => {
+              const busy = slot.state === 1 || slot.is_processing;
+              return (
+                <div key={i} style={{
+                  background: busy ? C.accL : C.bg,
+                  border: `1px solid ${busy ? C.accB : C.bdr}`,
+                  borderRadius: 8, padding: "10px 14px", minWidth: 120, flex: 1,
+                }}>
+                  <div style={{ fontSize: 11, color: C.txtS, fontWeight: 600 }}>SLOT {slot.id ?? i}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                    {statDot(busy)}
+                    <span style={{ fontWeight: 700, fontSize: 13, color: busy ? C.acc : C.txtM }}>
+                      {busy ? "Active" : "Idle"}
+                    </span>
+                  </div>
+                  {slot.n_past !== undefined && (
+                    <div style={{ fontSize: 10, color: C.txtS, marginTop: 3 }}>{slot.n_past} tokens used</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Corpus table */}
+      <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ padding: "12px 18px", borderBottom: `1px solid ${C.bdr}`, background: C.bg, fontWeight: 700, fontSize: 13 }}>Embeddable Corpus (MySQL Sources)</div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: C.bg }}>
+              {["Source", "Description", "Records", "Status"].map(h => (
+                <th key={h} style={{ ...thS, padding: "10px 18px", borderBottom: `1px solid ${C.bdrM}`, textAlign: "left" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {corpus.map((row, i) => (
+              <tr key={row.label} style={{ borderBottom: `1px solid ${C.bdr}`, background: i % 2 === 0 ? "transparent" : "#fbfbfb" }}>
+                <td style={{ ...tdS, padding: "11px 18px", fontWeight: 700 }}>{row.icon} {row.label}</td>
+                <td style={{ ...tdS, padding: "11px 18px", color: C.txtM }}>{row.desc}</td>
+                <td style={{ ...tdS, padding: "11px 18px", fontWeight: 800, color: C.acc }}>
+                  {loading ? <em style={{ color: C.txtS }}>…</em> : row.count.toLocaleString()}
+                </td>
+                <td style={{ ...tdS, padding: "11px 18px" }}>
+                  <span style={{
+                    background: row.count > 0 ? C.grnB : C.bg,
+                    color: row.count > 0 ? C.grn : C.txtS,
+                    border: `1px solid ${row.count > 0 ? C.grnBdr : C.bdr}`,
+                    borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 600
+                  }}>{row.count > 0 ? "Indexed" : "Empty"}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{ padding: "10px 18px", borderTop: `1px solid ${C.bdr}`, fontSize: 11, color: C.txtS }}>
+          Last refreshed: {data?.timestamp ? new Date(data.timestamp).toLocaleTimeString() : "—"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── ADMIN PAGE ───────────────────────────────────────────────────────────────
 function DatabaseBrowser({ token }) {
   const [selectedTable, setSelectedTable] = useState("users");
@@ -6153,6 +6360,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
     }
   })();
   const [confirm, setConfirm] = useState(null); // { title, msg, onOk, btn:"Restore"|"Delete" }
+  const [showVectorDB, setShowVectorDB] = useState(false);
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -6596,12 +6804,22 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
             <div style={{ fontSize:22, fontWeight:800, color:C.acc, marginBottom:4 }}>Admin Portal</div>
             <div style={{ fontSize:14, color:C.txtM, marginBottom:20 }}>System oversight and user management</div>
           </div>
-          <button 
-             style={{ ...mkBtn("primary"), padding: "10px 20px", fontWeight: 700, background: "#0d9488" }}
-             onClick={() => window.dispatchEvent(new CustomEvent('change-view', { detail: 'investor' }))}
-          >
-             Open Investor Dashboard
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              style={{ ...mkBtn(showVectorDB ? "primary" : "ghost"), padding: "10px 20px", fontWeight: 700,
+                background: showVectorDB ? "#7c3aed" : undefined,
+                border: showVectorDB ? "none" : `1px solid ${C.bdr}` }}
+              onClick={() => setShowVectorDB(v => !v)}
+            >
+              {showVectorDB ? "🧠 Hide Vector DB" : "🧠 Vector Database"}
+            </button>
+            <button 
+               style={{ ...mkBtn("primary"), padding: "10px 20px", fontWeight: 700, background: "#0d9488" }}
+               onClick={() => window.dispatchEvent(new CustomEvent('change-view', { detail: 'investor' }))}
+            >
+               Open Investor Dashboard
+            </button>
+          </div>
         </div>
 
 
@@ -7096,6 +7314,9 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
           </div>
         </div>
 
+
+        {/* VECTOR DB SECTION */}
+        {showVectorDB && <VectorBrowser token={token} />}
 
         {/* DATA BROWSER SECTION */}
         <DatabaseBrowser token={token} />
