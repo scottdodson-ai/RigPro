@@ -816,6 +816,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
 const BUILT_IN_REPORTS = [
   { id:"sales-dashboard",  name:"Sales Dashboard",          category:"Sales",      desc:"Overview of sales with line chart and data tables", scope:"org" },
   { id:"pipeline-dashboard",name:"Pipeline Dashboard",      category:"Pipeline",   desc:"Flow of RFQs leading into estimates and outcomes", scope:"org" },
+  { id:"open-rfqs",        name:"Requests for Quotes",      category:"Pipeline",   desc:"All open RFQs grouped by Estimator",              scope:"org" },
   { id:"rev-by-customer",  name:"Sales by Customer",      category:"Sales",      desc:"Total won sales ranked by customer",              scope:"org" },
   { id:"rev-by-estimator", name:"Sales by Estimator",     category:"Sales",      desc:"Won sales and win rate per estimator",            scope:"org" },
   { id:"rev-by-month",     name:"Sales by Month",         category:"Sales",      desc:"Monthly won sales trend",                        scope:"org" },
@@ -841,6 +842,43 @@ function buildReportData(reportId, jobs, reqs) {
         isPipelineDashboard: true,
         summary: `Pipeline Flow Overview`,
         rows: []
+      };
+    }
+    case "open-rfqs": {
+      // Show open RFQs (excluding "Dead")
+      const openReqs = reqs.filter(r => r.status !== "Dead" && r.status !== "Lost");
+      
+      const flatRows = [];
+      const rawRefs = [];
+      
+      // Group by Estimator
+      const grouped = {};
+      openReqs.forEach(r => {
+        const est = r.salesAssoc || "Unassigned";
+        if (!grouped[est]) grouped[est] = [];
+        grouped[est].push(r);
+      });
+      
+      Object.keys(grouped).sort().forEach(est => {
+         grouped[est]
+           .sort((a,b) => new Date(b.start_date || 0) - new Date(a.start_date || 0))
+           .forEach(r => {
+             flatRows.push([
+                est,
+                `${r.rn}: ${r.job_description || r.notes || "No description"} - ${r.company}`,
+                r.status || "Pending",
+                r.start_date || r.date || "Unknown"
+             ]);
+             rawRefs.push({ type: "rfq", req: r });
+           });
+      });
+
+      return {
+        cols: ["Estimator", "RFQ Description", "Progress Status", "Last Activity Date"],
+        clickHint: "Click a row to view the full RFQ details",
+        rows: flatRows,
+        rawRefs: rawRefs,
+        summary: `${openReqs.length} active Requests for Quotes`
       };
     }
     case "sales-dashboard": {
@@ -1243,31 +1281,41 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
   return null;
 }
 
-function PipelineSankeyChart({ reqs, jobs }) {
+function PipelineSankeyChart({ reqs, jobs, drillCb }) {
   const width = 800;
   const height = 400;
 
-  const deadQuotes = jobs.filter(q => q.status === "Dead").length;
+  const deadQuotes = jobs.filter(q => q.status === "Dead");
   const aliveJobs = jobs.filter(q => q.status !== "Dead");
   
   const statuses = ["Won", "Submitted", "Approved", "In Review", "In Progress", "Adjustments Needed", "Lost"];
-  const statusCounts = {};
-  statuses.forEach(s => statusCounts[s] = 0);
+  const statusGroups = {};
+  statuses.forEach(s => statusGroups[s] = []);
   aliveJobs.forEach(q => {
-    if (statusCounts[q.status] !== undefined) statusCounts[q.status]++;
-    else statusCounts["Other"] = (statusCounts["Other"] || 0) + 1;
+    if (statusGroups[q.status] !== undefined) statusGroups[q.status].push(q);
+    else {
+      if(!statusGroups["Other"]) statusGroups["Other"]=[];
+      statusGroups["Other"].push(q);
+    }
   });
-  if (statusCounts["Other"]) statuses.push("Other");
 
-  const activeStatuses = statuses.filter(s => statusCounts[s] > 0);
+  const activeStatuses = Object.keys(statusGroups).filter(s => statusGroups[s].length > 0);
   
   const totalPipeline = jobs.length;
   if (totalPipeline === 0) return <div style={{textAlign:"center", padding:40, color:C.txtS}}>No data available</div>;
   
   const nodeW = 12; 
   const paddingY = 50;
-  const usableHeight = height - paddingY * 2;
-  const scale = usableHeight / Math.max(totalPipeline, 1);
+
+  const NUM_GAPS = Math.max(activeStatuses.length - 1, 0);
+  const GAP_SIZE = 15;
+  const TOTAL_GAPS = NUM_GAPS * GAP_SIZE;
+  const DEAD_GAP = deadQuotes.length > 0 ? 30 : 0;
+  
+  const MAX_H = height - paddingY * 2;
+  const topY = paddingY;
+  
+  const scale = (MAX_H - TOTAL_GAPS - DEAD_GAP) / Math.max(totalPipeline, 1);
 
   const col0X = 40;
   const col1X = width * 0.40;
@@ -1281,24 +1329,24 @@ function PipelineSankeyChart({ reqs, jobs }) {
        <path 
          d={`M ${x1} ${y1} C ${cp1x} ${y1}, ${cp1x} ${y2}, ${x2} ${y2} L ${x2} ${y2+h} C ${cp1x} ${y2+h}, ${cp1x} ${y1+h}, ${x1} ${y1+h} Z`} 
          fill={fill} opacity={0.35} 
+         style={{ pointerEvents:"none" }}
        />
      );
   };
 
-  const topY = paddingY; 
-  
   let currentY2 = topY;
   const nodesRight = activeStatuses.map(st => {
-     const val = statusCounts[st];
-     const n = { label: st, value: val, y: currentY2, h: val * scale };
-     // Dynamic gap proportional to status count, spreading them organically
-     currentY2 += n.h + (usableHeight*0.4)/Math.max(activeStatuses.length, 1);
+     const arr = statusGroups[st];
+     const n = { label: st, value: arr.length, jobs: arr, y: currentY2, h: arr.length * scale };
+     currentY2 += n.h + GAP_SIZE;
      return n;
   });
 
-  const deadNode = { label: "Dead Quotes", value: deadQuotes, y: height - paddingY + 10, h: deadQuotes * scale };
+  const deadNode = { label: "Dead Quotes", value: deadQuotes.length, jobs: deadQuotes, y: deadQuotes.length > 0 ? topY + aliveJobs.length * scale + DEAD_GAP : 0, h: deadQuotes.length * scale };
 
   const fmtColor = (lbl) => lbl==="Won"?"#16a34a":lbl==="DeadQuotes"?"#ef4444":lbl==="Lost"?"#ef4444":lbl==="RFQs"?"#64748b":"#3b82f6";
+
+  const clk = (lbl, jbs) => drillCb ? drillCb({ type: "group-status", key: lbl, jobs: jbs }) : null;
 
   return (
     <div style={{ width: "100%", overflowX: "auto" }}>
@@ -1306,7 +1354,7 @@ function PipelineSankeyChart({ reqs, jobs }) {
         
         {/* Links */}
         {link(col0X+nodeW, topY, col1X, topY, aliveJobs.length, fmtColor("Estimates"))}
-        {link(col0X+nodeW, topY + aliveJobs.length*scale, col1X, deadNode.y, deadQuotes, fmtColor("DeadQuotes"))}
+        {link(col0X+nodeW, topY + aliveJobs.length*scale, col1X, deadNode.y, deadQuotes.length, fmtColor("DeadQuotes"))}
         
         {(() => {
            let y1 = topY;
@@ -1318,24 +1366,32 @@ function PipelineSankeyChart({ reqs, jobs }) {
         })()}
 
         {/* Nodes (Vertical thin bars) */}
-        <rect x={col0X} y={topY} width={nodeW} height={totalPipeline*scale} fill={fmtColor("RFQs")} />
-        <text x={col0X} y={topY - 14} fontSize="14" fontWeight="bold" fill={C.txt}>RFQs (Feed)</text>
-        <text x={col0X + nodeW + 8} y={topY + Math.max((totalPipeline*scale)/2, 5) + 4} fontSize="13" fill={C.txtS}>{totalPipeline} Total</text>
+        <g onClick={()=>clk("RFQs (Pipeline Feed)", jobs)} style={{cursor:"pointer", outline:"none"}}>
+          <rect x={col0X-15} y={topY-20} width={nodeW+100} height={Math.max(totalPipeline*scale+20, 20)} fill="transparent" />
+          <rect x={col0X} y={topY} width={nodeW} height={Math.max(totalPipeline*scale, 1.5)} fill={fmtColor("RFQs")} />
+          <text x={col0X} y={topY - 14} fontSize="14" fontWeight="bold" fill={C.txt}>RFQs (Feed)</text>
+          <text x={col0X + nodeW + 8} y={topY + Math.max((totalPipeline*scale)/2, 5) + 4} fontSize="13" fill={C.txtS}>{totalPipeline} Total</text>
+        </g>
 
-        <rect x={col1X} y={topY} width={nodeW} height={aliveJobs.length*scale} fill={fmtColor("Estimates")} />
-        <text x={col1X} y={topY - 14} fontSize="14" fontWeight="bold" fill={C.txt}>Estimates</text>
-        <text x={col1X + nodeW + 8} y={topY + Math.max((aliveJobs.length*scale)/2, 5) + 4} fontSize="13" fill={C.txtS}>{aliveJobs.length} Active</text>
+        <g onClick={()=>clk("Active Estimates", aliveJobs)} style={{cursor:"pointer", outline:"none"}}>
+          <rect x={col1X-15} y={topY-20} width={nodeW+100} height={Math.max(aliveJobs.length*scale+20, 20)} fill="transparent" />
+          <rect x={col1X} y={topY} width={nodeW} height={Math.max(aliveJobs.length*scale, 1.5)} fill={fmtColor("Estimates")} />
+          <text x={col1X} y={topY - 14} fontSize="14" fontWeight="bold" fill={C.txt}>Estimates</text>
+          <text x={col1X + nodeW + 8} y={topY + Math.max((aliveJobs.length*scale)/2, 5) + 4} fontSize="13" fill={C.txtS}>{aliveJobs.length} Active</text>
+        </g>
 
         {nodesRight.map(n => (
-          <g key={n.label}>
+          <g key={n.label} onClick={()=>clk(n.label, n.jobs)} style={{cursor:"pointer", outline:"none"}}>
+            <rect x={col2X-15} y={n.y-10} width={nodeW+150} height={Math.max(n.h+20, 20)} fill="transparent" />
             <rect x={col2X} y={n.y} width={nodeW} height={Math.max(n.h, 1.5)} fill={fmtColor(n.label)} />
             <text x={col2X+nodeW+8} y={n.y + Math.max(n.h/2, 5)} fontSize="12" fill={C.txt}>{n.label}</text>
             <text x={col2X+nodeW+8} y={n.y + Math.max(n.h/2, 5) + 14} fontSize="11" fontWeight="bold" fill={C.txtS}>{n.value}</text>
           </g>
         ))}
 
-        {deadQuotes > 0 && (
-          <g>
+        {deadQuotes.length > 0 && (
+          <g onClick={()=>clk("Dead Quotes", deadNode.jobs)} style={{cursor:"pointer", outline:"none"}}>
+            <rect x={col1X-15} y={deadNode.y-10} width={nodeW+150} height={Math.max(deadNode.h+20, 20)} fill="transparent" />
             <rect x={col1X} y={deadNode.y} width={nodeW} height={Math.max(deadNode.h, 1.5)} fill={fmtColor("DeadQuotes")} />
             <text x={col1X+nodeW+8} y={deadNode.y + Math.max(deadNode.h/2, 5)} fontSize="12" fill={C.txt}>Dead Quotes</text>
             <text x={col1X+nodeW+8} y={deadNode.y + Math.max(deadNode.h/2, 5) + 14} fontSize="11" fontWeight="bold" fill={C.txtS}>{deadNode.value}</text>
@@ -1691,7 +1747,7 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                   <div>
                     <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM, textAlign: "center" }}>Opportunity Flow</h3>
                     <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 16 }}>
-                      <PipelineSankeyChart reqs={filteredReqs} jobs={filteredJobs} />
+                      <PipelineSankeyChart reqs={filteredReqs} jobs={filteredJobs} drillCb={setDrillRef} />
                     </div>
                   </div>
                 </div>
