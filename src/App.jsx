@@ -817,6 +817,7 @@ const BUILT_IN_REPORTS = [
   { id:"sales-dashboard",  name:"Sales Dashboard",          category:"Sales",      desc:"Overview of sales with line chart and data tables", scope:"org" },
   { id:"pipeline-dashboard",name:"Pipeline Dashboard",      category:"Pipeline",   desc:"Flow of RFQs leading into estimates and outcomes", scope:"org" },
   { id:"open-rfqs",        name:"Requests for Quotes",      category:"Pipeline",   desc:"All open RFQs grouped by Estimator",              scope:"org" },
+  { id:"inactive-rfqs",    name:"Inactive Requests",        category:"Pipeline",   desc:"All RFQs marked as dead with context",            scope:"org" },
   { id:"rev-by-customer",  name:"Sales by Customer",      category:"Sales",      desc:"Total won sales ranked by customer",              scope:"org" },
   { id:"rev-by-estimator", name:"Sales by Estimator",     category:"Sales",      desc:"Won sales and win rate per estimator",            scope:"org" },
   { id:"rev-by-month",     name:"Sales by Month",         category:"Sales",      desc:"Monthly won sales trend",                        scope:"org" },
@@ -879,6 +880,32 @@ function buildReportData(reportId, jobs, reqs) {
         rows: flatRows,
         rawRefs: rawRefs,
         summary: `${openReqs.length} active Requests for Quotes`
+      };
+    }
+    case "inactive-rfqs": {
+      const deadReqs = reqs.filter(r => r.status === "Dead");
+      
+      const flatRows = [];
+      const rawRefs = [];
+      
+      deadReqs
+        .sort((a,b) => new Date(b.deadDate || b.start_date || 0) - new Date(a.deadDate || a.start_date || 0))
+        .forEach(r => {
+             flatRows.push([
+                `${r.rn}: ${r.job_description || r.notes || "No description"} - ${r.company}`,
+                r.start_date || r.date || "Unknown",
+                r.deadDate || "—",
+                r.deadNote || "—"
+             ]);
+             rawRefs.push({ type: "rfq", req: r });
+        });
+
+      return {
+        cols: ["RFQ Description", "Date Received", "Date Marked Dead", "Estimator Note"],
+        clickHint: "Click a row to view the full RFQ details",
+        rows: flatRows,
+        rawRefs: rawRefs,
+        summary: `${deadReqs.length} inactive Requests for Quotes`
       };
     }
     case "sales-dashboard": {
@@ -8314,8 +8341,8 @@ export default function App() {
         itemType={deadModal.type==="rfq"?"RFQ":"Job"}
         itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client}
         onConfirm={note=>{
-          if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
-          else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
+          if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note,deadDate:new Date().toISOString().split('T')[0]}:x));
+          else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note,deadDate:new Date().toISOString().split('T')[0]}:x));
           setDeadModal(null);
         }}
         onClose={()=>setDeadModal(null)}
@@ -8408,8 +8435,8 @@ export default function App() {
         itemType={deadModal.type==="rfq"?"RFQ":"Job"}
         itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client}
         onConfirm={note=>{
-          if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
-          else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
+          if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note,deadDate:new Date().toISOString().split('T')[0]}:x));
+          else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note,deadDate:new Date().toISOString().split('T')[0]}:x));
           setDeadModal(null);
         }}
         onClose={()=>setDeadModal(null)}
@@ -8443,7 +8470,7 @@ export default function App() {
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
-      {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Job"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
+      {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Job"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note,deadDate:new Date().toISOString().split('T')[0]}:x)); else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note,deadDate:new Date().toISOString().split('T')[0]}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
       <MasterJobList
         jobs={jobs} reqs={reqs} jobFolders={jobFolders} openEdit={openEdit} setShowJFM={setShowJFM}
         onUpdateJobNum={(id, num) => setJobs(p=>p.map(q=>q.id===id?{...q,job_num:num}:q))}
