@@ -814,6 +814,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
 
 // ── REPORTS PAGE ──────────────────────────────────────────────────────────────
 const BUILT_IN_REPORTS = [
+  { id:"sales-dashboard",  name:"Sales Dashboard",          category:"Sales",      desc:"Overview of sales with line chart and data tables", scope:"org" },
   { id:"rev-by-customer",  name:"Sales by Customer",      category:"Sales",      desc:"Total won sales ranked by customer",              scope:"org" },
   { id:"rev-by-estimator", name:"Sales by Estimator",     category:"Sales",      desc:"Won sales and win rate per estimator",            scope:"org" },
   { id:"rev-by-month",     name:"Sales by Month",         category:"Sales",      desc:"Monthly won sales trend",                        scope:"org" },
@@ -834,6 +835,26 @@ function buildReportData(reportId, jobs, reqs) {
   const fmt2 = n => "$"+Math.round(n||0).toLocaleString();
 
   switch(reportId) {
+    case "sales-dashboard": {
+      const dbMonthly = buildReportData("rev-by-month", jobs, reqs);
+      let dbCustomer = buildReportData("rev-by-customer", jobs, reqs);
+      let dbEstimator = buildReportData("rev-by-estimator", jobs, reqs);
+
+      dbCustomer.rows = dbCustomer.rows.slice(0, 5);
+      dbCustomer.rawRefs = dbCustomer.rawRefs.slice(0, 5);
+      dbEstimator.rows = dbEstimator.rows.slice(0, 5);
+      dbEstimator.rawRefs = dbEstimator.rawRefs.slice(0, 5);
+      const chartData = dbMonthly.rows
+        .map(r => ({ label: r[0], value: parseFloat(String(r[1]).replace(/[\$,]/g, '')) || 0 }))
+        .sort((a,b) => a.label.localeCompare(b.label)); // sort functionally
+      return {
+        isDashboard: true,
+        chartData,
+        dbCustomer,
+        dbEstimator,
+        summary: `Sales Dashboard Overview`
+      };
+    }
     case "rev-by-customer": {
       const m={};
       won.forEach(q=>{ if(!m[q.client])m[q.client]={customer:q.client,revenue:0,jobs:0,qs:[]}; m[q.client].revenue+=(q.total||0); m[q.client].jobs+=1; m[q.client].qs.push(q); });
@@ -1214,8 +1235,127 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
   return null;
 }
 
+function SalesLineChart({ data }) {
+  if (!data || data.length === 0) return <div style={{height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: C.txtS}}>No data available</div>;
+
+  const width = 800;
+  const height = 240;
+  const paddingX = 60;
+  const paddingY = 40;
+  
+  const maxVal = Math.max(...data.map(d => d.value), 1);
+  const minVal = 0;
+  
+  const getX = (index) => paddingX + (index * (width - 2 * paddingX) / Math.max((data.length - 1), 1));
+  const getY = (val) => height - paddingY - ((val - minVal) / (maxVal - minVal) * (height - 2 * paddingY));
+  
+  const points = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(" ");
+  const areaPoints = `${getX(0)},${height - paddingY} ${points} ${getX(data.length - 1)},${height - paddingY}`;
+
+  const formatK = (n) => "$" + (n >= 1000 ? Math.round(n/1000) + "k" : n);
+
+  return (
+    <div style={{ width: "100%", overflowX: "auto" }}>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} style={{ minWidth: 600 }}>
+        {[0, 0.25, 0.5, 0.75, 1].map(pct => {
+          const y = height - paddingY - (pct * (height - 2 * paddingY));
+          return (
+            <g key={pct}>
+              <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke={C.bdr} strokeDasharray="4 4" />
+              <text x={paddingX - 10} y={y + 4} textAnchor="end" fontSize="10" fill={C.txtS}>{formatK(maxVal * pct)}</text>
+            </g>
+          );
+        })}
+        {data.map((d, i) => (
+          <text key={d.label} x={getX(i)} y={height - paddingY + 20} textAnchor="middle" fontSize="10" fill={C.txtM} transform={`rotate(-30 ${getX(i)} ${height - paddingY + 20})`}>{d.label}</text>
+        ))}
+        <polygon points={areaPoints} fill={C.accL} opacity={0.5} />
+        <polyline points={points} fill="none" stroke={C.acc} strokeWidth="3" />
+        {data.map((d, i) => (
+          <circle key={i} cx={getX(i)} cy={getY(d.value)} r="4" fill="#fff" stroke={C.acc} strokeWidth="2" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function ReportTable({ data, drillCb }) {
+  if (!data || !data.rows || data.rows.length === 0) {
+    return <div style={{ textAlign:"center", padding:"24px", color:C.txtS, fontSize:13 }}>No data available.</div>;
+  }
+  const totalsRow = data.cols.map((_, j) => {
+    if (j === 0) return "Totals";
+    let sum = 0;
+    let isCurrency = false;
+    let isNumber = true;
+    let hasData = false;
+    for (let i = 0; i < data.rows.length; i++) {
+      const valStr = String(data.rows[i][j] || "").trim();
+      if (valStr === "—" || valStr === "-" || valStr === "" || valStr.includes("NaN")) continue;
+      hasData = true;
+      if (valStr.includes("$")) isCurrency = true;
+      if (valStr.includes("%") || valStr.match(/[a-zA-Z]/)) { isNumber = false; break; }
+      const cleanVal = valStr.replace(/[\$,]/g, "");
+      const num = Number(cleanVal);
+      if (isNaN(num)) { isNumber = false; break; }
+      sum += num;
+    }
+    if (!hasData || !isNumber) return "";
+    return isCurrency ? "$" + Math.round(sum).toLocaleString() : sum.toLocaleString();
+  });
+  const colAlignments = data.cols.map((_, j) => {
+    let isNum = false;
+    for (let i = 0; i < data.rows.length; i++) {
+      const valStr = String(data.rows[i][j] || "").trim();
+      if (valStr === "—" || valStr === "-" || valStr === "") continue;
+      const stripped = valStr.replace(/[\$,%\s]/g, "").replace(/days/i, "");
+      if (!isNaN(Number(stripped)) && stripped !== "") {
+        if (valStr.match(/^\d{4}-\d{2}-\d{2}$/)) return "left"; // date check
+        isNum = true;
+      }
+      break;
+    }
+    return isNum ? "center" : "left";
+  });
+  return (
+    <div style={{ overflowX:"auto" }}>
+      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+        <thead>
+          <tr style={{ background:C.bg }}>
+            {data.cols.map((c,i)=><th key={i} style={{ ...thS, padding:"9px 12px", borderBottom:`1px solid ${C.bdr}`, textAlign:colAlignments[i] }}>{c}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {data.rows.map((row,i)=>{
+            const rawRef = data.rawRefs?.[i];
+            return (
+              <tr key={i}
+                style={{ borderBottom:`1px solid ${C.bdr}`, cursor:rawRef?"pointer":"default" }}
+                onClick={()=>rawRef&&drillCb&&drillCb(rawRef)}
+                onMouseEnter={e=>{ if(rawRef) e.currentTarget.style.background=C.accL; }}
+                onMouseLeave={e=>{ e.currentTarget.style.background=""; }}>
+                {row.map((cell,j)=>(
+                  <td key={j} style={{ ...tdS, padding:"9px 12px", fontWeight:j===0?600:400, textAlign:colAlignments[j] }}>{cell}</td>
+                ))}
+              </tr>
+            );
+          })}
+          <tr style={{ background: C.bg }}>
+            {totalsRow.map((cell, j) => (
+              <td key={`total-${j}`} style={{ ...tdS, padding:"9px 12px", fontWeight: 700, borderTop: `2px solid ${C.bdrM}`, textAlign:colAlignments[j] }}>{cell}</td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack }) {
   const [catFilter,    setCatFilter]    = useState("All");
+  const [periodFilter, setPeriodFilter] = useState("YTD");
+  const [customStart,   setCustomStart] = useState("");
+  const [customEnd,     setCustomEnd]   = useState("");
   const [activeReport, setActiveReport] = useState(() => {
     if(initialReportId) return BUILT_IN_REPORTS.find(r=>r.id===initialReportId) || null;
     return null;
@@ -1247,12 +1387,74 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
   ];
 
   const filtered = catFilter==="All" ? allReports : allReports.filter(r=>r.category===catFilter);
+  const filteredJobs = useMemo(() => {
+    if (periodFilter === "All Time") return jobs;
+    if (periodFilter === "Custom") {
+      return jobs.filter(q => {
+        const d = q.date || q.start_date || q.startDate;
+        if (!d) return false;
+        if (customStart && d < customStart) return false;
+        if (customEnd && d > customEnd) return false;
+        return true;
+      });
+    }
+    const currentYear = new Date().getFullYear();
+    let targetYear = periodFilter === "YTD" ? currentYear : (periodFilter === "Last Year" ? currentYear - 1 : null);
+    
+    if (targetYear) {
+       const hasDataThisYear = jobs.some(q => { const d = q.date||q.start_date||q.startDate; return d && d.startsWith(String(targetYear)); });
+       if (!hasDataThisYear && jobs.length > 0) {
+           let latest = 0;
+           jobs.forEach(q => { const d = q.date||q.start_date||q.startDate; if(d) { const y = parseInt(d.substring(0,4)); if(y>latest) latest=y; } });
+           if (latest > 0) targetYear = periodFilter === "YTD" ? latest : latest - 1;
+       }
+    }
+
+    if (!targetYear) return jobs;
+    return jobs.filter(q => {
+      const d = q.date || q.start_date || q.startDate;
+      if (!d) return false;
+      return d.startsWith(String(targetYear));
+    });
+  }, [jobs, periodFilter, customStart, customEnd]);
+
+  const filteredReqs = useMemo(() => {
+    if (periodFilter === "All Time") return reqs;
+    if (periodFilter === "Custom") {
+      return reqs.filter(r => {
+        const d = r.date;
+        if (!d) return false;
+        if (customStart && d < customStart) return false;
+        if (customEnd && d > customEnd) return false;
+        return true;
+      });
+    }
+    const currentYear = new Date().getFullYear();
+    let targetYear = periodFilter === "YTD" ? currentYear : (periodFilter === "Last Year" ? currentYear - 1 : null);
+    
+    if (targetYear) {
+       const hasDataThisYear = reqs.some(r => { const d = r.date; return d && d.startsWith(String(targetYear)); });
+       if (!hasDataThisYear && reqs.length > 0) {
+           let latest = 0;
+           reqs.forEach(r => { const d = r.date; if(d) { const y = parseInt(d.substring(0,4)); if(y>latest) latest=y; } });
+           if (latest > 0) targetYear = periodFilter === "YTD" ? latest : latest - 1;
+       }
+    }
+
+    if (!targetYear) return reqs;
+    return reqs.filter(r => {
+      const d = r.date;
+      if (!d) return false;
+      return d.startsWith(String(targetYear));
+    });
+  }, [reqs, periodFilter, customStart, customEnd]);
+
   const reportData = useMemo(() => {
     if(!activeReport) return null;
     const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===activeReport.id);
-    if(isCustom) return runCustomReport(activeReport, jobs);
-    return buildReportData(activeReport.id, jobs, reqs);
-  }, [activeReport, jobs, reqs]);
+    if(isCustom) return runCustomReport(activeReport, filteredJobs);
+    return buildReportData(activeReport.id, filteredJobs, filteredReqs);
+  }, [activeReport, filteredJobs, filteredReqs]);
 
   function deleteCustom(id) {
     if(!window.confirm("Delete this report?")) return;
@@ -1282,11 +1484,35 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
         <button style={{ ...mkBtn("primary"), padding:"8px 16px" }} onClick={()=>{ setEditingReport(null); setShowBuilder(true); }}>+ New Custom Report</button>
       </div>
 
-      {/* Category filter */}
-      <div style={{ display:"flex", gap:3, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:8, padding:3, marginBottom:16, alignSelf:"flex-start", width:"fit-content" }}>
-        {REPORT_CATEGORIES.map(c=>(
-          <button key={c} onClick={()=>setCatFilter(c)} style={{ background:catFilter===c?"#fff":"transparent", color:catFilter===c?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:catFilter===c?700:600 }}>{c}</button>
-        ))}
+      {/* Filters strip */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
+        {/* Category filter */}
+        <div style={{ display:"flex", gap:3, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:8, padding:3 }}>
+          {REPORT_CATEGORIES.map(c=>(
+            <button key={c} onClick={()=>{
+              setCatFilter(c);
+              if (c === "Sales") setActiveReport(BUILT_IN_REPORTS.find(r=>r.id==="sales-dashboard")||activeReport);
+            }} style={{ background:catFilter===c?"#fff":"transparent", color:catFilter===c?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:catFilter===c?700:600 }}>{c}</button>
+          ))}
+        </div>
+
+        {/* Period Filter */}
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontSize:12, fontWeight:600, color:C.txtS }}>Period:</span>
+          <select value={periodFilter} onChange={e=>setPeriodFilter(e.target.value)} style={{ ...sel, width:140 }}>
+            <option value="YTD">Year to Date (YTD)</option>
+            <option value="Last Year">Last Year</option>
+            <option value="All Time">All Time</option>
+            <option value="Custom">Custom Range</option>
+          </select>
+          {periodFilter === "Custom" && (
+            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+              <input type="date" value={customStart} onChange={e=>setCustomStart(e.target.value)} style={{ ...inp, width:120 }} />
+              <span style={{ color:C.txtS }}>to</span>
+              <input type="date" value={customEnd} onChange={e=>setCustomEnd(e.target.value)} style={{ ...inp, width:120 }} />
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"280px 1fr", gap:16, alignItems:"start" }}>
@@ -1344,60 +1570,33 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                   <span style={{ fontSize:13 }}>👆</span> {reportData.clickHint}
                 </div>
               )}
-              {/* Table */}
-              {reportData && reportData.rows.length > 0 ? (() => {
-                const totalsRow = reportData.cols.map((_, j) => {
-                  if (j === 0) return "Totals";
-                  let sum = 0;
-                  let isCurrency = false;
-                  let isNumber = true;
-                  let hasData = false;
-                  for (let i = 0; i < reportData.rows.length; i++) {
-                    const valStr = String(reportData.rows[i][j] || "").trim();
-                    if (valStr === "—" || valStr === "-" || valStr === "") continue;
-                    hasData = true;
-                    if (valStr.includes("$")) isCurrency = true;
-                    if (valStr.includes("%") || valStr.match(/[a-zA-Z]/)) { isNumber = false; break; }
-                    const cleanVal = valStr.replace(/[\$,]/g, "");
-                    const num = Number(cleanVal);
-                    if (isNaN(num)) { isNumber = false; break; }
-                    sum += num;
-                  }
-                  if (!hasData || !isNumber) return "";
-                  return isCurrency ? "$" + Math.round(sum).toLocaleString() : sum.toLocaleString();
-                });
-                return (
-                <div style={{ overflowX:"auto" }}>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                    <thead>
-                      <tr style={{ background:C.bg }}>
-                        {reportData.cols.map(c=><th key={c} style={{ ...thS, padding:"9px 12px", borderBottom:`1px solid ${C.bdr}`, textAlign:"left" }}>{c}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reportData.rows.map((row,i)=>{
-                        const rawRef = reportData.rawRefs?.[i];
-                        return (
-                          <tr key={i}
-                            style={{ borderBottom:`1px solid ${C.bdr}`, cursor:rawRef?"pointer":"default" }}
-                            onClick={()=>rawRef&&setDrillRef(rawRef)}
-                            onMouseEnter={e=>{ if(rawRef) e.currentTarget.style.background=C.accL; }}
-                            onMouseLeave={e=>{ e.currentTarget.style.background=""; }}>
-                            {row.map((cell,j)=>(
-                              <td key={j} style={{ ...tdS, padding:"9px 12px", fontWeight:j===0?600:400 }}>{cell}</td>
-                            ))}
-                          </tr>
-                        );
-                      })}
-                      <tr style={{ background: C.bg }}>
-                        {totalsRow.map((cell, j) => (
-                          <td key={`total-${j}`} style={{ ...tdS, padding:"9px 12px", fontWeight: 700, borderTop: `2px solid ${C.bdrM}` }}>{cell}</td>
-                        ))}
-                      </tr>
-                    </tbody>
-                  </table>
+              {/* Table or Dashboard */}
+              {reportData?.isDashboard ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
+                  <div>
+                    <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM, textAlign: "center" }}>Sales by Month</h3>
+                    <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 16 }}>
+                      <SalesLineChart data={reportData.chartData} />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "start" }}>
+                    <div style={{ flex: "1 1 300px" }}>
+                      <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM, textAlign: "center" }}>Top 5 Customers by Sales</h3>
+                      <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, overflow: "hidden" }}>
+                        <ReportTable data={reportData.dbCustomer} drillCb={setDrillRef} />
+                      </div>
+                    </div>
+                    <div style={{ flex: "1 1 300px" }}>
+                      <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM, textAlign: "center" }}>Top 5 Estimators</h3>
+                      <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, overflow: "hidden" }}>
+                        <ReportTable data={reportData.dbEstimator} drillCb={setDrillRef} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              );})() : (
+              ) : reportData && reportData.rows && reportData.rows.length > 0 ? (
+                <ReportTable data={reportData} drillCb={setDrillRef} />
+              ) : (
                 <div style={{ textAlign:"center", padding:"24px", color:C.txtS, fontSize:13 }}>No data available for this report.</div>
               )}
             </Card>
