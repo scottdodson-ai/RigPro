@@ -814,19 +814,19 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
 
 // ── REPORTS PAGE ──────────────────────────────────────────────────────────────
 const BUILT_IN_REPORTS = [
-  { id:"rev-by-customer",  name:"Revenue by Customer",      category:"Sales",      desc:"Total won revenue ranked by customer",              scope:"org" },
-  { id:"rev-by-estimator", name:"Revenue by Estimator",     category:"Sales",      desc:"Won revenue and win rate per estimator",            scope:"org" },
-  { id:"rev-by-month",     name:"Revenue by Month",         category:"Sales",      desc:"Monthly won revenue trend",                        scope:"org" },
+  { id:"rev-by-customer",  name:"Sales by Customer",      category:"Sales",      desc:"Total won sales ranked by customer",              scope:"org" },
+  { id:"rev-by-estimator", name:"Sales by Estimator",     category:"Sales",      desc:"Won sales and win rate per estimator",            scope:"org" },
+  { id:"rev-by-month",     name:"Sales by Month",         category:"Sales",      desc:"Monthly won sales trend",                        scope:"org" },
   { id:"pipeline-summary", name:"Pipeline Summary",         category:"Pipeline",   desc:"Open jobs by status with total value",            scope:"org" },
   { id:"win-loss",         name:"Win / Loss Analysis",      category:"Pipeline",   desc:"Win rate by estimator, customer, and quote type",   scope:"org" },
   { id:"quote-aging",      name:"Quote Aging",              category:"Pipeline",   desc:"Open jobs ranked by days since created",          scope:"org" },
   { id:"rfq-response",     name:"RFQ Response Time",        category:"Operations", desc:"Days from RFQ received to estimate submitted",      scope:"org" },
   { id:"job-schedule",     name:"Job Schedule",             category:"Operations", desc:"Upcoming and in-progress jobs with dates",          scope:"org" },
-  { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Revenue, cost, and gross margin per quote",         scope:"org" },
-  { id:"estimator-activity",name:"Estimator Activity",      category:"Sales",      desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
+  { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Sales, cost, and gross margin per quote",         scope:"org" },
+  { id:"estimator-activity",name:"Estimator Activity",      category:"Activity",   desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
 ];
 
-const REPORT_CATEGORIES = ["All","Sales","Pipeline","Operations","Finance"];
+const REPORT_CATEGORIES = ["All","Sales","Pipeline","Operations","Finance","Activity"];
 
 // rowType: "quote" | "req" | "group-customer" | "group-estimator" | "group-month" | "group-status" | "group-type"
 function buildReportData(reportId, jobs, reqs) {
@@ -838,7 +838,7 @@ function buildReportData(reportId, jobs, reqs) {
       const m={};
       won.forEach(q=>{ if(!m[q.client])m[q.client]={customer:q.client,revenue:0,jobs:0,qs:[]}; m[q.client].revenue+=(q.total||0); m[q.client].jobs+=1; m[q.client].qs.push(q); });
       const data=Object.values(m).sort((a,b)=>b.revenue-a.revenue);
-      return { cols:["Customer","Revenue","Jobs Won","Avg Deal"], clickHint:"Click a row to see individual jobs",
+      return { cols:["Customer","Sales","Jobs Won","Avg Deal"], clickHint:"Click a row to see individual jobs",
         rows:data.map(r=>[r.customer,fmt2(r.revenue),r.jobs,fmt2(r.jobs?Math.round(r.revenue/r.jobs):0)]),
         rawRefs:data.map(r=>({type:"group-customer",key:r.customer,jobs:r.qs})),
         summary:`${data.length} customers · Total: ${fmt2(data.reduce((s,r)=>s+r.revenue,0))}` };
@@ -847,7 +847,7 @@ function buildReportData(reportId, jobs, reqs) {
       const m={};
       jobs.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,revenue:0,won:0,lost:0,total:0,qs:[]}; m[k].total+=1; m[k].qs.push(q); if(q.status==="Won"){m[k].revenue+=(q.total||0);m[k].won+=1;} if(q.status==="Lost")m[k].lost+=1; });
       const data=Object.values(m).sort((a,b)=>b.revenue-a.revenue);
-      return { cols:["Estimator","Revenue Won","Quotes Won","Quotes Lost","Win Rate"], clickHint:"Click a row to see that estimator's jobs",
+      return { cols:["Estimator","Sales Won","Quotes Won","Quotes Lost","Win Rate"], clickHint:"Click a row to see that estimator's jobs",
         rows:data.map(r=>[r.estimator,fmt2(r.revenue),r.won,r.lost,r.won+r.lost>0?Math.round(r.won/(r.won+r.lost)*100)+"%":"—"]),
         rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,jobs:r.qs})),
         summary:`${data.length} estimators tracked` };
@@ -856,7 +856,7 @@ function buildReportData(reportId, jobs, reqs) {
       const m={};
       won.forEach(q=>{ const mo=q.start_date?.slice(0,7)||"Unknown"; if(!m[mo])m[mo]={month:mo,revenue:0,jobs:0,qs:[]}; m[mo].revenue+=(q.total||0); m[mo].jobs+=1; m[mo].qs.push(q); });
       const data=Object.keys(m).sort().map(k=>m[k]);
-      return { cols:["Month","Revenue","Jobs"], clickHint:"Click a month to see its jobs",
+      return { cols:["Month","Sales","Jobs"], clickHint:"Click a month to see its jobs",
         rows:data.map(r=>[r.month,fmt2(r.revenue),r.jobs]),
         rawRefs:data.map(r=>({type:"group-month",key:r.month,jobs:r.qs})),
         summary:`${data.length} months · Peak: ${fmt2(Math.max(...data.map(r=>r.revenue)))}` };
@@ -906,16 +906,16 @@ function buildReportData(reportId, jobs, reqs) {
     case "cost-margin": {
       const data=won.map(q=>{ const rev=q.total||0; const cost=Math.round((q.labor||0)*0.6+(q.equip||0)*0.7+(q.hauling||0)*0.85+(q.mats||0)*0.85+(q.travel||0)); const margin=rev-cost; const pct=rev>0?Math.round(margin/rev*100):0; return {q,rev,cost,margin,pct}; }).sort((a,b)=>b.pct-a.pct);
       const totRev=won.reduce((s,q)=>s+(q.total||0),0); const avgM=data.length?Math.round(data.reduce((s,d)=>s+d.pct,0)/data.length):0;
-      return { cols:["Quote #","Customer","Revenue","Est. Cost","Gross Margin","Margin %"], clickHint:"Click a row to see the full cost breakdown",
+      return { cols:["Quote #","Customer","Sales","Est. Cost","Gross Margin","Margin %"], clickHint:"Click a row to see the full cost breakdown",
         rows:data.map(({q,rev,cost,margin,pct})=>[q.job_num,q.client,fmt2(rev),fmt2(cost),fmt2(margin),pct+"%"]),
         rawRefs:data.map(({q,rev,cost,margin,pct})=>({type:"cost-detail",quote:q,rev,cost,margin,pct})),
-        summary:`${data.length} won jobs · Avg margin: ${avgM}% · Total revenue: ${fmt2(totRev)}` };
+        summary:`${data.length} won jobs · Avg margin: ${avgM}% · Total sales: ${fmt2(totRev)}` };
     }
     case "estimator-activity": {
       const m={};
       jobs.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,created:0,submitted:0,won:0,lost:0,revWon:0,qs:[]}; m[k].created+=1; m[k].qs.push(q); if(["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status))m[k].submitted+=1; if(q.status==="Won"){m[k].won+=1;m[k].revWon+=(q.total||0);} if(q.status==="Lost")m[k].lost+=1; });
       const data=Object.values(m).sort((a,b)=>b.revWon-a.revWon);
-      return { cols:["Estimator","Total Quotes","In Pipeline","Won","Lost","Revenue Won"], clickHint:"Click an estimator to see their jobs",
+      return { cols:["Estimator","Total Quotes","In Pipeline","Won","Lost","Sales Won"], clickHint:"Click an estimator to see their jobs",
         rows:data.map(r=>[r.estimator,r.created,r.submitted,r.won,r.lost,fmt2(r.revWon)]),
         rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,jobs:r.qs})),
         summary:`${data.length} estimators` };
@@ -1345,7 +1345,28 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                 </div>
               )}
               {/* Table */}
-              {reportData && reportData.rows.length > 0 ? (
+              {reportData && reportData.rows.length > 0 ? (() => {
+                const totalsRow = reportData.cols.map((_, j) => {
+                  if (j === 0) return "Totals";
+                  let sum = 0;
+                  let isCurrency = false;
+                  let isNumber = true;
+                  let hasData = false;
+                  for (let i = 0; i < reportData.rows.length; i++) {
+                    const valStr = String(reportData.rows[i][j] || "").trim();
+                    if (valStr === "—" || valStr === "-" || valStr === "") continue;
+                    hasData = true;
+                    if (valStr.includes("$")) isCurrency = true;
+                    if (valStr.includes("%") || valStr.match(/[a-zA-Z]/)) { isNumber = false; break; }
+                    const cleanVal = valStr.replace(/[\$,]/g, "");
+                    const num = Number(cleanVal);
+                    if (isNaN(num)) { isNumber = false; break; }
+                    sum += num;
+                  }
+                  if (!hasData || !isNumber) return "";
+                  return isCurrency ? "$" + Math.round(sum).toLocaleString() : sum.toLocaleString();
+                });
+                return (
                 <div style={{ overflowX:"auto" }}>
                   <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
                     <thead>
@@ -1368,10 +1389,15 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                           </tr>
                         );
                       })}
+                      <tr style={{ background: C.bg }}>
+                        {totalsRow.map((cell, j) => (
+                          <td key={`total-${j}`} style={{ ...tdS, padding:"9px 12px", fontWeight: 700, borderTop: `2px solid ${C.bdrM}` }}>{cell}</td>
+                        ))}
+                      </tr>
                     </tbody>
                   </table>
                 </div>
-              ) : (
+              );})() : (
                 <div style={{ textAlign:"center", padding:"24px", color:C.txtS, fontSize:13 }}>No data available for this report.</div>
               )}
             </Card>
