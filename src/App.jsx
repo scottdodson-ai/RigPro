@@ -815,6 +815,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
 // ── REPORTS PAGE ──────────────────────────────────────────────────────────────
 const BUILT_IN_REPORTS = [
   { id:"sales-dashboard",  name:"Sales Dashboard",          category:"Sales",      desc:"Overview of sales with line chart and data tables", scope:"org" },
+  { id:"pipeline-dashboard",name:"Pipeline Dashboard",      category:"Pipeline",   desc:"Flow of RFQs leading into estimates and outcomes", scope:"org" },
   { id:"rev-by-customer",  name:"Sales by Customer",      category:"Sales",      desc:"Total won sales ranked by customer",              scope:"org" },
   { id:"rev-by-estimator", name:"Sales by Estimator",     category:"Sales",      desc:"Won sales and win rate per estimator",            scope:"org" },
   { id:"rev-by-month",     name:"Sales by Month",         category:"Sales",      desc:"Monthly won sales trend",                        scope:"org" },
@@ -835,6 +836,13 @@ function buildReportData(reportId, jobs, reqs) {
   const fmt2 = n => "$"+Math.round(n||0).toLocaleString();
 
   switch(reportId) {
+    case "pipeline-dashboard": {
+      return {
+        isPipelineDashboard: true,
+        summary: `Pipeline Flow Overview`,
+        rows: []
+      };
+    }
     case "sales-dashboard": {
       const dbMonthly = buildReportData("rev-by-month", jobs, reqs);
       let dbCustomer = buildReportData("rev-by-customer", jobs, reqs);
@@ -1235,6 +1243,109 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
   return null;
 }
 
+function PipelineSankeyChart({ reqs, jobs }) {
+  const width = 800;
+  const height = 400;
+
+  const deadQuotes = jobs.filter(q => q.status === "Dead").length;
+  const aliveJobs = jobs.filter(q => q.status !== "Dead");
+  
+  const statuses = ["Won", "Submitted", "Approved", "In Review", "In Progress", "Adjustments Needed", "Lost"];
+  const statusCounts = {};
+  statuses.forEach(s => statusCounts[s] = 0);
+  aliveJobs.forEach(q => {
+    if (statusCounts[q.status] !== undefined) statusCounts[q.status]++;
+    else statusCounts["Other"] = (statusCounts["Other"] || 0) + 1;
+  });
+  if (statusCounts["Other"]) statuses.push("Other");
+
+  const activeStatuses = statuses.filter(s => statusCounts[s] > 0);
+  
+  const totalPipeline = jobs.length;
+  if (totalPipeline === 0) return <div style={{textAlign:"center", padding:40, color:C.txtS}}>No data available</div>;
+  
+  const nodeW = 12; 
+  const paddingY = 50;
+  const usableHeight = height - paddingY * 2;
+  const scale = usableHeight / Math.max(totalPipeline, 1);
+
+  const col0X = 40;
+  const col1X = width * 0.40;
+  const col2X = width - 180;
+
+  const link = (x1, y1, x2, y2, v, fill) => {
+     if (v <= 0) return null;
+     const h = v * scale;
+     const cp1x = x1 + (x2 - x1) * 0.45;
+     return (
+       <path 
+         d={`M ${x1} ${y1} C ${cp1x} ${y1}, ${cp1x} ${y2}, ${x2} ${y2} L ${x2} ${y2+h} C ${cp1x} ${y2+h}, ${cp1x} ${y1+h}, ${x1} ${y1+h} Z`} 
+         fill={fill} opacity={0.35} 
+       />
+     );
+  };
+
+  const topY = paddingY; 
+  
+  let currentY2 = topY;
+  const nodesRight = activeStatuses.map(st => {
+     const val = statusCounts[st];
+     const n = { label: st, value: val, y: currentY2, h: val * scale };
+     // Dynamic gap proportional to status count, spreading them organically
+     currentY2 += n.h + (usableHeight*0.4)/Math.max(activeStatuses.length, 1);
+     return n;
+  });
+
+  const deadNode = { label: "Dead Quotes", value: deadQuotes, y: height - paddingY + 10, h: deadQuotes * scale };
+
+  const fmtColor = (lbl) => lbl==="Won"?"#16a34a":lbl==="DeadQuotes"?"#ef4444":lbl==="Lost"?"#ef4444":lbl==="RFQs"?"#64748b":"#3b82f6";
+
+  return (
+    <div style={{ width: "100%", overflowX: "auto" }}>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} style={{ minWidth: 700, fontFamily:"sans-serif" }}>
+        
+        {/* Links */}
+        {link(col0X+nodeW, topY, col1X, topY, aliveJobs.length, fmtColor("Estimates"))}
+        {link(col0X+nodeW, topY + aliveJobs.length*scale, col1X, deadNode.y, deadQuotes, fmtColor("DeadQuotes"))}
+        
+        {(() => {
+           let y1 = topY;
+           return nodesRight.map(n => {
+              const res = link(col1X+nodeW, y1, col2X, n.y, n.value, fmtColor(n.label));
+              y1 += n.value * scale; // PERFECT flush stacking
+              return res;
+           });
+        })()}
+
+        {/* Nodes (Vertical thin bars) */}
+        <rect x={col0X} y={topY} width={nodeW} height={totalPipeline*scale} fill={fmtColor("RFQs")} />
+        <text x={col0X} y={topY - 14} fontSize="14" fontWeight="bold" fill={C.txt}>RFQs (Feed)</text>
+        <text x={col0X + nodeW + 8} y={topY + Math.max((totalPipeline*scale)/2, 5) + 4} fontSize="13" fill={C.txtS}>{totalPipeline} Total</text>
+
+        <rect x={col1X} y={topY} width={nodeW} height={aliveJobs.length*scale} fill={fmtColor("Estimates")} />
+        <text x={col1X} y={topY - 14} fontSize="14" fontWeight="bold" fill={C.txt}>Estimates</text>
+        <text x={col1X + nodeW + 8} y={topY + Math.max((aliveJobs.length*scale)/2, 5) + 4} fontSize="13" fill={C.txtS}>{aliveJobs.length} Active</text>
+
+        {nodesRight.map(n => (
+          <g key={n.label}>
+            <rect x={col2X} y={n.y} width={nodeW} height={Math.max(n.h, 1.5)} fill={fmtColor(n.label)} />
+            <text x={col2X+nodeW+8} y={n.y + Math.max(n.h/2, 5)} fontSize="12" fill={C.txt}>{n.label}</text>
+            <text x={col2X+nodeW+8} y={n.y + Math.max(n.h/2, 5) + 14} fontSize="11" fontWeight="bold" fill={C.txtS}>{n.value}</text>
+          </g>
+        ))}
+
+        {deadQuotes > 0 && (
+          <g>
+            <rect x={col1X} y={deadNode.y} width={nodeW} height={Math.max(deadNode.h, 1.5)} fill={fmtColor("DeadQuotes")} />
+            <text x={col1X+nodeW+8} y={deadNode.y + Math.max(deadNode.h/2, 5)} fontSize="12" fill={C.txt}>Dead Quotes</text>
+            <text x={col1X+nodeW+8} y={deadNode.y + Math.max(deadNode.h/2, 5) + 14} fontSize="11" fontWeight="bold" fill={C.txtS}>{deadNode.value}</text>
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
 function SalesLineChart({ data }) {
   if (!data || data.length === 0) return <div style={{height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: C.txtS}}>No data available</div>;
 
@@ -1492,6 +1603,7 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
             <button key={c} onClick={()=>{
               setCatFilter(c);
               if (c === "Sales") setActiveReport(BUILT_IN_REPORTS.find(r=>r.id==="sales-dashboard")||activeReport);
+              if (c === "Pipeline") setActiveReport(BUILT_IN_REPORTS.find(r=>r.id==="pipeline-dashboard")||activeReport);
             }} style={{ background:catFilter===c?"#fff":"transparent", color:catFilter===c?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:catFilter===c?700:600 }}>{c}</button>
           ))}
         </div>
@@ -1561,7 +1673,10 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                   <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>{activeReport.desc}</div>
                   {reportData?.summary && <div style={{ fontSize:12, color:C.acc, fontWeight:600, marginTop:4 }}>{reportData.summary}</div>}
                 </div>
-                <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"5px 12px" }} onClick={exportCSV}>↓ Export CSV</button>
+                <div style={{ display:"flex", gap: 8 }}>
+                  <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ setEditingReport(activeReport); setShowBuilder(true); }}>✏ Edit Report Structure</button>
+                  <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"5px 12px" }} onClick={exportCSV}>↓ Export CSV</button>
+                </div>
               </div>
 
               {/* Click hint */}
@@ -1571,7 +1686,16 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                 </div>
               )}
               {/* Table or Dashboard */}
-              {reportData?.isDashboard ? (
+              {reportData?.isPipelineDashboard ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
+                  <div>
+                    <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM, textAlign: "center" }}>Opportunity Flow</h3>
+                    <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 16 }}>
+                      <PipelineSankeyChart reqs={filteredReqs} jobs={filteredJobs} />
+                    </div>
+                  </div>
+                </div>
+              ) : reportData?.isDashboard ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
                   <div>
                     <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM, textAlign: "center" }}>Sales by Month</h3>
@@ -1695,13 +1819,38 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
     onSave(report);
   }
 
+  function handleClose() {
+    if (window.confirm("Save as Original Report?")) {
+      const newName = window.prompt("Report Name:", name || "New Custom Report");
+      if (!newName) return;
+      const newDesc = window.prompt("Brief Description:", desc || "");
+      
+      const report = {
+        id: "custom-"+Date.now(),
+        name: newName.trim(),
+        category,
+        desc: newDesc?.trim() || `Custom report: ${newName.trim()}`,
+        scope: canSetOrgScope ? scope : "user",
+        filters,
+        columns,
+        sortBy,
+        sortDir,
+        createdBy: username||"user",
+        createdAt: new Date().toISOString().slice(0,10),
+      };
+      onSave(report);
+    } else {
+      onClose();
+    }
+  }
+
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
       <div style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:680, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
         {/* Header */}
         <div style={{ padding:"16px 24px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div style={{ fontSize:16, fontWeight:700 }}>{isEdit?"Edit":"New"} Custom Report</div>
-          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
+          <button onClick={handleClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
         </div>
 
         <div style={{ padding:"20px 24px", display:"flex", flexDirection:"column", gap:16 }}>
