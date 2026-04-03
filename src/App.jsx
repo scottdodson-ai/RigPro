@@ -1312,7 +1312,10 @@ function PipelineSankeyChart({ reqs, jobs, drillCb }) {
   const width = 800;
   const height = 400;
 
-  const deadQuotes = jobs.filter(q => q.status === "Dead");
+  const deadReqs = reqs.filter(r => r.status === "Dead");
+  const openReqs = reqs.filter(r => r.status !== "Dead");
+  const totalRFQs = reqs.length;
+
   const aliveJobs = jobs.filter(q => q.status !== "Dead");
   
   const statuses = ["Won", "Submitted", "Approved", "In Review", "In Progress", "Adjustments Needed", "Lost"];
@@ -1328,21 +1331,22 @@ function PipelineSankeyChart({ reqs, jobs, drillCb }) {
 
   const activeStatuses = Object.keys(statusGroups).filter(s => statusGroups[s].length > 0);
   
-  const totalPipeline = jobs.length;
-  if (totalPipeline === 0) return <div style={{textAlign:"center", padding:40, color:C.txtS}}>No data available</div>;
+  const maxPipelineVol = Math.max(totalRFQs, aliveJobs.length + deadReqs.length); // guarantees RFQs col sizes to max
   
+  if (maxPipelineVol === 0) return <div style={{textAlign:"center", padding:40, color:C.txtS}}>No data available</div>;
+
   const nodeW = 12; 
   const paddingY = 50;
 
   const NUM_GAPS = Math.max(activeStatuses.length - 1, 0);
   const GAP_SIZE = 15;
   const TOTAL_GAPS = NUM_GAPS * GAP_SIZE;
-  const DEAD_GAP = deadQuotes.length > 0 ? 30 : 0;
+  const DEAD_GAP = deadReqs.length > 0 ? 30 : 0;
   
   const MAX_H = height - paddingY * 2;
   const topY = paddingY;
   
-  const scale = (MAX_H - TOTAL_GAPS - DEAD_GAP) / Math.max(totalPipeline, 1);
+  const scale = (MAX_H - TOTAL_GAPS - DEAD_GAP) / Math.max(maxPipelineVol, 1);
 
   const col0X = 40;
   const col1X = width * 0.40;
@@ -1369,11 +1373,13 @@ function PipelineSankeyChart({ reqs, jobs, drillCb }) {
      return n;
   });
 
-  const deadNode = { label: "Dead Quotes", value: deadQuotes.length, jobs: deadQuotes, y: deadQuotes.length > 0 ? topY + aliveJobs.length * scale + DEAD_GAP : 0, h: deadQuotes.length * scale };
+  const deadNode = { label: "Dead RFQs", value: deadReqs.length, reqs: deadReqs, y: deadReqs.length > 0 ? topY + aliveJobs.length * scale + DEAD_GAP : 0, h: deadReqs.length * scale };
 
-  const fmtColor = (lbl) => lbl==="Won"?"#16a34a":lbl==="DeadQuotes"?"#ef4444":lbl==="Lost"?"#ef4444":lbl==="RFQs"?"#64748b":"#3b82f6";
+  const fmtColor = (lbl) => lbl==="Won"?"#16a34a":lbl==="DeadRFQs"?"#ef4444":lbl==="Lost"?"#ef4444":lbl==="RFQs"?"#64748b":"#3b82f6";
 
-  const clk = (lbl, jbs) => drillCb ? drillCb({ type: "group-status", key: lbl, jobs: jbs }) : null;
+  const clk = (lbl, data) => drillCb ? drillCb({ type: "group-status", key: lbl, jobs: data }) : null;
+  // Note for drillCb, ReportDrillDownModal expects 'jobs' key for arrays. We bypass this loosely.
+  const clkReq = (lbl, data) => drillCb ? drillCb({ type: "group-status", key: lbl, jobs: data }) : null;
 
   return (
     <div style={{ width: "100%", overflowX: "auto" }}>
@@ -1381,7 +1387,7 @@ function PipelineSankeyChart({ reqs, jobs, drillCb }) {
         
         {/* Links */}
         {link(col0X+nodeW, topY, col1X, topY, aliveJobs.length, fmtColor("Estimates"))}
-        {link(col0X+nodeW, topY + aliveJobs.length*scale, col1X, deadNode.y, deadQuotes.length, fmtColor("DeadQuotes"))}
+        {link(col0X+nodeW, topY + aliveJobs.length*scale, col1X, deadNode.y, deadReqs.length, fmtColor("DeadRFQs"))}
         
         {(() => {
            let y1 = topY;
@@ -1393,14 +1399,14 @@ function PipelineSankeyChart({ reqs, jobs, drillCb }) {
         })()}
 
         {/* Nodes (Vertical thin bars) */}
-        <g onClick={()=>clk("RFQs (Pipeline Feed)", jobs)} style={{cursor:"pointer", outline:"none"}}>
-          <rect x={col0X-15} y={topY-20} width={nodeW+100} height={Math.max(totalPipeline*scale+20, 20)} fill="transparent" />
-          <rect x={col0X} y={topY} width={nodeW} height={Math.max(totalPipeline*scale, 1.5)} fill={fmtColor("RFQs")} />
+        <g onClick={()=>clkReq("Total RFQs", reqs)} style={{cursor:"pointer", outline:"none"}}>
+          <rect x={col0X-15} y={topY-20} width={nodeW+100} height={Math.max(maxPipelineVol*scale+20, 20)} fill="transparent" />
+          <rect x={col0X} y={topY} width={nodeW} height={Math.max(maxPipelineVol*scale, 1.5)} fill={fmtColor("RFQs")} />
           <text x={col0X} y={topY - 14} fontSize="14" fontWeight="bold" fill={C.txt}>RFQs (Feed)</text>
-          <text x={col0X + nodeW + 8} y={topY + Math.max((totalPipeline*scale)/2, 5) + 4} fontSize="13" fill={C.txtS}>{totalPipeline} Total</text>
+          <text x={col0X + nodeW + 8} y={topY + Math.max((maxPipelineVol*scale)/2, 5) + 4} fontSize="13" fill={C.txtS}>{maxPipelineVol} Total</text>
         </g>
 
-        <g onClick={()=>clk("Active Estimates", aliveJobs)} style={{cursor:"pointer", outline:"none"}}>
+        <g onClick={()=>clk("Estimates (Active Quotes)", aliveJobs)} style={{cursor:"pointer", outline:"none"}}>
           <rect x={col1X-15} y={topY-20} width={nodeW+100} height={Math.max(aliveJobs.length*scale+20, 20)} fill="transparent" />
           <rect x={col1X} y={topY} width={nodeW} height={Math.max(aliveJobs.length*scale, 1.5)} fill={fmtColor("Estimates")} />
           <text x={col1X} y={topY - 14} fontSize="14" fontWeight="bold" fill={C.txt}>Estimates</text>
@@ -1416,11 +1422,11 @@ function PipelineSankeyChart({ reqs, jobs, drillCb }) {
           </g>
         ))}
 
-        {deadQuotes.length > 0 && (
-          <g onClick={()=>clk("Dead Quotes", deadNode.jobs)} style={{cursor:"pointer", outline:"none"}}>
+        {deadReqs.length > 0 && (
+          <g onClick={()=>clkReq("Dead RFQs", deadNode.reqs)} style={{cursor:"pointer", outline:"none"}}>
             <rect x={col1X-15} y={deadNode.y-10} width={nodeW+150} height={Math.max(deadNode.h+20, 20)} fill="transparent" />
-            <rect x={col1X} y={deadNode.y} width={nodeW} height={Math.max(deadNode.h, 1.5)} fill={fmtColor("DeadQuotes")} />
-            <text x={col1X+nodeW+8} y={deadNode.y + Math.max(deadNode.h/2, 5)} fontSize="12" fill={C.txt}>Dead Quotes</text>
+            <rect x={col1X} y={deadNode.y} width={nodeW} height={Math.max(deadNode.h, 1.5)} fill={fmtColor("DeadRFQs")} />
+            <text x={col1X+nodeW+8} y={deadNode.y + Math.max(deadNode.h/2, 5)} fontSize="12" fill={C.txt}>Dead RFQs</text>
             <text x={col1X+nodeW+8} y={deadNode.y + Math.max(deadNode.h/2, 5) + 14} fontSize="11" fontWeight="bold" fill={C.txtS}>{deadNode.value}</text>
           </g>
         )}
@@ -8155,18 +8161,45 @@ export default function App() {
     ));
   }
 
+  function ensureRFQForJob(upd) {
+    if (!upd.fromReqId) {
+      const newId = uid();
+      const rn = "REQ-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random()*1000)).padStart(3,'0');
+      const newReq = {
+        id: newId,
+        rn: rn,
+        company: upd.client || "Self-Generated Estimate",
+        requester: upd.contactName || "System",
+        email: upd.contactEmail || "",
+        phone: upd.contactPhone || "",
+        jobSite: upd.jobSite || "",
+        desc: upd.job_description || `Auto-generated RFQ from Estimate ${upd.job_num || upd.qn || ''}`,
+        notes: "Automatically created because estimate was processed without an existing RFQ.",
+        date: new Date().toISOString().split('T')[0],
+        status: upd.status === "Dead" ? "Dead" : "Quoted", 
+        salesAssoc: upd.salesAssoc || "System"
+      };
+      setReqs(prev => [newReq, ...prev]);
+      upd.fromReqId = newId;
+    }
+    return upd;
+  }
+
   function saveQuote(opts={}) {
     const cv  = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     // Save Quote always preserves current status (keeps In Progress if that's where it is)
     // Unless a specific status override is passed
     const newStatus = opts.status || active.status;
-    const upd = { ...active, ...cv, status: newStatus };
+    let upd = { ...active, ...cv, status: newStatus };
     if (upd.isHistorical) upd.locked = true;
     if (upd.client) {
       const newRates = {};
       (upd.laborRows||[]).forEach(r => { if(r.special) newRates[r.role]={ reg:Number(r.overReg), ot:Number(r.overOT) }; });
       if (Object.keys(newRates).length > 0) setCustomerRates(prev=>({...prev,[upd.client]:{...(prev[upd.client]||{}),...newRates}}));
     }
+    
+    upd = ensureRFQForJob(upd);
+    
     setJobs(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
     if (upd.fromReqId) {
       if (upd.status==="Dead") {
@@ -8175,14 +8208,15 @@ export default function App() {
         setReqs(prev=>prev.map(r=>r.id===upd.fromReqId?{...r,status:"Quoted"}:r));
       }
     }
-    setView("dash");
+    if (!opts.preventClose) setView("dash");
     return upd;
   }
 
   function markWon(jn, cd) {
-    const upd = { ...active, status:"Won", job_num:jn, compDate:cd, locked:true };
+    let upd = { ...active, status:"Won", job_num:jn, compDate:cd, locked:true };
     const cv  = calcQuote(upd, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
-    const fin = { ...upd, ...cv };
+    let fin = { ...upd, ...cv };
+    fin = ensureRFQForJob(fin);
     setJobs(prev => { const ix=prev.findIndex(q=>q.id===fin.id); return ix>=0?prev.map((q,i)=>i===ix?fin:q):[fin,...prev]; });
     setShowWM(false);
     setView("dash");
@@ -8190,7 +8224,8 @@ export default function App() {
 
   function submitQuote() {
     const cv  = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
-    const upd = { ...active, ...cv, status:"In Review" };
+    let upd = { ...active, ...cv, status:"In Review" };
+    upd = ensureRFQForJob(upd);
     setJobs(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
     setNotifs(p => [{ id:uid(), qn:upd.qn, client:upd.client, total:upd.total, at:new Date().toLocaleTimeString(), status:"Pending Review" }, ...p]);
     setView("dash");
@@ -8688,7 +8723,16 @@ export default function App() {
           </button>
           {/* Create Customer Document */}
           <button style={{ ...mkBtn("ghost"), width:"100%", padding:"8px 0", marginTop:5, fontSize:13, justifyContent:"center", borderColor:C.acc, color:C.acc }}
-            onClick={()=>setShowCustDoc(true)}>
+            onClick={()=>{
+               if (!active.locked && active.status !== "Won" && !active.isHistorical) {
+                   const saved = saveQuote({ preventClose: true });
+                   setActive(saved);
+               } else if (!active.fromReqId) {
+                   const saved = saveQuote({ preventClose: true });
+                   setActive(saved);
+               }
+               setShowCustDoc(true);
+            }}>
             📄 Create Customer Document
           </button>
           {/* Mark as Won */}
