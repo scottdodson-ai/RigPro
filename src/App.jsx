@@ -812,10 +812,71 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
 }
 
 
+// ── PINNED REPORTS RENDERER ──────────────────────────────────────────────────
+function PinnedReportsRenderer({ category, jobs, reqs, onOpenReport }) {
+  const [pinnedIds, setPinnedIds] = useState(() => { try { return JSON.parse(localStorage.getItem(`rigpro_pinned_reports_${category.toLowerCase()}`)||"[]"); } catch{return [];} });
+  const [customReports, setCustomReports] = useState(() => { try { return JSON.parse(localStorage.getItem("rigpro_custom_reports")||"[]"); } catch{return [];} });
+
+  useEffect(() => {
+    const fn = () => {
+       setPinnedIds(JSON.parse(localStorage.getItem(`rigpro_pinned_reports_${category.toLowerCase()}`)||"[]"));
+       setCustomReports(JSON.parse(localStorage.getItem("rigpro_custom_reports")||"[]"));
+    };
+    window.addEventListener(`rigpro_pinned_updated_${category.toLowerCase()}`, fn);
+    fn();
+    return () => window.removeEventListener(`rigpro_pinned_updated_${category.toLowerCase()}`, fn);
+  }, [category]);
+
+  const allAvailable = [...BUILT_IN_REPORTS, ...customReports];
+  const pinned = pinnedIds.map(id => allAvailable.find(r => r.id === id)).filter(Boolean);
+  if (pinned.length === 0) return null;
+
+  return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+        {pinned.map(rep => {
+          const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===rep.id);
+          const data = isCustom ? runCustomReport(rep, jobs) : buildReportData(rep.id, jobs, reqs);
+          if (!data) return null;
+          return (
+             <div key={rep.id} style={{ border: `1px solid ${C.bdr}`, borderRadius: 8, background: C.sur, overflow: "hidden" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "12px 16px", borderBottom: `1px solid ${C.bdr}` }}>
+                   <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{rep.name}</div>
+                      <div style={{ fontSize: 12, color: C.txtS, marginTop: 2 }}>{rep.desc}</div>
+                   </div>
+                   <button onClick={() => {
+                        const newPins = pinnedIds.filter(id => id !== rep.id);
+                        setPinnedIds(newPins);
+                        localStorage.setItem(`rigpro_pinned_reports_${category.toLowerCase()}`, JSON.stringify(newPins));
+                        window.dispatchEvent(new Event(`rigpro_pinned_updated_${category.toLowerCase()}`));
+                   }} style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 12 }}>Unpin</button>
+                </div>
+                {data.isPipelineDashboard || data.isDashboard || data.isCategoryDashboard ? (
+                    <div style={{ padding: "16px", color:C.txtS, fontSize:12, textAlign:"center" }}>Cannot pin a dashboard inside a dashboard. <span style={{color:C.blu, cursor:"pointer", textDecoration:"underline"}} onClick={()=>onOpenReport(rep)}>Click to view</span>.</div>
+                ) : (
+                  <div style={{ overflowX: "auto", position: "relative" }}>
+                     <ReportTable data={{...data, rows: data.rows.slice(0,5)}} />
+                     {data.rows.length > 5 && (
+                       <div onClick={()=>onOpenReport(rep)} style={{ padding: "8px 0", textAlign: "center", fontSize: 12, color: C.blu, cursor: "pointer", fontWeight: 600, borderTop: `1px solid ${C.bdr}`, background: C.sur }}>
+                         View {data.rows.length - 5} more rows →
+                       </div>
+                     )}
+                  </div>
+                )}
+             </div>
+          );
+        })}
+      </div>
+  );
+}
+
 // ── REPORTS PAGE ──────────────────────────────────────────────────────────────
 const BUILT_IN_REPORTS = [
   { id:"sales-dashboard",  name:"Sales Dashboard",          category:"Sales",      desc:"Overview of sales with line chart and data tables", scope:"org" },
   { id:"pipeline-dashboard",name:"Pipeline Dashboard",      category:"Pipeline",   desc:"Flow of RFQs leading into estimates and outcomes", scope:"org" },
+  { id:"operations-dashboard",name:"Operations Dashboard",  category:"Operations", desc:"Overview of operational reports and metrics", scope:"org" },
+  { id:"finance-dashboard",   name:"Finance Dashboard",     category:"Finance",    desc:"Financial summaries and overviews", scope:"org" },
+  { id:"activity-dashboard",  name:"Activity Dashboard",    category:"Activity",   desc:"Activity metrics and team performance", scope:"org" },
   { id:"open-rfqs",        name:"Requests for Quotes",      category:"Pipeline",   desc:"All open RFQs grouped by Estimator",              scope:"org" },
   { id:"inactive-rfqs",    name:"Inactive Requests",        category:"Pipeline",   desc:"All RFQs marked as dead with context",            scope:"org" },
   { id:"rev-by-customer",  name:"Sales by Customer",      category:"Sales",      desc:"Total won sales ranked by customer",              scope:"org" },
@@ -830,7 +891,7 @@ const BUILT_IN_REPORTS = [
   { id:"estimator-activity",name:"Estimator Activity",      category:"Activity",   desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
 ];
 
-const REPORT_CATEGORIES = ["All","Sales","Pipeline","Operations","Finance","Activity"];
+const REPORT_CATEGORIES = ["Sales","Pipeline","Operations","Finance","Activity"];
 
 // rowType: "quote" | "req" | "group-customer" | "group-estimator" | "group-month" | "group-status" | "group-type"
 function buildReportData(reportId, jobs, reqs) {
@@ -842,6 +903,30 @@ function buildReportData(reportId, jobs, reqs) {
       return {
         isPipelineDashboard: true,
         summary: `Pipeline Flow Overview`,
+        rows: []
+      };
+    }
+    case "operations-dashboard": {
+      return {
+        isCategoryDashboard: true,
+        category: "Operations",
+        summary: `Operations Overview`,
+        rows: []
+      };
+    }
+    case "finance-dashboard": {
+      return {
+        isCategoryDashboard: true,
+        category: "Finance",
+        summary: `Finance Overview`,
+        rows: []
+      };
+    }
+    case "activity-dashboard": {
+      return {
+        isCategoryDashboard: true,
+        category: "Activity",
+        summary: `Activity Overview`,
         rows: []
       };
     }
@@ -1552,7 +1637,7 @@ function ReportTable({ data, drillCb }) {
 }
 
 function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack }) {
-  const [catFilter,    setCatFilter]    = useState("All");
+  const [catFilter,    setCatFilter]    = useState("Sales");
   const [periodFilter, setPeriodFilter] = useState("YTD");
   const [customStart,   setCustomStart] = useState("");
   const [customEnd,     setCustomEnd]   = useState("");
@@ -1581,12 +1666,54 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
     localStorage.setItem("rigpro_custom_reports", JSON.stringify(r));
   }
 
+  const [reportOrder, setReportOrder] = useState(() => { try { return JSON.parse(localStorage.getItem("rigpro_report_order")||"[]"); } catch{return [];} });
+  const [draggedId, setDraggedId] = useState(null);
+  const [dropTargetId, setDropTargetId] = useState(null);
+
+  function handleDrop(e, targetId) {
+    e.preventDefault();
+    setDropTargetId(null);
+    if (!draggedId || draggedId === targetId) return;
+    
+    // Check if dropping on a dashboard dropzone
+    if (targetId.startsWith("pin-to-dash-")) {
+      const cat = targetId.split("pin-to-dash-")[1];
+      const storageKey = `rigpro_pinned_reports_${cat.toLowerCase()}`;
+      const pins = JSON.parse(localStorage.getItem(storageKey)||"[]");
+      if (!pins.includes(draggedId)) {
+        pins.push(draggedId);
+        localStorage.setItem(storageKey, JSON.stringify(pins));
+        window.dispatchEvent(new Event(`rigpro_pinned_updated_${cat.toLowerCase()}`));
+      }
+      return;
+    }
+
+    const orderedIds = [...reportOrder];
+    allReports.forEach(r => { if (!orderedIds.includes(r.id)) orderedIds.push(r.id); });
+
+    const sourceIdx = orderedIds.indexOf(draggedId);
+    const targetIdx = orderedIds.indexOf(targetId);
+    if (sourceIdx >= 0 && targetIdx >= 0) {
+      orderedIds.splice(sourceIdx, 1);
+      orderedIds.splice(targetIdx, 0, draggedId);
+      setReportOrder(orderedIds);
+      localStorage.setItem("rigpro_report_order", JSON.stringify(orderedIds));
+    }
+  }
+
   const allReports = [
     ...BUILT_IN_REPORTS,
     ...customReports,
   ];
 
-  const filtered = catFilter==="All" ? allReports : allReports.filter(r=>r.category===catFilter);
+  const filtered = (catFilter==="All" ? allReports : allReports.filter(r=>r.category===catFilter)).sort((a,b) => {
+     const idxA = reportOrder.indexOf(a.id);
+     const idxB = reportOrder.indexOf(b.id);
+     if (idxA === -1 && idxB !== -1) return 1;
+     if (idxB === -1 && idxA !== -1) return -1;
+     if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+     return 0;
+  });
   const filteredJobs = useMemo(() => {
     if (periodFilter === "All Time") return jobs;
     if (periodFilter === "Custom") {
@@ -1691,8 +1818,8 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
           {REPORT_CATEGORIES.map(c=>(
             <button key={c} onClick={()=>{
               setCatFilter(c);
-              if (c === "Sales") setActiveReport(BUILT_IN_REPORTS.find(r=>r.id==="sales-dashboard")||activeReport);
-              if (c === "Pipeline") setActiveReport(BUILT_IN_REPORTS.find(r=>r.id==="pipeline-dashboard")||activeReport);
+              const dashId = c.toLowerCase() + "-dashboard";
+              setActiveReport(BUILT_IN_REPORTS.find(r=>r.id===dashId)||activeReport);
             }} style={{ background:catFilter===c?"#fff":"transparent", color:catFilter===c?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:catFilter===c?700:600 }}>{c}</button>
           ))}
         </div>
@@ -1723,7 +1850,14 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
             const isActive = activeReport?.id===r.id;
             const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===r.id);
             return (
-              <div key={r.id} onClick={()=>setActiveReport(r)} style={{ background:isActive?C.accL:C.sur, border:`1px solid ${isActive?C.accB:C.bdr}`, borderRadius:8, padding:"10px 12px", cursor:"pointer", position:"relative" }}>
+              <div key={r.id} onClick={()=>setActiveReport(r)}
+               draggable
+               onDragStart={(e) => { setDraggedId(r.id); e.dataTransfer.setData("text/plain", r.id); }}
+               onDragOver={(e) => { e.preventDefault(); setDropTargetId(r.id); }}
+               onDragLeave={() => setDropTargetId(null)}
+               onDrop={(e) => handleDrop(e, r.id)}
+               style={{ background:isActive?C.accL:C.sur, border:`1px solid ${isActive?C.accB:C.bdr}`, borderRadius:8, padding:"10px 12px", cursor:"grab", position:"relative", transition:"all .2s", ...(dropTargetId === r.id ? { borderTop: `4px solid ${C.acc}`, transform:"scale(1.02)", zIndex:10 } : {}) }}
+              >
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
                   <div>
                     <div style={{ fontWeight:700, fontSize:13, color:isActive?C.acc:C.txt }}>{r.name}</div>
@@ -1807,10 +1941,33 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                     </div>
                   </div>
                 </div>
+              ) : reportData?.isCategoryDashboard ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
+                   <div style={{ padding: 48, textAlign: "center", border: `1px solid ${C.bdr}`, borderRadius: 8, background: C.sur }}>
+                      <div style={{ fontSize: 24, marginBottom: 8, color: C.blu }}>{reportData.category} Dashboard</div>
+                      <div style={{ fontSize: 13, color: C.txtS }}>Pin reports to this dashboard by dropping them in the zone below.</div>
+                   </div>
+                </div>
               ) : reportData && reportData.rows && reportData.rows.length > 0 ? (
                 <ReportTable data={reportData} drillCb={setDrillRef} />
               ) : (
                 <div style={{ textAlign:"center", padding:"24px", color:C.txtS, fontSize:13 }}>No data available for this report.</div>
+              )}
+
+              {/* Categorical Pinned Dropzone & List */}
+              {(reportData?.isPipelineDashboard || reportData?.isDashboard || reportData?.isCategoryDashboard) && (
+                 <div style={{ marginTop: 24, borderTop: `1px solid ${C.bdr}`, paddingTop: 24 }}>
+                    <div
+                       onDragOver={e => { e.preventDefault(); setDropTargetId(`pin-to-dash-${activeReport.category}`); }}
+                       onDragLeave={() => setDropTargetId(null)}
+                       onDrop={e => handleDrop(e, `pin-to-dash-${activeReport.category}`)}
+                       style={{ background: dropTargetId===`pin-to-dash-${activeReport.category}` ? C.accL : "transparent", border: `2px dashed ${dropTargetId===`pin-to-dash-${activeReport.category}` ? C.acc : C.bdr}`, borderRadius: 8, padding: 16, textAlign: "center", color: dropTargetId===`pin-to-dash-${activeReport.category}` ? C.acc : C.txtS, fontSize: 13, marginBottom: 16, transition: "all .2s", minHeight: 60, display: "flex", alignItems:"center", justifyContent:"center" }}
+                    >
+                       {dropTargetId===`pin-to-dash-${activeReport.category}` ? `Release to pin to ${activeReport.category} Dashboard!` : `Drag a report here to pin to your ${activeReport.category} Dashboard`}
+                    </div>
+                    
+                    <PinnedReportsRenderer category={activeReport.category} jobs={filteredJobs} reqs={filteredReqs} onOpenReport={setActiveReport} />
+                 </div>
               )}
             </Card>
           )}
@@ -2059,6 +2216,67 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
           <button style={mkBtn("ghost")} onClick={onClose}>Cancel</button>
           <button style={mkBtn("primary")} onClick={handleSave}>{isEdit?"Save Changes":"Create Report"}</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── DASHBOARD PINNED REPORTS COMPONENT ──
+function DashboardPinnedReports({ jobs, reqs, onOpenReport }) {
+  const [pinnedIds, setPinnedIds] = useState(() => { try { return JSON.parse(localStorage.getItem("rigpro_pinned_reports")||"[]"); } catch{return [];} });
+  const [customReports, setCustomReports] = useState(() => { try { return JSON.parse(localStorage.getItem("rigpro_custom_reports")||"[]"); } catch{return [];} });
+
+  useEffect(() => {
+    const fn = () => {
+       setPinnedIds(JSON.parse(localStorage.getItem("rigpro_pinned_reports")||"[]"));
+       setCustomReports(JSON.parse(localStorage.getItem("rigpro_custom_reports")||"[]"));
+    };
+    window.addEventListener("rigpro_pinned_updated", fn);
+    return () => window.removeEventListener("rigpro_pinned_updated", fn);
+  }, []);
+
+  if (pinnedIds.length === 0) return null;
+  const allAvailable = [...BUILT_IN_REPORTS, ...customReports];
+  const pinned = pinnedIds.map(id => allAvailable.find(r => r.id === id)).filter(Boolean);
+  if (pinned.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 15 }}>
+      <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM }}>Pinned Reports</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+        {pinned.map(rep => {
+          const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===rep.id);
+          const data = isCustom ? runCustomReport(rep, jobs) : buildReportData(rep.id, jobs, reqs);
+          if (!data) return null;
+          return (
+             <Card key={rep.id} style={{ marginBottom: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                   <div>
+                      <div style={{ fontSize: 15, fontWeight: 700 }}>{rep.name}</div>
+                      <div style={{ fontSize: 12, color: C.txtS }}>{rep.desc}</div>
+                   </div>
+                   <button onClick={() => {
+                        const newPins = pinnedIds.filter(id => id !== rep.id);
+                        setPinnedIds(newPins);
+                        localStorage.setItem("rigpro_pinned_reports", JSON.stringify(newPins));
+                        window.dispatchEvent(new Event("rigpro_pinned_updated"));
+                   }} style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 12 }}>Unpin</button>
+                </div>
+                {data.isPipelineDashboard || data.isDashboard ? (
+                    <div style={{ color:C.txtS, fontSize:12 }}>Full dashboard views cannot be previewed cleanly. <span style={{color:C.blu, cursor:"pointer", textDecoration:"underline"}} onClick={()=>onOpenReport(rep.id)}>Click to open inside Reports Manager</span>.</div>
+                ) : (
+                  <div style={{ overflowX: "auto", position: "relative" }}>
+                     <ReportTable data={{...data, rows: data.rows.slice(0,5)}} />
+                     {data.rows.length > 5 && (
+                       <div onClick={()=>onOpenReport(rep.id)} style={{ padding: "8px 0", textAlign: "center", fontSize: 12, color: C.blu, cursor: "pointer", fontWeight: 600, borderTop: `1px solid ${C.bdr}`, background: C.sur }}>
+                         View {data.rows.length - 5} more rows →
+                       </div>
+                     )}
+                  </div>
+                )}
+             </Card>
+          );
+        })}
       </div>
     </div>
   );
@@ -8433,6 +8651,9 @@ export default function App() {
           Sec={Sec}
         />
         <DashboardMetrics jobs={jobs} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
+        
+        <DashboardPinnedReports jobs={jobs} reqs={reqs} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
+
         {/* ── SALESMAN TRACKING CHARTS ─────────────────────────────────── */}
         <SalesmanCharts jobs={jobs} reqs={reqs}/>
 
