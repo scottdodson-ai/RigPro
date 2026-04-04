@@ -885,6 +885,7 @@ const BUILT_IN_REPORTS = [
   { id:"pipeline-summary", name:"Pipeline Summary",         category:"Pipeline",   desc:"Open jobs by status with total value",            scope:"org" },
   { id:"win-loss",         name:"Win / Loss Analysis",      category:"Pipeline",   desc:"Win rate by estimator, customer, and quote type",   scope:"org" },
   { id:"quote-aging",      name:"Quote Aging",              category:"Pipeline",   desc:"Open jobs ranked by days since created",          scope:"org" },
+  { id:"open-estimates",   name:"Open Estimates",           category:"Pipeline",   desc:"Open quotes formatted as an aging summary",       scope:"org" },
   { id:"rfq-response",     name:"RFQ Response Time",        category:"Operations", desc:"Days from RFQ received to estimate submitted",      scope:"org" },
   { id:"job-schedule",     name:"Job Schedule",             category:"Operations", desc:"Upcoming and in-progress jobs with dates",          scope:"org" },
   { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Sales, cost, and gross margin per quote",         scope:"org" },
@@ -1058,6 +1059,26 @@ function buildReportData(reportId, jobs, reqs) {
         rows:data.map(({q,days})=>[q.job_num,q.client,q.status,days+" days",fmt2(q.total||0)]),
         rawRefs:data.map(({q})=>({type:"quote",quote:q})),
         summary:`${openQ.length} open jobs · Oldest: ${data[0]?data[0].days+" days":"—"}` };
+    }
+    case "open-estimates": {
+      const now = new Date();
+      const openQ = jobs.filter(q => !["Won","Lost","Dead"].includes(q.status));
+      const data = openQ.map(q => ({ q, days: Math.floor((now - new Date(q.start_date || q.date || now)) / 86400000) }));
+      data.sort((a, b) => (a.q.status || "").localeCompare(b.q.status || ""));
+      return { 
+        cols: ["Quote", "Status", "New", "8-14 Days", "15-30 Days", "Over 30 Days"], 
+        clickHint: "Click a quote to open it",
+        rows: data.map(({q, days}) => [
+          `${q.job_num||q.qn} - ${q.client}`, 
+          q.status, 
+          days <= 7 ? fmt2(q.total||0) : "—", 
+          days >= 8 && days <= 14 ? fmt2(q.total||0) : "—",
+          days >= 15 && days <= 30 ? fmt2(q.total||0) : "—",
+          days > 30 ? fmt2(q.total||0) : "—"
+        ]),
+        rawRefs: data.map(({q}) => ({type:"quote", quote:q})),
+        summary: `${openQ.length} open estimates` 
+      };
     }
     case "rfq-response": {
       const data=reqs.filter(r=>r.date).map(r=>{ const linked=jobs.find(q=>q.fromReqId===r.id); const days=linked?Math.floor((new Date(linked.date)-new Date(r.date))/86400000):null; return {r,linked,days}; }).sort((a,b)=>{ if(a.days===null)return 1; if(b.days===null)return -1; return a.days-b.days; });
