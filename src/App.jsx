@@ -888,6 +888,7 @@ const BUILT_IN_REPORTS = [
   { id:"open-estimates",   name:"Open Estimates",           category:"Pipeline",   desc:"Open quotes formatted as an aging summary",       scope:"org" },
   { id:"rfq-response",     name:"RFQ Response Time",        category:"Operations", desc:"Days from RFQ received to estimate submitted",      scope:"org" },
   { id:"job-schedule",     name:"Job Schedule",             category:"Operations", desc:"Upcoming and in-progress jobs with dates",          scope:"org" },
+  { id:"lost-estimates",   name:"Lost Estimates",           category:"Operations", desc:"All lost quotes sorted by customer",              scope:"org" },
   { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Sales, cost, and gross margin per quote",         scope:"org" },
   { id:"estimator-activity",name:"Estimator Activity",      category:"Activity",   desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
 ];
@@ -1078,6 +1079,23 @@ function buildReportData(reportId, jobs, reqs) {
         ]),
         rawRefs: data.map(({q}) => ({type:"quote", quote:q})),
         summary: `${openQ.length} open estimates` 
+      };
+    }
+    case "lost-estimates": {
+      const lostQ = jobs.filter(q => q.status === "Lost");
+      lostQ.sort((a,b) => (a.client || "").localeCompare(b.client || ""));
+      return { 
+        cols: ["Customer", "Quote #", "Description", "Value", "Notes"], 
+        clickHint: "Click a quote to open it",
+        rows: lostQ.map(q => [
+          q.client, 
+          q.job_num || q.qn,
+          q.job_description || q.desc,
+          fmt2(q.total || 0),
+          q.notes || "—"
+        ]),
+        rawRefs: lostQ.map(q => ({type:"quote", quote:q})),
+        summary: `${lostQ.length} lost estimates` 
       };
     }
     case "rfq-response": {
@@ -1578,17 +1596,26 @@ function SalesLineChart({ data }) {
 }
 
 function ReportTable({ data, drillCb }) {
+  const [filterStr, setFilterStr] = useState("");
   if (!data || !data.rows || data.rows.length === 0) {
     return <div style={{ textAlign:"center", padding:"24px", color:C.txtS, fontSize:13 }}>No data available.</div>;
   }
+  
+  const combined = data.rows.map((row, i) => ({ row, rawRef: data.rawRefs?.[i] }));
+  const filteredCombined = filterStr.trim() !== ""
+    ? combined.filter(c => c.row.some(cell => String(cell).toLowerCase().includes(filterStr.toLowerCase())))
+    : combined;
+  
+  const filteredRows = filteredCombined.map(c => c.row);
+
   const totalsRow = data.cols.map((_, j) => {
     if (j === 0) return "Totals";
     let sum = 0;
     let isCurrency = false;
     let isNumber = true;
     let hasData = false;
-    for (let i = 0; i < data.rows.length; i++) {
-      const valStr = String(data.rows[i][j] || "").trim();
+    for (let i = 0; i < filteredRows.length; i++) {
+      const valStr = String(filteredRows[i][j] || "").trim();
       if (valStr === "—" || valStr === "-" || valStr === "" || valStr.includes("NaN")) continue;
       hasData = true;
       if (valStr.includes("$")) isCurrency = true;
@@ -1601,10 +1628,11 @@ function ReportTable({ data, drillCb }) {
     if (!hasData || !isNumber) return "";
     return isCurrency ? "$" + Math.round(sum).toLocaleString() : sum.toLocaleString();
   });
+
   const colAlignments = data.cols.map((_, j) => {
     let isNum = false;
-    for (let i = 0; i < data.rows.length; i++) {
-      const valStr = String(data.rows[i][j] || "").trim();
+    for (let i = 0; i < filteredRows.length; i++) {
+      const valStr = String(filteredRows[i][j] || "").trim();
       if (valStr === "—" || valStr === "-" || valStr === "") continue;
       const stripped = valStr.replace(/[\$,%\s]/g, "").replace(/days/i, "");
       if (!isNaN(Number(stripped)) && stripped !== "") {
@@ -1615,8 +1643,18 @@ function ReportTable({ data, drillCb }) {
     }
     return isNum ? "center" : "left";
   });
+
   return (
     <div style={{ overflowX:"auto" }}>
+      <div style={{ marginBottom: 10, display: "flex", justifyContent: "flex-end" }}>
+        <input 
+          type="text" 
+          value={filterStr} 
+          onChange={e => setFilterStr(e.target.value)} 
+          placeholder="Filter report..." 
+          style={{ ...inp, width: 220, padding: "5px 10px" }} 
+        />
+      </div>
       <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
         <thead>
           <tr style={{ background:C.bg }}>
@@ -1624,8 +1662,9 @@ function ReportTable({ data, drillCb }) {
           </tr>
         </thead>
         <tbody>
-          {data.rows.map((row,i)=>{
-            const rawRef = data.rawRefs?.[i];
+          {filteredCombined.map((c,i)=>{
+            const row = c.row;
+            const rawRef = c.rawRef;
             return (
               <tr key={i}
                 style={{ borderBottom:`1px solid ${C.bdr}`, cursor:rawRef?"pointer":"default" }}
@@ -2079,25 +2118,40 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
   }
 
   function handleClose() {
-    if (window.confirm("Save as Original Report?")) {
-      const newName = window.prompt("Report Name:", name || "New Custom Report");
-      if (!newName) return;
-      const newDesc = window.prompt("Brief Description:", desc || "");
-      
-      const report = {
-        id: "custom-"+Date.now(),
-        name: newName.trim(),
-        category,
-        desc: newDesc?.trim() || `Custom report: ${newName.trim()}`,
-        scope: canSetOrgScope ? scope : "user",
-        filters,
-        columns,
-        sortBy,
-        sortDir,
-        createdBy: username||"user",
-        createdAt: new Date().toISOString().slice(0,10),
-      };
-      onSave(report);
+    const origFilters = editing?.filters || { status:"", estimator:"", customer:"", dateFrom:"", dateTo:"", qtype:"" };
+    const origCols = editing?.columns || ["qn","client","status","total","date","salesAssoc"];
+    const isAltered = name !== (editing?.name || "") ||
+                      category !== (editing?.category || "Sales") ||
+                      desc !== (editing?.desc || "") ||
+                      scope !== (editing?.scope || "org") ||
+                      JSON.stringify(filters) !== JSON.stringify(origFilters) ||
+                      JSON.stringify(columns) !== JSON.stringify(origCols) ||
+                      sortBy !== (editing?.sortBy || "date") ||
+                      sortDir !== (editing?.sortDir || "desc");
+
+    if (isAltered) {
+      if (window.confirm("Save as New Report?")) {
+        const newName = window.prompt("Report Name:", name || "New Custom Report");
+        if (!newName) return;
+        const newDesc = window.prompt("Brief Description:", desc || "");
+        
+        const report = {
+          id: "custom-"+Date.now(),
+          name: newName.trim(),
+          category,
+          desc: newDesc?.trim() || `Custom report: ${newName.trim()}`,
+          scope: canSetOrgScope ? scope : "user",
+          filters,
+          columns,
+          sortBy,
+          sortDir,
+          createdBy: username||"user",
+          createdAt: new Date().toISOString().slice(0,10),
+        };
+        onSave(report);
+      } else {
+        onClose();
+      }
     } else {
       onClose();
     }
