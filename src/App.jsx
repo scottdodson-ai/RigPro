@@ -891,9 +891,10 @@ const BUILT_IN_REPORTS = [
   { id:"lost-estimates",   name:"Lost Estimates",           category:"Operations", desc:"All lost quotes sorted by customer",              scope:"org" },
   { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Sales, cost, and gross margin per quote",         scope:"org" },
   { id:"estimator-activity",name:"Estimator Activity",      category:"Activity",   desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
+  { id:"neighborhood-report", name:"Neighborhood Report",   category:"Customers",  desc:"Find customers by zipcode or proximity",            scope:"org" },
 ];
 
-const REPORT_CATEGORIES = ["Sales","Pipeline","Operations","Finance","Activity"];
+const REPORT_CATEGORIES = ["Sales","Pipeline","Operations","Finance","Activity","Customers"];
 
 // rowType: "quote" | "req" | "group-customer" | "group-estimator" | "group-month" | "group-status" | "group-type"
 function buildReportData(reportId, jobs, reqs) {
@@ -1129,6 +1130,9 @@ function buildReportData(reportId, jobs, reqs) {
         rows:data.map(r=>[r.estimator,r.created,r.submitted,r.won,r.lost,fmt2(r.revWon)]),
         rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,jobs:r.qs})),
         summary:`${data.length} estimators` };
+    }
+    case "neighborhood-report": {
+      return { isNeighborhoodReport: true, summary: "Customer distance tools" };
     }
     default: {
       if(!reportId) return { cols:[], rows:[], rawRefs:[], summary:"" };
@@ -1688,7 +1692,121 @@ function ReportTable({ data, drillCb }) {
   );
 }
 
-function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack }) {
+function NeighborhoodReport({ custData }) {
+  const [zip, setZip] = useState("");
+  const [cust, setCust] = useState("");
+  const [locIdx, setLocIdx] = useState(0);
+
+  const customersList = Object.keys(custData||{}).map(name => ({name, ...custData[name]}));
+  const matchedCust = customersList.find(c => c.name.toLowerCase() === cust.trim().toLowerCase());
+
+  const filtered = useMemo(() => {
+    if (matchedCust) {
+      let targetAddr = matchedCust.billingAddr;
+      if (matchedCust.locations && matchedCust.locations.length > 0) {
+         const loc = matchedCust.locations[locIdx] || matchedCust.locations[0];
+         targetAddr = loc.address;
+      }
+      
+      if (!targetAddr) return [];
+      const zipMatch = targetAddr.match(/\b\d{5}\b/);
+      const targetZip = zipMatch ? zipMatch[0] : null;
+      if (!targetZip) return [];
+      
+      return customersList.filter(c => {
+         let zips = [];
+         if (c.billingAddr) {
+            const z = c.billingAddr.match(/\b\d{5}\b/)?.[0];
+            if (z) zips.push(z);
+         }
+         if (c.locations) {
+            c.locations.forEach(l => {
+              const z = l.address?.match(/\b\d{5}\b/)?.[0];
+              if (z && !zips.includes(z)) zips.push(z);
+            });
+         }
+         if(zips.length === 0) return false;
+         
+         return zips.some(z => Math.abs(parseInt(z) - parseInt(targetZip)) <= 10);
+      });
+    }
+    if (zip.trim()) {
+      return customersList.filter(c => {
+         let zips = [];
+         if (c.billingAddr) {
+            const z = c.billingAddr.match(/\b\d{5}\b/)?.[0];
+            if (z) zips.push(z);
+         }
+         if (c.locations) {
+            c.locations.forEach(l => {
+              const z = l.address?.match(/\b\d{5}\b/)?.[0];
+              if (z && !zips.includes(z)) zips.push(z);
+            });
+         }
+         return zips.includes(zip.trim());
+      });
+    }
+    return [];
+  }, [zip, matchedCust, locIdx, customersList]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
+      <div>
+        <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM, textAlign: "center" }}>Neighborhood Customers</h3>
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 16 }}>
+          <div style={{ display: "flex", gap: 15, marginBottom: 20, flexWrap: "wrap", alignItems:"flex-start" }}>
+            <div style={{ flex: 1, minWidth:200 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: C.txtS, display: "block", marginBottom: 4 }}>Zip Code:</label>
+              <input style={{ ...inp, width: "100%" }} placeholder="e.g. 44312" value={zip} onChange={e => {setZip(e.target.value); setCust(""); setLocIdx(0);}} />
+            </div>
+            <div style={{ paddingBottom:10, fontSize:13, color:C.txtM, fontWeight:600, alignSelf:"flex-end" }}>OR</div>
+            <div style={{ flex: 1, minWidth:200 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: C.txtS, display: "block", marginBottom: 4 }}>Customer Name (within 10 miles):</label>
+              <AutoInput val={cust} on={v => {setCust(v); setZip(""); setLocIdx(0);}} list={customersList.map(c=>c.name)} ph="e.g. Apex Industrial LLC" />
+              {matchedCust && matchedCust.locations && matchedCust.locations.length > 1 && (
+                <div style={{ marginTop: 8 }}>
+                   <label style={{ fontSize: 11, fontWeight: 600, color: C.txtS, display: "block", marginBottom: 4 }}>Select Location:</label>
+                   <select value={locIdx} onChange={e=>setLocIdx(Number(e.target.value))} style={{ ...sel, width: "100%", padding:"6px 12px", fontSize:12 }}>
+                     {matchedCust.locations.map((loc, i) => (
+                        <option key={i} value={i}>{loc.name} - {loc.address}</option>
+                     ))}
+                   </select>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {filtered.length > 0 ? (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: C.bg, textAlign: "left", borderBottom:`1px solid ${C.bdr}` }}>
+                    <th style={{ ...thS, padding: "8px 12px" }}>Customer</th>
+                    <th style={{ ...thS, padding: "8px 12px" }}>Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c, i) => (
+                    <tr key={i} style={{ borderBottom: `1px solid ${C.bdr}` }}>
+                      <td style={{ ...tdS, padding: "8px 12px", fontWeight: 600 }}>{c.name}</td>
+                      <td style={{ ...tdS, padding: "8px 12px" }}>{c.billingAddr || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ padding: 20, textAlign: "center", color: C.txtS, fontSize: 13 }}>
+              {zip || cust ? "No customers found matching this criteria." : "Enter a zip code or customer name above to find matches."}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack, custData }) {
   const [catFilter,    setCatFilter]    = useState("Sales");
   const [periodFilter, setPeriodFilter] = useState("YTD");
   const [customStart,   setCustomStart] = useState("");
@@ -1961,7 +2079,9 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                 </div>
               )}
               {/* Table or Dashboard */}
-              {reportData?.isPipelineDashboard ? (
+              {reportData?.isNeighborhoodReport ? (
+                <NeighborhoodReport custData={custData} />
+              ) : reportData?.isPipelineDashboard ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
                   <div>
                     <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM, textAlign: "center" }}>Opportunity Flow</h3>
@@ -8875,6 +8995,7 @@ export default function App() {
         onOpenJobFolder={r=>setShowJFM(r)}
         onClearInitialReport={()=>setTimeout(()=>setDashReportId(null),100)}
         onBack={()=>{ setDashReportId(null); setView("dash"); }}
+        custData={custData}
       />
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
