@@ -88,7 +88,8 @@ const db = mysql.createPool({
   database: process.env.DB_NAME || 'rigpro',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  multipleStatements: true
 });
 
 const USERNAME_REGEX = /^[a-z]{1,16}$/;
@@ -592,15 +593,7 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
       const initSqlPath = path.join(__dirname, '..', 'db', 'init.sql');
       if (fs.existsSync(initSqlPath)) {
         const schema = fs.readFileSync(initSqlPath, 'utf8');
-        // Simple heuristic to remove empty statements so we avoid "Query was empty" errors
-        const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
-        for (const stmt of statements) {
-          try {
-            await connection.query(stmt);
-          } catch (stmtErr) {
-            // Ignore errors like ER_DUP_ENTRY so remainder of DB structures still execute
-          }
-        }
+        await connection.query(schema);
         console.log('[INIT] Database schema synchronized');
       }
     } catch (schemaErr) {
@@ -876,33 +869,39 @@ app.post('/api/admin/backups/delete', authenticateToken, authenticateAdmin, (req
 });
 
 // RESTORE DATABASE (Admin Only) - Takes a .sql file as raw text
-app.post('/api/admin/restore', authenticateToken, authenticateAdmin, async (req, res) => {
+app.post('/api/admin/restore', authenticateToken, authenticateAdmin, (req, res) => {
   const sql = req.body;
   if (!sql || typeof sql !== 'string') return res.status(400).json({ error: 'No SQL content provided' });
 
-  console.log('[RESTORE] Starting native database restoration...');
+  const host = process.env.DB_HOST || 'localhost';
+  const user = process.env.DB_USER || 'root';
+  const password = process.env.DB_PASSWORD || 'password123';
+  const database = process.env.DB_NAME || 'rigpro';
+
+  const tempPath = path.join(BACKUPS_DIR, `temp_restore_${Date.now()}.sql`);
   
   try {
-    // Ensure the connection pool allows multiple statements if it doesn't already
-    const restorePool = mysql.createPool({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || 'password123',
-      database: process.env.DB_NAME || 'rigpro',
-      multipleStatements: true
+    fs.writeFileSync(tempPath, sql);
+    console.log('[RESTORE] Using mariadb CLI for restoration...');
+
+    const restoreCmd = `mariadb --skip-ssl -h ${host} -u ${user} ${database} < "${tempPath}"`;
+    const envWithPass = { ...process.env, MYSQL_PWD: password };
+
+    exec(restoreCmd, { env: envWithPass }, (error, stdout, stderr) => {
+      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+
+      if (error) {
+        console.error('[RESTORE] CLI Error:', error, stderr);
+        return res.status(500).json({ error: 'Restoration failed', details: stderr || error.message });
+      }
+      
+      console.log('[RESTORE] Native restoration completed successfully');
+      res.json({ message: 'Database restored successfully' });
     });
-
-    const statements = sql.split(';').map(s => s.trim()).filter(s => s.length > 0);
-    for (const stmt of statements) {
-      await restorePool.query(stmt);
-    }
-    await restorePool.end();
-
-    console.log(`[RESTORE] Native restoration completed successfully.`);
-    res.json({ message: 'Database restored successfully' });
   } catch (err) {
-    console.error('[RESTORE] Native mysql2 fail:', err);
-    res.status(500).json({ error: 'Data restoration error: ' + err.message });
+    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+    console.error('[RESTORE] Post Error:', err);
+    res.status(500).json({ error: 'Failed to initiate restoration', details: err.message });
   }
 });
 
@@ -1178,6 +1177,17 @@ const PORT = process.env.PORT || 3001;
 // Ensure admin account exists and has known password (dev/seed behavior).
 const initAdmin = async () => {
   try {
+    const dbUser = process.env.DB_USER || 'root';
+    const dbPass = process.env.DB_PASSWORD || 'password123';
+    
+    // Explicitly update current user to legacy auth plugin so mariadb CLI can connect
+    try {
+      await db.query(`ALTER USER CURRENT_USER() IDENTIFIED WITH mysql_native_password BY ?`, [dbPass]);
+    } catch (authErr) {
+      // Might fail on some managed DBs or older versions; log and continue
+      console.warn('[INIT] Could not set legacy auth plugin, CLI restore might fail:', authErr.message);
+    }
+
     await ensureUserProfileColumns();
     await ensureCompanyInfoTable();
     const hash = await bcrypt.hash('pass', 10);
@@ -1201,30 +1211,24 @@ app.post('/api/admin/restore-local', authenticateToken, authenticateAdmin, async
   const safePath = path.join(BACKUPS_DIR, path.basename(filename));
   if (!fs.existsSync(safePath)) return res.status(404).json({ error: 'Backup file not found' });
 
-  console.log(`[RESTORE] Restoring native local file: ${filename}`);
+  const host = process.env.DB_HOST || 'localhost';
+  const user = process.env.DB_USER || 'root';
+  const password = process.env.DB_PASSWORD || 'password123';
+  const database = process.env.DB_NAME || 'rigpro';
 
-  try {
-    const restorePool = mysql.createPool({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || 'password123',
-      database: process.env.DB_NAME || 'rigpro',
-      multipleStatements: true
-    });
+  console.log(`[RESTORE] CLI local restore: ${filename}`);
 
-    const script = fs.readFileSync(safePath, 'utf8');
-    const statements = script.split(';').map(s => s.trim()).filter(s => s.length > 0);
-    for (const stmt of statements) {
-      await restorePool.query(stmt);
+  const restoreCmd = `mariadb --skip-ssl -h ${host} -u ${user} ${database} < "${safePath}"`;
+  const envWithPass = { ...process.env, MYSQL_PWD: password };
+
+  exec(restoreCmd, { env: envWithPass }, (err, stdout, stderr) => {
+    if (err) {
+      console.error('[RESTORE-LOCAL] CLI Error:', err, stderr);
+      return res.status(500).json({ error: 'Restoration failed', details: stderr || err.message });
     }
-    await restorePool.end();
-
-    console.log('[RESTORE] Database native restore successfully');
+    console.log('[RESTORE-LOCAL] Native CLI restore completed successfully');
     res.json({ message: 'Database restored successfully' });
-  } catch (error) {
-    console.error('[RESTORE] Native Error:', error);
-    res.status(500).json({ error: 'Data restoration error: ' + error.message });
-  }
+  });
 });
 
 app.listen(PORT, () => {

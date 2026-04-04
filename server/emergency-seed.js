@@ -18,14 +18,7 @@ async function run() {
   try {
     const initSqlPath = path.join(__dirname, '..', 'db', 'init.sql');
     const schema = fs.readFileSync(initSqlPath, 'utf8');
-    const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
-    for (let stmt of statements) {
-      try {
-        await pool.query(stmt);
-      } catch (e) {
-        console.error('Failed stmt:', stmt.substring(0, 50), e.message);
-      }
-    }
+    await pool.query(schema);
     console.log('Successfully recreated tables from init.sql!');
   } catch(e) {
     console.error('Seed script failed:', e.message);
