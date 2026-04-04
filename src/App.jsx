@@ -891,6 +891,10 @@ const BUILT_IN_REPORTS = [
   { id:"lost-estimates",   name:"Lost Estimates",           category:"Historical", desc:"All lost quotes sorted by customer",              scope:"org" },
   { id:"average-estimate-cycle",    name:"Average Estimate Cycle",  category:"Historical", desc:"Avg days an RFQ takes to become a job via stage progressions",      scope:"org" },
   { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Sales, cost, and gross margin per quote",         scope:"org" },
+  { id:"labor-hours",      name:"Labor Hours Quoted",       category:"Finance",    desc:"Labor breakdown and average bill rates",          scope:"org" },
+  { id:"travel-quoted",    name:"Travel Quoted",            category:"Finance",    desc:"Quoted travel expenses including markup",         scope:"org" },
+  { id:"equipment-quoted", name:"Equipment Quoted",         category:"Finance",    desc:"Quoted equipment and shipping/hauling charges",   scope:"org" },
+  { id:"addl-costs",       name:"Subcontractors & Materials",category:"Finance",   desc:"Subcontractors, materials, and permits",          scope:"org" },
   { id:"estimator-activity",name:"Estimator Activity",      category:"Activity",   desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
   { id:"neighborhood-report", name:"Neighborhood Report",   category:"Customers",  desc:"Find customers by zipcode or proximity",            scope:"org" },
   { id:"prospect-report",     name:"Prospect Report",       category:"Customers",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
@@ -1123,6 +1127,73 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
         rows:data.map(({q,rev,cost,margin,pct})=>[q.job_num,q.client,fmt2(rev),fmt2(cost),fmt2(margin),pct+"%"]),
         rawRefs:data.map(({q,rev,cost,margin,pct})=>({type:"cost-detail",quote:q,rev,cost,margin,pct})),
         summary:`${data.length} won jobs · Avg margin: ${avgM}% · Total sales: ${fmt2(totRev)}` };
+    }
+    case "labor-hours": {
+      const m = {};
+      jobs.forEach(q => {
+         (q.laborRows||[]).forEach(r => {
+            if (!r.role) return;
+            if (!m[r.role]) m[r.role] = { role: r.role, regHrs: 0, otHrs: 0, regDols: 0, otDols: 0 };
+            const w = Number(r.workers)||0; 
+            const d = Number(r.days)||0;
+            const reg = Number(r.regHrs)||0;
+            const ot = Number(r.otHrs)||0;
+            const totalRegHrs = w * d * reg;
+            const totalOtHrs = w * d * ot;
+            const rR = Number(r.overReg)||0;
+            const oR = Number(r.overOT)||0;
+            m[r.role].regHrs += totalRegHrs;
+            m[r.role].otHrs += totalOtHrs;
+            m[r.role].regDols += totalRegHrs * rR;
+            m[r.role].otDols += totalOtHrs * oR;
+         });
+      });
+      const data = Object.values(m).sort((a,b) => b.regHrs - a.regHrs);
+      const rows = data.map(d => [
+         d.role, d.regHrs, d.otHrs,
+         d.regHrs > 0 ? "$" + (d.regDols / d.regHrs).toFixed(2) + "/hr" : "—",
+         d.otHrs > 0 ? "$" + (d.otDols / d.otHrs).toFixed(2) + "/hr" : "—",
+         fmt2(d.regDols + d.otDols)
+      ]);
+      return { cols: ["Labor Role", "Regular Hours", "OT Hours", "Avg Reg Rate", "Avg OT Rate", "Total"],
+        clickHint: "Labor hours aggregated by active estimator assignments",
+        rows: rows, rawRefs:[], summary: "Total Quoted Labor Hours by Role" };
+    }
+    case "travel-quoted": {
+      const data = jobs.map(q => {
+         const t = Number(q.travel) || 0;
+         return { q, t };
+      }).filter(x => x.t > 0).sort((a,b)=>b.t-a.t);
+      
+      const rows = data.map(d => [d.q.qn, d.q.client, fmt2(d.t)]);
+      return { cols: ["Quote #", "Customer", "Travel (inc Markup)"],
+        clickHint: "Quotes containing Travel",
+        rows: rows, rawRefs:data.map(d=>({type:"quote",quote:d.q})), summary: "Travel Estimates" };
+    }
+    case "equipment-quoted": {
+      const data = jobs.map(q => {
+         const e = Number(q.equip) || 0;
+         const h = Number(q.hauling) || 0;
+         return { q, e, h, total: e+h };
+      }).filter(x => x.total > 0).sort((a,b)=>b.total-a.total);
+      
+      const rows = data.map(d => [d.q.qn, d.q.client, fmt2(d.e), fmt2(d.h), fmt2(d.total)]);
+      return { cols: ["Quote #", "Customer", "Equipment", "Shipping/Hauling", "Subtotal"],
+        clickHint: "Quotes containing Equipment or Shipping",
+        rows: rows, rawRefs:data.map(d=>({type:"quote",quote:d.q})), summary: "Equipment & Shipping Estimates" };
+    }
+    case "addl-costs": {
+      const data = jobs.map(q => {
+         const subs = q.subs ?? (q.subRows||[]).reduce((s,r) => s+Number(r.cost)*(1+Number(r.markup||0)), 0);
+         const mats = q.mats ?? (q.matRows||[]).reduce((s,r) => s+Number(r.cost)*(1+Number(r.markup||0.15)), 0);
+         const permits = q.permits ?? (q.permitRows||[]).reduce((s,r) => s+Number(r.cost)*(1+Number(r.markup||0)), 0);
+         return { q, subs, mats, permits, total: subs+mats+permits };
+      }).filter(x => x.total > 0).sort((a,b)=>b.total-a.total);
+      
+      const rows = data.map(d => [d.q.qn, d.q.client, fmt2(d.subs), fmt2(d.mats), fmt2(d.permits), fmt2(d.total)]);
+      return { cols: ["Quote #", "Customer", "Subcontractors", "Materials & Other", "Permits", "Subtotal"],
+        clickHint: "Quotes containing Subs, Materials, or Permits",
+        rows: rows, rawRefs:data.map(d=>({type:"quote",quote:d.q})), summary: "Additional Job Costs" };
     }
     case "estimator-activity": {
       const m={};
