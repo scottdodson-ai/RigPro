@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS quotes (
     start_date DATE,
     comp_date DATE,
     is_locked BOOLEAN DEFAULT false,
+    quote_data LONGTEXT,
     notes TEXT
 );
 

@@ -1231,6 +1231,97 @@ app.post('/api/admin/restore-local', authenticateToken, authenticateAdmin, async
   });
 });
 
+// SAVE QUOTE ENDPOINT
+app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const quote = req.body;
+
+  if (!quote || !quote.qn) {
+    return res.status(400).json({ error: 'Invalid quote data' });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    const safeId = Number(id);
+    let targetId = null;
+
+    // Only trust route id if it fits INT range used by quotes.id
+    if (Number.isInteger(safeId) && safeId > 0 && safeId <= 2147483647) {
+      const [existingById] = await connection.query('SELECT id FROM quotes WHERE id = ?', [safeId]);
+      if (existingById.length > 0) targetId = existingById[0].id;
+    }
+
+    // Fallback: resolve by quote number so client-side timestamp ids can still update correctly
+    if (!targetId && quote.qn) {
+      const [existingByQn] = await connection.query(
+        'SELECT id FROM quotes WHERE quote_number = ? ORDER BY id DESC LIMIT 1',
+        [quote.qn]
+      );
+      if (existingByQn.length > 0) targetId = existingByQn[0].id;
+    }
+
+    let resolvedJobNum = (quote.jobNum || quote.job_num || '').trim();
+    if (!resolvedJobNum && !['Dead', 'Lost'].includes(quote.status || '')) {
+      const year = String(new Date(quote.date || Date.now()).getFullYear());
+      const [seqRows] = await connection.query(
+        `SELECT MAX(CAST(SUBSTRING_INDEX(job_num, '-', -1) AS UNSIGNED)) AS max_seq
+           FROM quotes
+          WHERE job_num REGEXP ?`,
+        [`^J-${year}-[0-9]{3,}$`]
+      );
+      const nextSeq = Number(seqRows?.[0]?.max_seq || 0) + 1;
+      resolvedJobNum = `J-${year}-${String(nextSeq).padStart(3, '0')}`;
+      quote.job_num = resolvedJobNum;
+      quote.jobNum = resolvedJobNum;
+    }
+
+    const rowValues = [
+      quote.qn || '',
+      quote.client || '',
+      quote.jobSite || '',
+      quote.desc || '',
+      quote.date || null,
+      quote.status || 'Draft',
+      quote.qtype || '',
+      quote.labor || 0,
+      quote.equip || 0,
+      quote.hauling || 0,
+      quote.travel || 0,
+      quote.mats || 0,
+      quote.total || 0,
+      quote.markup || 0,
+      quote.salesAssoc || '',
+      resolvedJobNum,
+      quote.startDate || null,
+      quote.compDate || null,
+      quote.locked ? 1 : 0,
+      quote.notes || '',
+      JSON.stringify(quote)
+    ];
+
+    let savedId = targetId;
+    if (targetId) {
+      await connection.query(
+        'UPDATE quotes SET quote_number=?, customer_name=?, job_site=?, description=?, date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=? WHERE id=?',
+        [...rowValues, targetId]
+      );
+    } else {
+      const [insertResult] = await connection.query(
+        'INSERT INTO quotes (quote_number, customer_name, job_site, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        rowValues
+      );
+      savedId = insertResult.insertId;
+    }
+
+    connection.release();
+    res.json({ success: true, id: savedId });
+  } catch (error) {
+    connection.release();
+    console.error('Error saving quote:', error);
+    res.status(500).json({ error: 'Failed to save quote', details: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   initAdmin();

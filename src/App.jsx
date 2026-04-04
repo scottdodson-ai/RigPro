@@ -320,6 +320,18 @@ const nextQN = () => "RIG-" + new Date().getFullYear() + "-" + String(Math.floor
 const nextRN = () => "REQ-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random()*900+100));
 const today  = () => new Date().toISOString().slice(0,10);
 
+function nextJobNumber(quotes, dateValue) {
+  const year = String(new Date(dateValue || Date.now()).getFullYear());
+  const maxSeq = (quotes || []).reduce((mx, q) => {
+    const raw = String(q?.job_num || q?.jobNum || q?.job_number || "").trim();
+    const m = raw.match(/^J-(\d{4})-(\d{3,})$/);
+    if (!m || m[1] !== year) return mx;
+    const seq = Number(m[2]);
+    return Number.isFinite(seq) ? Math.max(mx, seq) : mx;
+  }, 0);
+  return `J-${year}-${String(maxSeq + 1).padStart(3, "0")}`;
+}
+
 function defLaborRows(client, customerRates, baseLabor) {
   const cr = customerRates[client];
   const _baseLabor = baseLabor || DEFAULT_LABOR;
@@ -6331,6 +6343,7 @@ function DatabaseBrowser({ token }) {
   const [selectedTable, setSelectedTable] = useState("users");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [tableSearch, setTableSearch] = useState("");
 
   const tables = ['users', 'estimators', 'admin_tasks', 'jobs', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
 
@@ -6344,6 +6357,16 @@ function DatabaseBrowser({ token }) {
   }, [selectedTable, token]);
 
   const headers = data.length > 0 ? Object.keys(data[0]) : [];
+  const searchTerm = tableSearch.trim().toLowerCase();
+  const filteredData = !searchTerm
+    ? data
+    : data.filter((row) =>
+        headers.some((h) => {
+          const fieldNameMatch = String(h || "").toLowerCase().includes(searchTerm);
+          const fieldValueMatch = String(row[h] ?? "").toLowerCase().includes(searchTerm);
+          return fieldNameMatch || fieldValueMatch;
+        })
+      );
 
   return (
     <div style={{ marginTop: 40, borderTop: `1px solid ${C.bdr}`, paddingTop: 30 }}>
@@ -6367,7 +6390,20 @@ function DatabaseBrowser({ token }) {
             <Card style={{ padding:16, margin:0, border:`1.5px solid ${C.accB}`, borderRadius:10 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                 <div style={{ fontWeight:800, fontSize:15, color:C.acc }}>Table: {selectedTable}</div>
-                {loading && <div style={{ fontSize:11, color:C.acc, fontWeight:700 }}>⏳ Loading records...</div>}
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <input
+                    value={tableSearch}
+                    onChange={(e)=>setTableSearch(e.target.value)}
+                    placeholder="Search this table..."
+                    style={{ ...inp, width:220, fontSize:12, padding:"6px 10px" }}
+                  />
+                  {!loading && (
+                    <div style={{ fontSize:11, color:C.txtS, fontWeight:700 }}>
+                      {filteredData.length}/{data.length} rows
+                    </div>
+                  )}
+                  {loading && <div style={{ fontSize:11, color:C.acc, fontWeight:700 }}>⏳ Loading records...</div>}
+                </div>
               </div>
               <div style={{ overflowX:"auto", borderRadius:6, border:`1px solid ${C.bdr}`, background:C.sur }}>
                 <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
@@ -6377,7 +6413,7 @@ function DatabaseBrowser({ token }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.length > 0 ? data.map((row, i) => (
+                    {filteredData.length > 0 ? filteredData.map((row, i) => (
                       <tr key={i} style={{ borderBottom:`1px solid ${C.bdr}`, background:i%2===0?"transparent":"#fbfbfb" }}>
                         {headers.map(h => (
                           <td key={h} style={{ ...tdS, padding:"8px 12px", whiteSpace:"nowrap", maxWidth:250, overflow:"hidden", textOverflow:"ellipsis" }}>
@@ -6386,7 +6422,7 @@ function DatabaseBrowser({ token }) {
                         ))}
                       </tr>
                     )) : !loading && (
-                      <tr><td colSpan={10} style={{ ...tdS, textAlign:"center", padding:40, color:C.txtS }}>No records found in this table.</td></tr>
+                      <tr><td colSpan={Math.max(headers.length, 1)} style={{ ...tdS, textAlign:"center", padding:40, color:C.txtS }}>{searchTerm ? "No matching records found." : "No records found in this table."}</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -7734,12 +7770,43 @@ export default function App() {
     ));
   }
 
+  function reconcileSavedQuoteId(localId, savedId) {
+    const n = Number(savedId);
+    if (!Number.isInteger(n) || n <= 0 || n === Number(localId)) return;
+    setJobs(prev => prev.map(q => (q.id === localId ? { ...q, id: n } : q)));
+    setActive(prev => (prev && prev.id === localId ? { ...prev, id: n } : prev));
+  }
+
+  function persistQuote(quote) {
+    fetch(`/api/quotes/${quote.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(quote)
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(`Save quote failed (${res.status}): ${body}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.id != null) reconcileSavedQuoteId(quote.id, data.id);
+      })
+      .catch(e => console.error('Failed to save quote to backend:', e));
+  }
+
   function saveQuote(opts={}) {
     const cv  = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     // Save Quote always preserves current status (keeps In Progress if that's where it is)
     // Unless a specific status override is passed
     const newStatus = opts.status || active.status;
-    const upd = { ...active, ...cv, status: newStatus };
+    const shouldAssignJobNum = !["Dead", "Lost"].includes(newStatus);
+    const autoJobNum = shouldAssignJobNum ? (active.job_num || active.jobNum || nextJobNumber(jobs, active.date)) : "";
+    const upd = { ...active, ...cv, status: newStatus, ...(shouldAssignJobNum ? { job_num: autoJobNum, jobNum: autoJobNum } : {}) };
     if (upd.isHistorical) upd.locked = true;
     if (upd.client) {
       const newRates = {};
@@ -7754,24 +7821,29 @@ export default function App() {
         setReqs(prev=>prev.map(r=>r.id===upd.fromReqId?{...r,status:"Quoted"}:r));
       }
     }
+    persistQuote(upd);
     setView("dash");
     return upd;
   }
 
   function markWon(jn, cd) {
-    const upd = { ...active, status:"Won", job_num:jn, compDate:cd, locked:true };
+    const resolvedJobNum = (jn || active.job_num || active.jobNum || nextJobNumber(jobs, active.date));
+    const upd = { ...active, status:"Won", job_num:resolvedJobNum, jobNum:resolvedJobNum, compDate:cd, locked:true };
     const cv  = calcQuote(upd, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     const fin = { ...upd, ...cv };
     setJobs(prev => { const ix=prev.findIndex(q=>q.id===fin.id); return ix>=0?prev.map((q,i)=>i===ix?fin:q):[fin,...prev]; });
+    persistQuote(fin);
     setShowWM(false);
     setView("dash");
   }
 
   function submitQuote() {
     const cv  = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
-    const upd = { ...active, ...cv, status:"In Review" };
+    const autoJobNum = active.job_num || active.jobNum || nextJobNumber(jobs, active.date);
+    const upd = { ...active, ...cv, status:"In Review", job_num:autoJobNum, jobNum:autoJobNum };
     setJobs(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
     setNotifs(p => [{ id:uid(), qn:upd.qn, client:upd.client, total:upd.total, at:new Date().toLocaleTimeString(), status:"Pending Review" }, ...p]);
+    persistQuote(upd);
     setView("dash");
   }
 
