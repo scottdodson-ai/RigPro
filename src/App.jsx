@@ -63,6 +63,8 @@ const DEFAULT_HOTEL    = 120;
 
 // ── SYSTEM PROMPTING ──────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = "RigPro v3.1 Unified Data Source Enabled. All future features are strictly referenced against the live MySQL database. System initialized with full historical dataset.";
+const SHOW_SEMANTIC_SEARCH = false;
+const SHOW_SYSTEM_PROMPT_BANNER = false;
 
 const DEFAULT_COMPANY  = {
   name: "Shoemaker Rigging & Transport LLC",
@@ -470,7 +472,7 @@ const Badge = ({ status }) => { const x = SS[status]||SS.Draft; return <span sty
 const Lbl   = ({ c }) => <div style={{ fontSize:11, color:C.txtM, marginBottom:3, fontWeight:600 }}>{c}</div>;
 const Sec   = ({ c }) => <div style={{ color:C.acc, fontSize:11, letterSpacing:1, marginBottom:10, fontWeight:700, textTransform:"uppercase" }}>{c}</div>;
 const XBtn  = ({ on }) => <button onClick={on} style={{ background:"none", border:"none", color:C.txtS, cursor:"pointer", fontSize:17, padding:"0 3px", lineHeight:1 }}>×</button>;
-const Card  = ({ children, style={}, onClick }) => <div onClick={onClick} style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:16, marginBottom:12, ...style }}>{children}</div>;
+const Card  = ({ children, style={}, onClick }) => <div className="app-card" onClick={onClick} style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:16, marginBottom:12, width:"100%", minWidth:0, ...style }}>{children}</div>;
 const DollarInput = ({ val, on, w=80 }) => (
   <div style={{ display:"flex", alignItems:"center", border:`1px solid ${C.bdrM}`, borderRadius:5, overflow:"hidden", background:C.sur }}>
     <span style={{ padding:"0 6px", color:C.txtS, fontSize:13, borderRight:`1px solid ${C.bdrM}`, background:"#f9fafb", display:"flex", alignItems:"center" }}>$</span>
@@ -632,17 +634,38 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
   return (
     <>
       <style>{`
-        @media (max-width: 800px) {
+        .app-header-shell { padding: 6px 14px 10px; }
+        .app-header-top-row { min-height: 54px; }
+        @media (max-width: 767px) {
+          .app-header-shell { padding-top: 2px !important; }
+          .app-header-top-row { min-height: 44px !important; }
+          .app-brand { margin-right: 8px !important; }
+          .app-brand-main { gap: 6px !important; }
+          .app-brand-logo { width: 32px !important; height: 32px !important; }
+          .app-brand-name { font-size: 13px !important; }
+          .app-brand-version { font-size: 8px !important; }
+          .app-brand-service,
+          .app-brand-address { font-size: 8px !important; line-height: 1.1; letter-spacing: .2px !important; }
           .desktop-nav { display: none !important; }
           .hamburger-btn { display: flex !important; margin-left: auto; }
-          .mobile-inline { display: flex !important; }
+          .mobile-inline { display: flex !important; max-width: 58vw !important; }
         }
-        @media (min-width: 801px) {
+        @media (min-width: 768px) and (max-width: 1024px) {
+          .app-header-shell { padding: 5px 12px 8px !important; }
+          .app-header-top-row { min-height: 48px !important; }
+          .app-brand { margin-right: 12px !important; }
+          .app-brand-service,
+          .app-brand-address { font-size: 8px !important; }
+          .top-tab-btn { font-size: 11px !important; padding: 4px 6px !important; }
+          .desktop-actions-row { gap: 8px !important; }
+        }
+        @media (min-width: 768px) {
           .hamburger-btn { display: none !important; }
           .mobile-inline { display: none !important; }
         }
       `}</style>
       <div
+        className="app-header-shell"
         style={{
           background: C.sur,
           borderBottom: `1px solid ${C.bdr}`,
@@ -654,14 +677,14 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
         }}
       >
         {/* Desktop actions row: right-aligned above menu */}
-        <div className="desktop-nav" style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:4 }}>
+        <div className="desktop-nav desktop-actions-row" style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:4 }}>
+          {extra}
           {token && profileUser && (
             <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => setProfileOpen(true)}>
               <span aria-hidden="true">👤</span>
               <span>{displayName} (@{profileUser.username})</span>
             </button>
           )}
-          {extra}
           {token ? (
             <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
           ) : (
@@ -670,33 +693,33 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
         </div>
 
         {/* Top row: logo + nav */}
-        <div style={{ display:"flex", alignItems:"center", minHeight:54 }}>
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginRight:16 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        <div className="app-header-top-row" style={{ display:"flex", alignItems:"center", minHeight:54 }}>
+          <div className="app-brand" style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginRight:16 }}>
+            <div className="app-brand-main" style={{ display:"flex", alignItems:"center", gap:8 }}>
               {comp.logoSrc ? (
-                <img src={comp.logoSrc} alt="Logo" style={{ width:36, height:36, objectFit:"contain", borderRadius:4, background:"#fff", border:`2px solid ${C.accB}` }}/>
+                <img className="app-brand-logo" src={comp.logoSrc} alt="Logo" style={{ width:36, height:36, objectFit:"contain", borderRadius:4, background:"#fff", border:`2px solid ${C.accB}` }}/>
               ) : (
-                <div style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏗</div>
+                <div className="app-brand-logo" style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏗</div>
               )}
               <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center" }}>
-                <div style={{ fontFamily:"Georgia,serif", fontSize:14, color:C.acc, fontWeight:800, lineHeight:1.1 }}>
+                <div className="app-brand-name" style={{ fontFamily:"Georgia,serif", fontSize:14, color:C.acc, fontWeight:800, lineHeight:1.1 }}>
                   {comp.name.split(" ")[0]}
                 </div>
-                <div style={{ fontSize:9, color:C.txtS, letterSpacing:.35, textTransform:"uppercase", marginTop:1, fontWeight:700 }}>
+                <div className="app-brand-version" style={{ fontSize:9, color:C.txtS, letterSpacing:.35, textTransform:"uppercase", marginTop:1, fontWeight:700 }}>
                   RigPro v3.1
                 </div>
               </div>
             </div>
-            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
+            <div className="app-brand-service" style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
               Industrial Rigging,
             </div>
-            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
+            <div className="app-brand-service" style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
               Machinery Moving,
             </div>
-            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
+            <div className="app-brand-service" style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
               Heavy Haul Transport
             </div>
-            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.3, marginTop:1 }}>
+            <div className="app-brand-address" style={{ fontSize:9, color:C.txtS, letterSpacing:.3, marginTop:1 }}>
               3385 Miller Park Road · Akron, OH 44312
             </div>
           </div>
@@ -704,7 +727,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
           {/* Desktop Nav */}
           <div className="desktop-nav" style={{ display:"flex", alignItems:"center", flex:1, gap:4, overflowX:"auto" }}>
             {TABS.map(([v,l]) => (
-              <button key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", color:view===v?C.acc:C.txtM, fontSize:12, cursor:"pointer", padding:"4px 8px", borderBottom:view===v?`2px solid ${C.acc}`:"2px solid transparent", fontFamily:"inherit", fontWeight:view===v?700:400, whiteSpace:"nowrap" }}>{l}</button>
+              <button className="top-tab-btn" key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", color:view===v?C.acc:C.txtM, fontSize:12, cursor:"pointer", padding:"4px 8px", borderBottom:view===v?`2px solid ${C.acc}`:"2px solid transparent", fontFamily:"inherit", fontWeight:view===v?700:400, whiteSpace:"nowrap" }}>{l}</button>
             ))}
             {crumb && <><span style={{ color:C.bdr, margin:"0 2px" }}>›</span><span style={{ color:C.txtS, fontSize:12, whiteSpace:"nowrap" }}>{crumb}</span></>}
           </div>
@@ -754,11 +777,11 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
       )}
 
       {profileOpen && profileUser && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:12000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-          <div style={{ background:C.sur, width:"100%", maxWidth:520, borderRadius:12, padding:24, border:`1px solid ${C.bdr}`, boxShadow:"0 20px 60px rgba(0,0,0,.35)" }}>
-            <div style={{ fontSize:18, fontWeight:800, color:C.acc, marginBottom:14 }}>Edit Profile</div>
+        <div className="app-modal-overlay" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:12000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div className="app-modal-panel" style={{ background:C.sur, width:"100%", maxWidth:520, borderRadius:12, padding:24, border:`1px solid ${C.bdr}`, boxShadow:"0 20px 60px rgba(0,0,0,.35)" }}>
+            <div className="app-modal-title" style={{ fontSize:18, fontWeight:800, color:C.acc, marginBottom:14 }}>Edit Profile</div>
             <form onSubmit={handleSaveProfile} style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              <div className="app-two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                 <div>
                   <Lbl c="FIRST NAME"/>
                   <input id="profile-first-name" name="first_name" autoComplete="given-name" style={{ ...inp, background:C.bg, color:C.txtS }} value={profileForm.first_name} disabled />
@@ -794,7 +817,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
                 <input id="profile-password" name="new_password" autoComplete="new-password" style={inp} type="password" value={profileForm.password} onChange={(e)=>setProfileForm(p=>({ ...p, password:e.target.value }))} />
               </div>
               {profileErr && <div style={{ fontSize:12, color:C.red, fontWeight:700 }}>⚠ {profileErr}</div>}
-              <div style={{ display:"flex", justifyContent:"flex-end", gap:10, marginTop:4 }}>
+              <div className="app-modal-actions" style={{ display:"flex", justifyContent:"flex-end", gap:10, marginTop:4 }}>
                 <button type="button" style={{ ...mkBtn("ghost"), padding:"8px 14px" }} onClick={() => setProfileOpen(false)}>Cancel</button>
                 <button type="submit" style={{ ...mkBtn("primary"), padding:"8px 16px" }} disabled={profileSaving}>{profileSaving ? "Saving..." : "Save"}</button>
               </div>
@@ -982,15 +1005,15 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
     const groupLabel  = rawRef.key;
     const total = groupQuotes.reduce((s,q)=>s+(q.total||0),0);
     return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
-        <div style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:860, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
+      <div className="app-modal-overlay" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
+        <div className="app-modal-panel" style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:860, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
           <div style={{ padding:"16px 22px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL, borderTopLeftRadius:12, borderTopRightRadius:12 }}>
             <div>
               <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Drill-Down · {groupQuotes.length} jobs</div>
               <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{groupLabel}</div>
               <div style={{ fontSize:12, color:C.acc, fontWeight:600, marginTop:2 }}>Total: {fmt2(total)}</div>
             </div>
-            <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
+            <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
           </div>
           <div style={{ padding:"16px 22px", maxHeight:"65vh", overflowY:"auto" }}>
             <div style={{ fontSize:11, color:C.txtS, marginBottom:10 }}>Click any row to open the quote or job folder.</div>
@@ -1019,7 +1042,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
               </tbody>
             </table>
           </div>
-          <div style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"flex-end" }}>
+          <div className="app-modal-actions" style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"flex-end" }}>
             <button style={mkBtn("ghost")} onClick={onClose}>Close</button>
           </div>
         </div>
@@ -1036,14 +1059,14 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
     const matCost    = Math.round((q.mats||0)*0.85);
     const travCost   = q.travel||0;
     return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
-        <div style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:620, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
+      <div className="app-modal-overlay" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
+        <div className="app-modal-panel" style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:620, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
           <div style={{ padding:"16px 22px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL, borderTopLeftRadius:12, borderTopRightRadius:12 }}>
             <div>
               <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Cost Breakdown</div>
               <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{q.job_num} · {q.client}</div>
             </div>
-            <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
+            <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
           </div>
           <div style={{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:12 }}>
             {/* Revenue */}
@@ -1086,7 +1109,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
               <div style={{ fontSize:36, fontWeight:800, color:pct>=20?C.grn:pct>=10?C.yel:C.red }}>{pct}%</div>
             </div>
           </div>
-          <div style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between" }}>
+          <div className="app-modal-actions" style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between" }}>
             <button style={{ ...mkBtn("blue"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ onOpenQuote(q); onClose(); }}>Open Quote →</button>
             <button style={mkBtn("ghost")} onClick={onClose}>Close</button>
           </div>
@@ -1102,20 +1125,20 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
     const daysOld = Math.floor((new Date()-rfqDate)/86400000);
     const days = quote ? Math.floor((new Date(quote.date)-rfqDate)/86400000) : null;
     return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
-        <div style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:620, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
+      <div className="app-modal-overlay" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
+        <div className="app-modal-panel" style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:620, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
           <div style={{ padding:"16px 22px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL, borderTopLeftRadius:12, borderTopRightRadius:12 }}>
             <div>
               <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>RFQ Transaction Detail</div>
               <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{req.rn} · {req.company}</div>
             </div>
-            <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
+            <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
           </div>
           <div style={{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:12 }}>
             {/* RFQ info */}
             <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8, padding:"12px 16px" }}>
               <div style={{ fontSize:9, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>RFQ Information</div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+              <div className="app-two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
                 {[["RFQ #",req.rn],["Company",req.company],["Requester",req.requester||"—"],["Phone",req.phone||"—"],["Date Received",req.start_date||"—"],["Estimator",req.salesAssoc||"Unassigned"],["Status",req.status],["Job Site",req.jobSite||"—"]].map(([k,v])=>(
                   <div key={k}>
                     <div style={{ fontSize:10, color:C.txtS, fontWeight:700 }}>{k}</div>
@@ -1157,7 +1180,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
               </div>
             )}
           </div>
-          <div style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div className="app-modal-actions" style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <div style={{ display:"flex", gap:8 }}>
               <button style={{ ...mkBtn("primary"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ onOpenJobFolder(req); onClose(); }}>Open Job Folder</button>
               {quote && <button style={{ ...mkBtn("blue"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ onOpenQuote(quote); onClose(); }}>Open Estimate →</button>}
@@ -1174,17 +1197,17 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
     const q = rawRef.quote;
     const adj=(q.salesAdjustments||[]).reduce((s,a)=>s+a.amount,0);
     return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
-        <div style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:600, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
+      <div className="app-modal-overlay" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
+        <div className="app-modal-panel" style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:600, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
           <div style={{ padding:"16px 22px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL, borderTopLeftRadius:12, borderTopRightRadius:12 }}>
             <div>
               <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Quote Transaction</div>
               <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{q.job_num} · {q.client}</div>
             </div>
-            <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
+            <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
           </div>
           <div style={{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:12 }}>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            <div className="app-two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
               {[["Quote #",q.job_num],["Customer",q.client],["Status",q.status],["Type",q.qtype],["Date",q.start_date],["Estimator",q.salesAssoc||"—"],["Job Site",q.jobSite||"—"],["Job #",q.jobNum||"—"]].map(([k,v])=>(
                 <div key={k}><div style={{ fontSize:10, color:C.txtS, fontWeight:700 }}>{k}</div><div style={{ fontSize:12, fontWeight:600 }}>{k==="Status"?<Badge status={v}/>:v}</div></div>
               ))}
@@ -1205,7 +1228,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
             </div>
             {q.job_description&&<div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:6, padding:"8px 12px", fontSize:12, color:C.txtM }}>{q.job_description}</div>}
           </div>
-          <div style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between" }}>
+          <div className="app-modal-actions" style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between" }}>
             <button style={{ ...mkBtn("primary"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ onOpenQuote(q); onClose(); }}>Open Full Quote →</button>
             <button style={mkBtn("ghost")} onClick={onClose}>Close</button>
           </div>
@@ -1279,7 +1302,7 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
   }
 
   return (
-    <div style={{ padding:"16px", width:1200, margin:"0 auto" }}>
+    <div className="app-page-container" style={{ maxWidth:1200 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           {onBack && (
@@ -1487,7 +1510,7 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
         {/* Header */}
         <div style={{ padding:"16px 24px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div style={{ fontSize:16, fontWeight:700 }}>{isEdit?"Edit":"New"} Custom Report</div>
-          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
+          <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
         </div>
 
         <div style={{ padding:"20px 24px", display:"flex", flexDirection:"column", gap:16 }}>
@@ -1708,6 +1731,9 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, rfqStageFilter, setRfqStag
         @media (max-width: 950px) {
           .dash-grid-stats, .dash-grid-status { grid-template-columns: 1fr 1fr; }
         }
+        @media (max-width: 420px) {
+          .filter-helper-text { display: none !important; }
+        }
       `}</style>
       {/* Left Column: Period Selector */ }
       <div className="dash-period">
@@ -1715,8 +1741,8 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, rfqStageFilter, setRfqStag
           style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", width:"100%", justifyContent:"space-between", padding:"10px 14px", fontSize:14 }}
           onClick={() => { setShowPeriodMenu(!showPeriodMenu); setShowRfqMenu(false); }}
         >
-          <span style={{ fontWeight:700 }}>{period==="custom" ? `Filter: ${customStart} → ${customEnd}` : `Filter: ${periodLabel}`}</span>
-          <span style={{ fontSize:11, opacity:0.9 }}>Click to change Filter ▾</span>
+          <span style={{ fontWeight:700, flex:1, minWidth:0, textAlign:"left", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{period==="custom" ? `Filter: ${customStart} → ${customEnd}` : `Filter: ${periodLabel}`}</span>
+          <span className="filter-helper-text" style={{ fontSize:11, opacity:0.9, flexShrink:0, marginLeft:8 }}>Click to change Filter ▾</span>
         </button>
         {showPeriodMenu && (
           <div style={{ position:"absolute", top:"100%", left:0, zIndex:100, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:8, display:"flex", flexDirection:"column", gap:4, width:"100%", marginTop:4, boxShadow:"0 4px 12px rgba(0,0,0,0.1)" }}>
@@ -1820,8 +1846,8 @@ function RecentQuotesCard({ jobs, openEdit, setView }) {
           style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", width:"100%", justifyContent:"space-between", padding:"10px 14px", fontSize:14 }}
           onClick={() => { setExpandedCustFilter(p => !p); }}
         >
-          <span style={{ fontWeight:700 }}>{custFilter==="all" ? "Filter: All Customers" : `Filter: ${custFilter}`}</span>
-          <span style={{ fontSize:11, opacity:0.9 }}>Click to change Filter ▾</span>
+          <span style={{ fontWeight:700, flex:1, minWidth:0, textAlign:"left", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{custFilter==="all" ? "Filter: All Customers" : `Filter: ${custFilter}`}</span>
+          <span className="filter-helper-text" style={{ fontSize:11, opacity:0.9, flexShrink:0, marginLeft:8 }}>Click to change Filter ▾</span>
         </button>
         {expandedCustFilter && (
           <div style={{ position:"absolute", top:"100%", left:0, zIndex:100, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:8, display:"flex", flexDirection:"column", gap:4, width:"100%", marginTop:4, boxShadow:"0 4px 12px rgba(0,0,0,0.1)", maxHeight:250, overflowY:"auto" }}>
@@ -1833,7 +1859,7 @@ function RecentQuotesCard({ jobs, openEdit, setView }) {
           </div>
         )}
       </div>
-      <div style={{ overflowX:"auto" }}>
+      <div className="app-table-wrap" style={{ overflowX:"auto" }}>
         <style>{`
           @media (max-width: 600px) {
             .rq-hide-mobile { display: none !important; }
@@ -1925,13 +1951,12 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
           style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", width:"100%", justifyContent:"space-between", padding:"10px 14px", fontSize:14 }}
           onClick={() => { setExpandedRfq(p => p==="filterMenu" ? null : "filterMenu"); }}
         >
-          <span style={{ fontWeight:700 }}>{rfqStageFilter==="all" ? "Filter: All Requests" : `Filter: ${STAGES_DASH[Number(rfqStageFilter)]}`}</span>
-          <span style={{ fontSize:11, opacity:0.9 }}>Click to change Filter ▾</span>
+          <span style={{ fontWeight:700, flex:1, minWidth:0, textAlign:"left", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{rfqStageFilter==="all" ? "Filter: All Requests" : `Filter: ${STAGES_DASH[Number(rfqStageFilter)]}`}</span>
+          <span style={{ fontSize:11, opacity:0.9, flexShrink:0, marginLeft:8 }}>Click to change Filter ▾</span>
         </button>
         {expandedRfq === "filterMenu" && (
           <div style={{ position:"absolute", top:"100%", left:0, zIndex:100, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, padding:8, display:"flex", flexDirection:"column", gap:4, width:"100%", marginTop:4, boxShadow:"0 4px 12px rgba(0,0,0,0.1)" }}>
             <button onClick={()=>{setRfqStageFilter("all"); setExpandedRfq(null);}} style={{ background:rfqStageFilter==="all"?C.bg:"transparent", color:rfqStageFilter==="all"?C.acc:C.txtM, border:"none", borderRadius:5, padding:"8px 11px", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:rfqStageFilter==="all"?700:500, textAlign:"left" }}>All Requests</button>
-            <div style={{ borderTop:`1px solid ${C.bdr}`, margin:"4px 0" }}></div>
             {STAGES_DASH.map((s,i) => (
               <button key={i} onClick={()=>{setRfqStageFilter(String(i)); setExpandedRfq(null);}} style={{ background:rfqStageFilter===String(i)?C.bg:"transparent", color:rfqStageFilter===String(i)?C.acc:C.txtM, border:"none", borderRadius:5, padding:"8px 11px", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:rfqStageFilter===String(i)?700:500, textAlign:"left" }}>{s}</button>
             ))}
@@ -2244,7 +2269,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
   );
 
   return (
-    <div style={{ padding:"16px", maxWidth:1400, margin:"0 auto" }}>
+    <div className="app-page-container app-page-container--wide" style={{ maxWidth:1400 }}>
       {/* Header */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16, flexWrap:"wrap", gap:10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:15 }}>
@@ -2271,7 +2296,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
 
       {/* Table */}
       <Card style={{ padding:0, overflow:"hidden" }}>
-        <div style={{ overflowX:"auto" }}>
+        <div className="app-table-wrap" style={{ overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
             <thead style={{ background:C.bg }}>
               <tr>
@@ -2520,7 +2545,7 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
         {/* Header */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
           <div><div style={{ fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:1 }}>Request For Quote</div><div style={{ fontSize:17, fontWeight:700 }}>{f.rn}</div></div>
-          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS }}>×</button>
+          <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS }}>×</button>
         </div>
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
@@ -2750,7 +2775,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
             <ClockBadge label="Since Activity" days={daysSinceActivity} alertThresh={3}/>
             <div style={{ width:1, height:40, background:C.bdr, margin:"0 4px" }}/>
             <button style={{ ...mkBtn("ghost"), padding:"5px 12px", fontSize:12 }} onClick={handlePrint}>Print</button>
-            <button onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS, lineHeight:1 }}>×</button>
+            <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS, lineHeight:1 }}>×</button>
           </div>
         </div>
 
@@ -3468,7 +3493,7 @@ Output ONLY the complete Node.js script, no markdown, no explanation, nothing el
             <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{quote.client} — {quote.qn}</div>
             <div style={{ fontSize:12, color:C.txtS, marginTop:1 }}>Creates a formatted Word proposal document</div>
           </div>
-          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS }}>×</button>
+          <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS }}>×</button>
         </div>
 
         <div style={{ padding:"20px 24px", display:"flex", flexDirection:"column", gap:16 }}>
@@ -3788,8 +3813,8 @@ function SearchResultsModal({ search, jobs, reqs, custData, onClose, onOpenQuote
   const T_COLORS = { Quote: C.acc, RFQ: C.blue, Customer: C.purp };
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.4)", zIndex:800, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"40px 16px", overflowY:"auto" }}>
-      <div style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:640, boxShadow:"0 12px 40px rgba(0,0,0,.25)", display:"flex", flexDirection:"column", maxHeight:"85vh" }}>
+    <div className="app-modal-overlay" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.4)", zIndex:800, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"40px 16px", overflowY:"auto" }}>
+      <div className="app-modal-panel" style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:640, boxShadow:"0 12px 40px rgba(0,0,0,.25)", display:"flex", flexDirection:"column", maxHeight:"85vh" }}>
         <div style={{ padding:"16px 20px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:C.sur, borderTopLeftRadius:12, borderTopRightRadius:12 }}>
           <div>
             <div style={{ fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:1, fontWeight:700 }}>Search Results</div>
@@ -3837,7 +3862,7 @@ function SearchResultsModal({ search, jobs, reqs, custData, onClose, onOpenQuote
           )}
         </div>
         
-        <div style={{ padding:14, borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div className="app-modal-actions" style={{ padding:14, borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div style={{ fontSize:11, color:C.txtS }}>Found {results.length} result(s)</div>
           <button style={{ ...mkBtn("ghost"), padding:"5px 12px" }} onClick={onClose}>Close</button>
         </div>
@@ -3917,7 +3942,7 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
                boxSizing:"border-box", outline:"none" };
 
   return (
-    <div style={{ padding:"16px", maxWidth:1200, margin:"0 auto" }}>
+    <div className="app-page-container" style={{ maxWidth:1200 }}>
       {/* Header */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
         <div>
@@ -3992,7 +4017,7 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
       {eqCats.map(cat => (
         <Card key={cat}>
           <Sec c={cat}/>
-          <div style={{ overflowX:"auto" }}>
+          <div className="app-table-wrap" style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", borderCollapse:"collapse", minWidth:640 }}>
               <thead>
                 <tr>
@@ -7355,7 +7380,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
         {editingUser && (
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.65)", zIndex:10001, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
             <div style={{ background:C.sur, width:"100%", maxWidth:520, borderRadius:12, padding:24, boxShadow:"0 20px 60px rgba(0,0,0,0.35)", border:`1.5px solid ${C.bdr}` }}>
-              <div style={{ fontSize:18, fontWeight:800, color:C.acc, marginBottom:14 }}>Edit Account</div>
+              <div className="app-modal-title" style={{ fontSize:18, fontWeight:800, color:C.acc, marginBottom:14 }}>Edit Account</div>
               <form onSubmit={handleEditUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                   <div>
@@ -7572,7 +7597,7 @@ export default function App() {
   const [showJFM,    setShowJFM]    = useState(null);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   useEffect(() => {
-    if (dbStatus === "MySQL Live") {
+    if (SHOW_SYSTEM_PROMPT_BANNER && dbStatus === "MySQL Live") {
       setShowSystemPrompt(true);
       const timer = setTimeout(() => setShowSystemPrompt(false), 5000);
       return () => clearTimeout(timer);
@@ -7888,7 +7913,7 @@ export default function App() {
   // ── DASHBOARD ──────────────────────────────────────────────────────────────
   if (view==="dash") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize:14 }}>
-      {showSystemPrompt && (
+      {SHOW_SYSTEM_PROMPT_BANNER && showSystemPrompt && (
         <div style={{ position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)", zIndex: 1000, background: C.acc, color: "#fff", padding: "10px 20px", borderRadius: 30, fontWeight: 700, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 18 }}>💡</span> {SYSTEM_PROMPT}
         </div>
@@ -7915,28 +7940,36 @@ export default function App() {
           <div className="desktop-act-btns">{actBtns}</div>
         </div>
       }/>
-      <div style={{ padding:"16px", maxWidth:1160, margin:"0 auto" }}>
+      <div className="app-page-container" style={{ maxWidth:1160 }}>
         <style>{`
           .desktop-act-btns { display: block; }
           .mobile-act-btns { display: none; }
-          @media (max-width: 950px) {
+          @media (max-width: 767px) {
             .desktop-act-btns { display: none !important; }
             .mobile-act-btns { display: flex !important; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
             .mobile-act-btns > div { width: 100%; display: flex; flex-direction: column; gap: 8px; }
             .mobile-act-btns button { width: 100%; justify-content: center; padding: 12px 14px !important; font-size: 15px !important; }
           }
+          @media (min-width: 768px) and (max-width: 1024px) {
+            .desktop-act-btns { display: none !important; }
+            .mobile-act-btns { display: flex !important; margin-bottom: 12px; }
+            .mobile-act-btns > div { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+            .mobile-act-btns button { flex: 1 1 calc(50% - 8px); min-width: 190px; justify-content: center; }
+          }
         `}</style>
         <div className="mobile-act-btns">{actBtns}</div>
-        <VectorSearchPanel
-          token={token}
-          setView={setView}
-          C={C}
-          inp={inp}
-          sel={sel}
-          mkBtn={mkBtn}
-          Card={Card}
-          Sec={Sec}
-        />
+        {SHOW_SEMANTIC_SEARCH && (
+          <VectorSearchPanel
+            token={token}
+            setView={setView}
+            C={C}
+            inp={inp}
+            sel={sel}
+            mkBtn={mkBtn}
+            Card={Card}
+            Sec={Sec}
+          />
+        )}
         <DashboardMetrics jobs={jobs} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
         {/* ── SALESMAN TRACKING CHARTS ─────────────────────────────────── */}
         <SalesmanCharts jobs={jobs} reqs={reqs}/>
@@ -7986,7 +8019,7 @@ export default function App() {
         onClose={()=>setDeadModal(null)}
       />}
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
-      <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
+      <div className="app-page-container" style={{ maxWidth:1160 }}>
         <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal}/>
       </div>
       <Footer />
@@ -8025,14 +8058,14 @@ export default function App() {
         jobListFilter={jobListFilter} setJobListFilter={setJobListFilter} setView={setView}
       />
       {attachModal && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
-          <div style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:640, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
+        <div className="app-modal-overlay" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
+          <div className="app-modal-panel" style={{ background:C.sur, borderRadius:12, width:"100%", maxWidth:640, boxShadow:"0 16px 48px rgba(0,0,0,.28)" }}>
             <div style={{ padding:"16px 22px", borderBottom:`1px solid ${C.bdr}`, background:C.accL, borderTopLeftRadius:12, borderTopRightRadius:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
                 <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Attachments</div>
                 <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{attachModal.jobNum||attachModal.quoteNum} · {attachModal.client}</div>
               </div>
-              <button onClick={()=>setAttachModal(null)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS }}>×</button>
+              <button className="app-modal-close" onClick={()=>setAttachModal(null)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS }}>×</button>
             </div>
             <div style={{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:14 }}>
               {attachModal.attachments?.length>0 && (
@@ -8063,7 +8096,7 @@ export default function App() {
                 <div style={{ textAlign:"center", color:C.txtS, padding:"20px 0" }}>No attachments on record.</div>
               )}
             </div>
-            <div style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", gap:8, justifyContent:"space-between" }}>
+            <div className="app-modal-actions" style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", gap:8, justifyContent:"space-between" }}>
               <div style={{ display:"flex", gap:8 }}>
                 {attachModal.rfq && <button style={{ ...mkBtn("outline"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ setAttachModal(null); setShowJFM(attachModal.rfq); }}>Open Job Folder</button>}
                 <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ setAttachModal(null); openEdit(attachModal.quote); }}>Open Estimate</button>
@@ -8290,7 +8323,7 @@ export default function App() {
             {!active.locked && <button style={mkBtn("primary")} onClick={()=>saveQuote()}>Save Quote</button>}
           </div>
         }/>
-        <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
+        <div className="app-page-container" style={{ maxWidth:1160 }}>
           {active.fromReqId    && <div style={{ background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.blue }}>Pre-filled from a Quote Request.</div>}
           {active.isChangeOrder && <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:"#6d28d9" }}>Change Order — linked to original won quote.</div>}
           {active.isHistorical && <div style={{ background:C.accL, border:`1px solid ${C.accB}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.acc, fontWeight:700 }}>HISTORICAL ESTIMATE — Metrics manually established.</div>}

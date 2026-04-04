@@ -1,5 +1,196 @@
-body, html {
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bp-mobile-max: 767px;
+  --bp-tablet-max: 1024px;
+  --page-gutter-mobile: 10px;
+  --page-gutter-tablet: 14px;
+  --page-gutter-desktop: 20px;
+  --app-edge-space: 6px;
+}
+
+html,
+body {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  box-sizing: border-box;
+  padding: var(--app-edge-space);
+  overflow-x: clip;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-height: calc(100vh - (var(--app-edge-space) * 2));
+  overflow-x: clip;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.app-page-container {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 16px var(--page-gutter-desktop);
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.app-page-container--wide {
+  max-width: 1440px;
+}
+
+.app-card {
+  padding: 16px;
+  min-width: 0;
+}
+
+.app-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.app-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-table-wrap > table {
+  min-width: 640px;
+}
+
+.app-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.app-modal-panel {
+  width: 100%;
+  max-width: 680px;
+}
+
+.app-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.app-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.app-modal-close {
+  background: none;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+@media (max-width: 1024px) {
+  .app-page-container {
+    padding-inline: var(--page-gutter-tablet);
+  }
+
+  .app-card {
+    padding: 14px;
+  }
+
+  .app-modal-panel {
+    max-width: min(92vw, 760px);
+  }
+
+  .app-modal-title {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-page-container {
+    padding: 12px var(--page-gutter-mobile);
+  }
+
+  .app-card {
+    padding: 12px;
+  }
+
+  .app-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .app-table-wrap > table {
+    min-width: 520px;
+  }
+
+  .app-modal-overlay {
+    align-items: flex-start;
+    padding: 14px 10px !important;
+  }
+
+  .app-modal-panel {
+    max-width: 100%;
+    border-radius: 10px !important;
+  }
+
+  .app-modal-title {
+    font-size: 16px;
+  }
+
+  .app-modal-close {
+    width: 42px;
+    height: 42px;
+    font-size: 24px;
+  }
+
+  .app-modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .app-modal-actions > * {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 1025px) {
+  :root {
+    --app-edge-space: 8px;
+  }
 }

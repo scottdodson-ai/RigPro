@@ -122,12 +122,41 @@ export default function VectorSearchPanel({ token, setView, C, inp, sel, mkBtn, 
 
   return (
     <Card>
+      <style>{`
+        .vsp-controls {
+          display: grid;
+          grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 0.8fr) auto;
+          gap: 8px;
+          align-items: center;
+        }
+
+        @media (max-width: 1024px) {
+          .vsp-controls {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          }
+
+          .vsp-search-btn {
+            grid-column: 1 / -1;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .vsp-controls {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .vsp-search-btn {
+            width: 100%;
+            min-width: 0 !important;
+          }
+        }
+      `}</style>
       <Sec c="Semantic Search"/>
       <div style={{ fontSize:12, color:C.txtS, marginBottom:10 }}>
         Search indexed quote files and imported table rows using vector similarity.
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"minmax(240px,1fr) 150px 110px auto", gap:8, alignItems:"center" }}>
+      <div className="vsp-controls">
         <input
           style={{ ...inp, width:"100%" }}
           value={query}
@@ -144,9 +173,10 @@ export default function VectorSearchPanel({ token, setView, C, inp, sel, mkBtn, 
           {[5, 8, 10, 15].map(n=><option key={n} value={n}>{n} results</option>)}
         </select>
         <button
+          className="vsp-search-btn"
           style={{ ...mkBtn("primary"), justifyContent:"center", minWidth:120 }}
           onClick={runSearch}
-          disabled={isSearching}
+          disabled={isSearching || !query.trim()}
         >
           {isSearching ? "Searching..." : "Search"}
         </button>
