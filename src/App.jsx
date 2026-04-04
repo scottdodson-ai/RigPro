@@ -901,7 +901,7 @@ const BUILT_IN_REPORTS = [
   { id:"prospect-report",     name:"Prospect Report",       category:"Customers",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
 ];
 
-const REPORT_CATEGORIES = ["Sales","Pipeline","Historical","Finance","Activity","Customers"];
+const REPORT_CATEGORIES = ["Sales","Pipeline","Customers","Historical","Finance","Activity"];
 
 // rowType: "quote" | "req" | "group-customer" | "group-estimator" | "group-month" | "group-status" | "group-type"
 function buildReportData(reportId, jobs, reqs, custData = {}) {
@@ -2552,7 +2552,7 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
             <div>
               <Lbl c="CATEGORY"/>
               <select style={{ ...sel, width:"100%" }} value={category} onChange={e=>setCategory(e.target.value)}>
-                {["Sales","Pipeline","Historical","Finance","Custom"].map(c=><option key={c}>{c}</option>)}
+                {["Sales","Pipeline","Customers","Historical","Finance","Activity","Custom"].map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
           </div>
