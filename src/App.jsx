@@ -811,6 +811,14 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
   );
 }
 
+function Footer() {
+  return (
+    <div className="global-footer" style={{ padding: "30px 16px", textAlign: "center", fontSize: "12px", color: C.txtS, borderTop: `1px solid ${C.bdr}`, background: C.bg, marginTop: "auto", width: "100%" }}>
+      © 2026 Powered by <strong>Surpentor Software</strong>
+    </div>
+  );
+}
+
 
 // ── REPORTS PAGE ──────────────────────────────────────────────────────────────
 const BUILT_IN_REPORTS = [
@@ -1232,6 +1240,11 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
     prevInitRef.current = initialReportId || prevInitRef.current;
   }, [initialReportId]);
   const [customReports,setCustomReports]= useState(() => { try { return JSON.parse(localStorage.getItem("rigpro_custom_reports")||"[]"); } catch{return [];} });
+  const allReports = [
+    ...BUILT_IN_REPORTS,
+    ...customReports,
+  ];
+
   const [showBuilder,  setShowBuilder]  = useState(false);
   const [drillRef,     setDrillRef]     = useState(null);
   const [editingReport,setEditingReport]= useState(null);
@@ -1241,10 +1254,13 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
     localStorage.setItem("rigpro_custom_reports", JSON.stringify(r));
   }
 
-  const allReports = [
-    ...BUILT_IN_REPORTS,
-    ...customReports,
-  ];
+  function setCategory(cat) {
+    setCatFilter(cat);
+    const filteredReports = cat === "All" ? allReports : allReports.filter(r => r.category === cat);
+    if (filteredReports.length > 0) setActiveReport(filteredReports[0]);
+    else setActiveReport(null);
+  }
+
 
   const filtered = catFilter==="All" ? allReports : allReports.filter(r=>r.category===catFilter);
   const reportData = useMemo(() => {
@@ -1268,7 +1284,7 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
   }
 
   return (
-    <div style={{ padding:"16px", maxWidth:1200, margin:"0 auto" }}>
+    <div style={{ padding:"16px", width:1200, margin:"0 auto" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           {onBack && (
@@ -1285,11 +1301,11 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
       {/* Category filter */}
       <div style={{ display:"flex", gap:3, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:8, padding:3, marginBottom:16, alignSelf:"flex-start", width:"fit-content" }}>
         {REPORT_CATEGORIES.map(c=>(
-          <button key={c} onClick={()=>setCatFilter(c)} style={{ background:catFilter===c?"#fff":"transparent", color:catFilter===c?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:catFilter===c?700:600 }}>{c}</button>
+          <button key={c} onClick={()=>setCategory(c)} style={{ background:catFilter===c?"#fff":"transparent", color:catFilter===c?C.acc:"#fff", border:"none", borderRadius:6, padding:"5px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:catFilter===c?700:600 }}>{c}</button>
         ))}
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"280px 1fr", gap:16, alignItems:"start" }}>
+      <div style={{ display:"grid", gridTemplateColumns:"280px 904px", gap:16, alignItems:"start" }}>
         {/* Report list */}
         <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
           {filtered.map(r => {
@@ -7829,6 +7845,7 @@ export default function App() {
           </button>
         </div>
       </div>
+      <Footer />
     </div>
   );
 
@@ -7844,6 +7861,7 @@ export default function App() {
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} />
         </div>
+        <Footer />
       </div>
     );
   }
@@ -7851,9 +7869,10 @@ export default function App() {
   // ── ADMIN ──────────────────────────────────────────────────────────────────
   if (view==="admin" && role!=="admin") return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
   if (view==="admin") return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} />
       <AdminPage token={token} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo}/>
+      <Footer />
     </div>
   );
 
@@ -7866,13 +7885,14 @@ export default function App() {
         ← Back to Admin Portal
       </button>
       <InvestorDashboard />
+      <Footer />
     </div>
   );
 
 
   // ── DASHBOARD ──────────────────────────────────────────────────────────────
   if (view==="dash") return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize:14 }}>
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize:14 }}>
       {showSystemPrompt && (
         <div style={{ position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)", zIndex: 1000, background: C.acc, color: "#fff", padding: "10px 20px", borderRadius: 30, fontWeight: 700, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 18 }}>💡</span> {SYSTEM_PROMPT}
@@ -7947,11 +7967,13 @@ export default function App() {
         <RFQDashCard reqs={reqs} jobs={jobs} jobFolders={jobFolders} setJobFolders={setJobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal} rfqStageFilter={rfqStageFilter}/>
         <RecentQuotesCard jobs={jobs} openEdit={openEdit} setView={setView}/>
       </div>
+      <Footer />
     </div>
   );
 
   // ── CUSTOMERS ──────────────────────────────────────────────────────────────
   if (view === "customers") return (
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg }}>
     <CustomerCRMBoard 
       {...{
         C, fmt, mkBtn, Badge, Sec, Lbl, Card, thS, tdS, inp, sel, actBtns,
@@ -7967,6 +7989,8 @@ export default function App() {
         Header, RFQModal, JobFolderModal, MarkDeadModal, CustomerModal, SearchResultsModal, SalesAdjustmentModal, ProfileTemplateModal
       }}
     />
+    <Footer />
+    </div>
   );
 
   // ── RFQs ───────────────────────────────────────────────────────────────
@@ -7988,22 +8012,25 @@ export default function App() {
       <div style={{ padding:"14px", maxWidth:1160, margin:"0 auto" }}>
         <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal}/>
       </div>
+      <Footer />
     </div>
   );
 
   // ── EQUIPMENT RATES ────────────────────────────────────────────────────────
   if (view==="equipment") return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv} role={role}/>
+      <Footer />
     </div>
   );
 
   // ── LABOR RATES ────────────────────────────────────────────────────────────
   if (view==="labor") return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates} role={role} baseLabor={baseLabor} setBaseLabor={setBaseLabor}/>
+      <Footer />
     </div>
   );
 
@@ -8073,15 +8100,16 @@ export default function App() {
   );
 
   if (view==="calendar") return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <CalendarPage jobs={jobs} setJobs={setJobs} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
+      <Footer />
     </div>
   );
 
   // ── REPORTS ───────────────────────────────────────────────────────────────
   if (view==="reports") return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14, overflowX:"auto" }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       <ReportsPage
         jobs={jobs}
@@ -8107,6 +8135,7 @@ export default function App() {
         }}
         onClose={()=>setDeadModal(null)}
       />}
+      <Footer />
     </div>
   );
 
@@ -8272,7 +8301,7 @@ export default function App() {
     );
 
     return (
-      <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+      <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
         {adjModal&&<SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
         {showWM && <WonModal quote={active} onSave={markWon} onClose={()=>setShowWM(false)}/>}
         {deadModal && <MarkDeadModal itemType="Quote" itemLabel={deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
@@ -8637,6 +8666,7 @@ export default function App() {
               .mobile-only-return-btn { display: none !important; }
             }
           `}</style>
+          <Footer />
         </div>
       </div>
     );
