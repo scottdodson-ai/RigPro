@@ -229,12 +229,79 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const equipment = await safeQuery('SELECT * FROM equipment');
     const customers = await safeQuery('SELECT * FROM customers');
     const contacts = await safeQuery('SELECT * FROM customer_contacts');
-    // Backward-compatible jobs source: prefer master_jobs, fall back to quotes.
+    // Load quotes from the working table first, then optionally append master_jobs history.
+    const quotesRows = await safeQuery(`SELECT id,
+                quote_number as qn,
+                customer_name as client,
+                job_site as jobSite,
+                description as jobDesc,
+                date,
+                status,
+                quote_type as qtype,
+                labor,
+                equip,
+                hauling,
+                travel,
+                materials as mats,
+                total,
+                markup,
+                sales_assoc as salesAssoc,
+                job_num,
+                start_date as startDate,
+                comp_date as compDate,
+                is_locked as locked,
+                notes,
+                quote_data
+           FROM quotes`);
+
+    const mappedQuotes = quotesRows.map((row) => {
+      let json = {};
+      if (row.quote_data) {
+        try { json = JSON.parse(row.quote_data); } catch { json = {}; }
+      }
+      const jobNum = row.job_num || json.job_num || json.jobNum || '';
+      return {
+        ...json,
+        ...row,
+        qn: row.qn || json.qn || '',
+        client: row.client || json.client || '',
+        jobSite: row.jobSite || json.jobSite || '',
+        desc: row.jobDesc || row.desc || json.desc || '',
+        qtype: row.qtype || json.qtype || 'Contract',
+        salesAssoc: row.salesAssoc || json.salesAssoc || '',
+        job_num: jobNum,
+        jobNum,
+        startDate: row.startDate || json.startDate || '',
+        compDate: row.compDate || json.compDate || '',
+        locked: Boolean(row.locked ?? json.locked),
+      };
+    });
+
+    let jobs = mappedQuotes;
     const [masterJobsExists] = await db.query("SHOW TABLES LIKE 'master_jobs'");
-    const jobsQuery = masterJobsExists.length
-      ? 'SELECT *, customer_name as client, job_number as job_num, total_billings as total FROM master_jobs'
-      : 'SELECT *, customer_name as client, job_num as job_num, total as total FROM quotes';
-    const master_jobs = await safeQuery(jobsQuery);
+    if (masterJobsExists.length) {
+      const masterRows = await safeQuery('SELECT *, customer_name as client, job_number as job_num, total_billings as total FROM master_jobs');
+      const existingKeys = new Set(mappedQuotes.map(q => q.qn || `quote:${q.id}`));
+      const mappedMaster = masterRows.map((row) => {
+        const qn = row.quote_number || row.qn || '';
+        const jobNum = row.job_num || row.job_number || '';
+        return {
+          ...row,
+          qn,
+          job_num: jobNum,
+          jobNum,
+          jobSite: row.job_site || row.jobSite || '',
+          desc: row.description || row.desc || '',
+          qtype: row.quote_type || row.qtype || 'Contract',
+          salesAssoc: row.sales_assoc || row.salesAssoc || '',
+          locked: Boolean(row.is_locked ?? row.locked),
+        };
+      });
+      jobs = [
+        ...mappedQuotes,
+        ...mappedMaster.filter(m => !existingKeys.has(m.qn || `master:${m.id}`)),
+      ];
+    }
     const rfqs = await safeQuery('SELECT *, rfq_number as rn FROM rfqs');
     const users = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, created_at FROM users');
     const estimators = await safeQuery('SELECT * FROM estimators');
@@ -262,7 +329,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       labor,
       equipment,
       customers: custData,
-      jobs: master_jobs,
+      jobs,
       rfqs,
       users,
       estimators
@@ -526,7 +593,11 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
 
   try {
-    const [rows] = await db.query(`SELECT * FROM ${table} LIMIT 100`);
+    const [idColumn] = await db.query(`SHOW COLUMNS FROM ${table} LIKE 'id'`);
+    const query = idColumn.length
+      ? `SELECT * FROM ${table} ORDER BY id DESC LIMIT 100`
+      : `SELECT * FROM ${table} LIMIT 100`;
+    const [rows] = await db.query(query);
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch table data' });
@@ -1273,6 +1344,18 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       resolvedJobNum = `J-${year}-${String(nextSeq).padStart(3, '0')}`;
       quote.job_num = resolvedJobNum;
       quote.jobNum = resolvedJobNum;
+    }
+
+    // Ensure new estimate customers are represented in customers table.
+    const customerName = String(quote.client || '').trim();
+    if (customerName) {
+      const [existingCustomer] = await connection.query('SELECT id FROM customers WHERE name = ? LIMIT 1', [customerName]);
+      if (existingCustomer.length === 0) {
+        await connection.query(
+          'INSERT INTO customers (name, billing_address, notes) VALUES (?, ?, ?)',
+          [customerName, String(quote.jobSite || '').trim(), 'Auto-created from quote save']
+        );
+      }
     }
 
     const rowValues = [

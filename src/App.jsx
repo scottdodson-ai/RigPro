@@ -316,6 +316,12 @@ const DEFAULT_PROFILE_TEMPLATE = [
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 const fmt    = n  => "$" + Math.round(n||0).toLocaleString();
 const uid    = () => Date.now() + Math.floor(Math.random()*10000);
+const listKey = (prefix, item, index = 0) => {
+  const base = item && typeof item === "object"
+    ? (item.id ?? item.quote_number ?? item.qn ?? item.job_num ?? item.code ?? item.name ?? item.label)
+    : item;
+  return `${prefix}-${String(base ?? "na")}-${index}`;
+};
 const nextQN = () => "RIG-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random()*900+100));
 const nextRN = () => "REQ-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random()*900+100));
 const today  = () => new Date().toISOString().slice(0,10);
@@ -1034,10 +1040,10 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
                 {["Quote #","Customer","Description","Date","Status","Total","Estimator"].map(h=><th key={h} style={{ ...thS, padding:"8px 10px", borderBottom:`1px solid ${C.bdr}` }}>{h}</th>)}
               </tr></thead>
               <tbody>
-                {groupQuotes.map(q=>{
+                {groupQuotes.map((q, i)=>{
                   const adj=(q.salesAdjustments||[]).reduce((s,a)=>s+a.amount,0);
                   return (
-                    <tr key={q.id} style={{ borderBottom:`1px solid ${C.bdr}`, cursor:"pointer" }}
+                    <tr key={listKey("drill-quote", q, i)} style={{ borderBottom:`1px solid ${C.bdr}`, cursor:"pointer" }}
                       onClick={()=>{ onOpenQuote(q); onClose(); }}
                       onMouseEnter={e=>e.currentTarget.style.background=C.accL}
                       onMouseLeave={e=>e.currentTarget.style.background=""}>
@@ -1338,11 +1344,11 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
       <div style={{ display:"grid", gridTemplateColumns:"280px 904px", gap:16, alignItems:"start" }}>
         {/* Report list */}
         <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-          {filtered.map(r => {
+          {filtered.map((r, i) => {
             const isActive = activeReport?.id===r.id;
             const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===r.id);
             return (
-              <div key={r.id} onClick={()=>setActiveReport(r)} style={{ background:isActive?C.accL:C.sur, border:`1px solid ${isActive?C.accB:C.bdr}`, borderRadius:8, padding:"10px 12px", cursor:"pointer", position:"relative" }}>
+              <div key={listKey("report", r, i)} onClick={()=>setActiveReport(r)} style={{ background:isActive?C.accL:C.sur, border:`1px solid ${isActive?C.accB:C.bdr}`, borderRadius:8, padding:"10px 12px", cursor:"pointer", position:"relative" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
                   <div>
                     <div style={{ fontWeight:700, fontSize:13, color:isActive?C.acc:C.txt }}>{r.name}</div>
@@ -1890,8 +1896,8 @@ function RecentQuotesCard({ jobs, openEdit, setView }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.slice(0,12).map(q=>(
-              <tr key={q.id} style={{ cursor:"pointer" }} onClick={()=>openEdit(q)}>
+            {filtered.slice(0,12).map((q, i)=>(
+              <tr key={listKey("hist-quote", q, i)} style={{ cursor:"pointer" }} onClick={()=>openEdit(q)}>
                 <td style={{ ...tdS, color:C.acc, fontWeight:600, whiteSpace:"nowrap" }}>{q.job_num}</td>
                 <td style={{ ...tdS, fontWeight:600 }}>{q.client}</td>
                 <td className="rq-hide-mobile" style={{ ...tdS, color:C.txtM, maxWidth:180 }}>{q.job_description}</td>
@@ -1981,7 +1987,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
         {filteredReqs.length===0 && (
           <div style={{ fontSize:12, color:C.txtS, padding:"10px 0", textAlign:"center" }}>No requests match the selected filters.</div>
         )}
-        {filteredReqs.map(r => {
+        {filteredReqs.map((r, i) => {
           const folder  = jobFolders[r.id];
           const stage   = folder ? (folder.stage ?? 0) : 0;
           const lastAct = folder?.lastActivity || r.date || "";
@@ -1994,7 +2000,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
           const isExp   = expandedRfq===r.id;
 
           return (
-            <div key={r.id} style={{ background:C.bg, borderRadius:8, border:`1px solid ${isExp?C.accB:C.bdr}`, overflow:"hidden", transition:"border .15s" }}>
+            <div key={listKey("rfq-row", r, i)} style={{ background:C.bg, borderRadius:8, border:`1px solid ${isExp?C.accB:C.bdr}`, overflow:"hidden", transition:"border .15s" }}>
               {/* Collapsed row */}
               <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", cursor:"pointer", flexWrap:"wrap" }} onClick={()=>setExpandedRfq(isExp?null:r.id)}>
                 <div style={{ width:22, height:22, borderRadius:"50%", background:isExp?C.acc:C.bdr, color:isExp?"#fff":C.txtM, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0, transition:"all .15s" }}>{isExp?"▾":"▸"}</div>
@@ -2151,12 +2157,12 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
             {rfqView==="active"?"No active RFQs — all requests have been quoted or closed.":"No requests found."}
           </Card>
         )}
-        {filtered.map(r => {
+        {filtered.map((r, i) => {
           const isDead   = r.status==="Dead";
           const isQuoted = r.status==="Quoted";
           const linkedQ  = jobs.find(q=>q.fromReqId===r.id);
           return (
-            <Card key={r.id} style={{ marginBottom:0, opacity:isDead?0.75:1, background:isDead?"#111318":C.sur, border:isDead?`1px solid #374151`:`1px solid ${C.bdr}`, display:"flex", flexDirection:"column", height:"100%" }}>
+            <Card key={listKey("rfq-card", r, i)} style={{ marginBottom:0, opacity:isDead?0.75:1, background:isDead?"#111318":C.sur, border:isDead?`1px solid #374151`:`1px solid ${C.bdr}`, display:"flex", flexDirection:"column", height:"100%" }}>
               <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:layoutMode==="card"?"stretch":"flex-start", flex:1, flexDirection:layoutMode==="card"?"column":"row" }}>
                 <div style={{ flex:1, minWidth:200 }}>
                   <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginBottom:3 }}>
@@ -2330,8 +2336,8 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
                   {allJobs.length===0 ? "No historical jobs found. Jobs appear here from the Master Job Registry." : "No jobs match your search."}
                 </td></tr>
               )}
-              {filtered.map(j => (
-                <tr key={j.id}
+              {filtered.map((j, i) => (
+                <tr key={listKey("master-job", j, i)}
                   style={{ borderBottom:`1px solid ${C.bdr}`, background:C.sur }}
                   onMouseEnter={e=>e.currentTarget.style.background=C.grnB}
                   onMouseLeave={e=>e.currentTarget.style.background=C.sur}>
@@ -4888,11 +4894,11 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
                         <div style={{ padding:"10px 14px",borderTop:"1px solid #e2e5ea" }}>
                           <div style={{ fontSize:11,color:"#8a93a2",fontWeight:600,marginBottom:7,textTransform:"uppercase",letterSpacing:.5 }}>Estimates at this Location</div>
                           <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
-                            {locQuotes.map(q=>{
+                            {locQuotes.map((q, i)=>{
                               const ss={"In Progress":{bg:C.yelB,cl:C.yel,bd:C.yelBdr},"In Review":{bg:C.bluB,cl:C.blue,bd:C.bluBdr},"Approved":{bg:"#f0fdfa",cl:"#0d9488",bd:"#99f6e4"},"Adjustments Needed":{bg:"#fff1f2",cl:"#e11d48",bd:"#fecdd3"},Submitted:{bg:"#eff6ff",cl:"#2563eb",bd:"#bfdbfe"},Won:{bg:"#f0fdf4",cl:"#16a34a",bd:"#bbf7d0"},Lost:{bg:"#fef2f2",cl:"#dc2626",bd:"#fecaca"},Dead:{bg:"#1c1f26",cl:"#9ca3af",bd:"#374151"},Draft:{bg:"#f1f5f9",cl:"#475569",bd:"#cbd5e1"},"Change Order":{bg:"#f5f3ff",cl:"#6d28d9",bd:"#ddd6fe"}};
                               const st=ss[q.status]||ss.Draft;
                               return(
-                                <div key={q.id} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 10px",background:"#f9fafb",border:"1px solid #e2e5ea",borderRadius:6 }}>
+                                <div key={listKey("loc-quote", q, i)} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 10px",background:"#f9fafb",border:"1px solid #e2e5ea",borderRadius:6 }}>
                                   <div>
                                     <span style={{ fontWeight:700,color:"#b86b0a",fontSize:12,marginRight:8 }}>{q.job_num}</span>
                                     <span style={{ background:st.bg,color:st.cl,border:`1px solid ${st.bd}`,borderRadius:3,padding:"1px 6px",fontSize:10,fontWeight:600 }}>{q.status}</span>
@@ -4933,11 +4939,11 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
               </div>
               {filteredQ.length===0 && <div style={{ textAlign:"center",color:"#8a93a2",padding:"24px 0",fontSize:13 }}>No jobs match your filter.</div>}
               <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-                {filteredQ.map(q=>{
+                {filteredQ.map((q, i)=>{
                   const ss={"In Progress":{bg:C.yelB,cl:C.yel,bd:C.yelBdr},"In Review":{bg:C.bluB,cl:C.blue,bd:C.bluBdr},"Approved":{bg:"#f0fdfa",cl:"#0d9488",bd:"#99f6e4"},"Adjustments Needed":{bg:"#fff1f2",cl:"#e11d48",bd:"#fecdd3"},Submitted:{bg:"#eff6ff",cl:"#2563eb",bd:"#bfdbfe"},Won:{bg:"#f0fdf4",cl:"#16a34a",bd:"#bbf7d0"},Lost:{bg:"#fef2f2",cl:"#dc2626",bd:"#fecaca"},Dead:{bg:"#1c1f26",cl:"#9ca3af",bd:"#374151"},Draft:{bg:"#f1f5f9",cl:"#475569",bd:"#cbd5e1"},"Change Order":{bg:"#f5f3ff",cl:"#6d28d9",bd:"#ddd6fe"}};
                   const st=ss[q.status]||ss.Draft;
                   return(
-                    <div key={q.id} style={{ background:"#f5f6f8",border:"1px solid #e2e5ea",borderRadius:7,padding:"11px 14px" }}>
+                    <div key={listKey("cust-quote", q, i)} style={{ background:"#f5f6f8",border:"1px solid #e2e5ea",borderRadius:7,padding:"11px 14px" }}>
                       <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8 }}>
                         <div style={{ flex:1,minWidth:0 }}>
                           <div style={{ display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginBottom:3 }}>
@@ -5063,7 +5069,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
                     </div>
                   ) : (
                     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                      {openReqs.map(r=><RFQCard key={r.id} r={r}/>)}
+                      {openReqs.map((r, i)=><RFQCard key={listKey("open-rfq", r, i)} r={r}/>)}
                     </div>
                   )}
                 </div>
@@ -5080,7 +5086,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
                   </button>
                   {showDeadRfqs && deadReqs.length > 0 && (
                     <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:10 }}>
-                      {deadReqs.map(r=><RFQCard key={r.id} r={r}/>)}
+                      {deadReqs.map((r, i)=><RFQCard key={listKey("dead-rfq", r, i)} r={r}/>)}
                     </div>
                   )}
                   {showDeadRfqs && deadReqs.length===0 && (
@@ -5539,12 +5545,12 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {/* JOB VIEW: job chips only, no equipment */}
-          {calView === "job" && viewJobs.slice(0, 2).map(job => {
+          {calView === "job" && viewJobs.slice(0, 2).map((job, i) => {
             const s       = sc(job.status);
             const isStart = job.startObj.getDate()===d && job.startObj.getMonth()===month && job.startObj.getFullYear()===year;
             const isEnd   = job.endObj.getDate()===d   && job.endObj.getMonth()===month   && job.endObj.getFullYear()===year;
             return (
-              <div key={job.id} onClick={e => { e.stopPropagation(); setDetailJob(job); setEditDates(null); }}
+              <div key={listKey("month-cell-job", job, i)} onClick={e => { e.stopPropagation(); setDetailJob(job); setEditDates(null); }}
                 title={`${job.client} — ${job.desc}`}
                 style={{
                   fontSize: 10, fontWeight: 600, padding: "2px 5px", cursor: "pointer",
@@ -5631,8 +5637,8 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
                     );
                   })}
                 </div>
-                {[cf.jobA, cf.jobB].map(job => (
-                  <div key={job.id} style={{ background: C.sur, border: `1px solid ${C.bdr}`,
+                {[cf.jobA, cf.jobB].map((job, i) => (
+                  <div key={listKey("conflict-job", job, i)} style={{ background: C.sur, border: `1px solid ${C.bdr}`,
                                              borderRadius: 6, padding: "9px 12px", marginBottom: 6 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, color: C.acc }}>{job.qn}</div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{job.client}</div>
@@ -5946,13 +5952,13 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
             })}
             {/* Job cards */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {jobs.map(job => {
+              {jobs.map((job, i) => {
                 const s = sc(job.status);
                 const jobEquip = (job.equipList || []).map(code => ({
                   code, eq: eqLookup[code], conflict: (equipMap[code] || []).length > 1,
                 }));
                 return (
-                  <div key={job.id} style={{ border: `1px solid ${s.bd}`, borderRadius: 7,
+                  <div key={listKey("day-job", job, i)} style={{ border: `1px solid ${s.bd}`, borderRadius: 7,
                                              padding: "11px 14px", background: s.bg }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -6018,11 +6024,11 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
           );
           return (
             <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-              {filtered.map(job => {
+              {filtered.map((job, i) => {
                 const s = sc(job.status);
                 const hasCf = equipConflicts.some(cf => cf.jobA.id === job.id || cf.jobB.id === job.id);
                 return (
-                  <div key={job.id} onClick={() => { setDetailJob(job); setEditDates(null); }}
+                  <div key={listKey("month-list-job", job, i)} onClick={() => { setDetailJob(job); setEditDates(null); }}
                     style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start",
                              padding: "11px 14px", borderRadius: 7, cursor: "pointer", gap: 10,
                              background: hasCf ? "#fff5f5" : s.bg,
@@ -6345,7 +6351,7 @@ function DatabaseBrowser({ token }) {
   const [loading, setLoading] = useState(false);
   const [tableSearch, setTableSearch] = useState("");
 
-  const tables = ['users', 'estimators', 'admin_tasks', 'jobs', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
+  const tables = ['users', 'estimators', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
 
   useEffect(() => {
     if (!selectedTable || !token) return;
@@ -8518,13 +8524,13 @@ export default function App() {
               <table style={{ width:"100%", borderCollapse:"collapse", minWidth:620 }}>
                 <thead><tr>{["Role","Workers","Days","Reg Hrs","OT Hrs","Bill Rate","Subtotal","Special?",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {(active.laborRows||[]).map(row => {
+                  {(active.laborRows||[]).map((row, i) => {
                     const b   = baseLabor.find(x=>x.role===row.role)||baseLabor[0];
                     const rR  = row.special ? Number(row.overReg) : b.reg;
                     const oR  = row.special ? Number(row.overOT)  : b.ot;
                     const sub = rR*row.workers*(row.regHrs||0)*row.days + oR*row.workers*(row.otHrs||0)*row.days;
                     return (
-                      <tr key={row.id}>
+                      <tr key={listKey("labor-row", row, i)}>
                         <td style={tdS}><select style={sel} value={row.role} onChange={e=>updR("laborRows",row.id,"role",e.target.value)} disabled={active.locked}>{baseLabor.map(r=><option key={r.role}>{r.role}</option>)}</select></td>
                         <td style={tdS}><input style={{ ...inp, width:50 }} type="number" min={0} value={row.workers}    onChange={e=>updR("laborRows",row.id,"workers",Number(e.target.value))} disabled={active.locked}/></td>
                         <td style={tdS}><input style={{ ...inp, width:50 }} type="number" min={0} value={row.days}       onChange={e=>updR("laborRows",row.id,"days",Number(e.target.value))}    disabled={active.locked}/></td>
@@ -8572,10 +8578,10 @@ export default function App() {
               <table style={{ width:"100%", borderCollapse:"collapse", minWidth:500 }}>
                 <thead><tr>{["Mobilization","Workers","Days","Per Diem","Hotel","Travel - Other","Subtotal",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {(active.travelRows||[]).map(row => {
+                  {(active.travelRows||[]).map((row, i) => {
                     const sub = row.workers*row.days*((row.perDiem?perDiemRate:0)+(row.hotel?hotelRate:0));
                     return (
-                      <tr key={row.id}>
+                      <tr key={listKey("travel-row", row, i)}>
                         <td style={tdS}><select style={sel} value={row.label} onChange={e=>updR("travelRows",row.id,"label",e.target.value)} disabled={active.locked}>{["First Mobilization","Second Mobilization","Additional Mobilization"].map(l=><option key={l}>{l}</option>)}</select></td>
                         <td style={tdS}><input style={{ ...inp, width:50 }} type="number" min={0} value={row.workers} onChange={e=>updR("travelRows",row.id,"workers",Number(e.target.value))} disabled={active.locked}/></td>
                         <td style={tdS}><input style={{ ...inp, width:50 }} type="number" min={0} value={row.days}    onChange={e=>updR("travelRows",row.id,"days",Number(e.target.value))}    disabled={active.locked}/></td>
@@ -8609,14 +8615,14 @@ export default function App() {
               <table style={{ width:"100%", borderCollapse:"collapse", minWidth:560 }}>
                 <thead><tr>{["Equipment","Cap.","Rate/Day","Days","Shipping","Subtotal","Override?",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {(active.equipRows||[]).map(row => {
+                  {(active.equipRows||[]).map((row, i) => {
                     const eq    = eqMap[row.code] || EQUIPMENT[0];
                     const gOv   = eqOv[row.code];
                     const bd    = Number(gOv?.daily ?? eq.daily_rate ?? 0);
                     const daily = row.overRate ? Number(row.overDaily ?? bd) : bd;
                     const sub   = daily*row.days + Number(row.ship||0);
                     return (
-                      <tr key={row.id}>
+                      <tr key={listKey("equip-row", row, i)}>
                         <td style={tdS}><select style={{ ...sel, maxWidth:210 }} value={row.code} onChange={e=>{ const ne=eqMap[e.target.value]||EQUIPMENT[0]; const go=eqOv[e.target.value]; updR("equipRows",row.id,"code",e.target.value); updR("equipRows",row.id,"overDaily",go?go.daily:ne.daily_rate); }} disabled={active.locked}>{eqCats.map(cat=><optgroup key={cat} label={cat}>{equipment.filter(e=>e.category===cat).map(e=><option key={e.code} value={e.code}>{e.name}</option>)}</optgroup>)}</select></td>
                         <td style={{ ...tdS, fontSize:11, color:C.txtS }}>{eq.capacity}</td>
                         <td style={tdS}>{row.overRate ? <DollarInput val={row.overDaily} on={e=>updR("equipRows",row.id,"overDaily",Number(e.target.value))} w={65}/> : <span style={{ fontSize:13, color:gOv?C.yel:C.txtM }}>${daily.toLocaleString()}/day{gOv?" ⚡":""}</span>}</td>
@@ -8640,10 +8646,10 @@ export default function App() {
               <table style={{ width:"100%", borderCollapse:"collapse", minWidth:420 }}>
                 <thead><tr>{["Vendor","Description","Cost","Markup %","Bid Amt",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {(active.haulingRows||[]).map(row => {
+                  {(active.haulingRows||[]).map((row, i) => {
                     const bid = Number(row.cost)*(1+Number(row.markup||0));
                     return (
-                      <tr key={row.id}>
+                      <tr key={listKey("hauling-row", row, i)}>
                         <td style={tdS}><input style={inp} value={row.vendor} placeholder="Vendor"  onChange={e=>updR("haulingRows",row.id,"vendor",e.target.value)} disabled={active.locked}/></td>
                         <td style={tdS}><input style={inp} value={row.desc}   placeholder="Details" onChange={e=>updR("haulingRows",row.id,"desc",e.target.value)}   disabled={active.locked}/></td>
                         <td style={tdS}><DollarInput val={row.cost} on={e=>updR("haulingRows",row.id,"cost",Number(e.target.value))} w={75}/></td>
@@ -8665,10 +8671,10 @@ export default function App() {
               <table style={{ width:"100%", borderCollapse:"collapse", minWidth:420 }}>
                 <thead><tr>{["Subcontractor","Scope","Cost","Markup %","Bid Amt",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {(active.subRows||[]).map(row => {
+                  {(active.subRows||[]).map((row, i) => {
                     const bid = Number(row.cost)*(1+Number(row.markup||0));
                     return (
-                      <tr key={row.id}>
+                      <tr key={listKey("sub-row", row, i)}>
                         <td style={tdS}><input style={inp} value={row.vendor} placeholder="Company" onChange={e=>updR("subRows",row.id,"vendor",e.target.value)} disabled={active.locked}/></td>
                         <td style={tdS}><input style={inp} value={row.desc}   placeholder="Scope of work" onChange={e=>updR("subRows",row.id,"desc",e.target.value)} disabled={active.locked}/></td>
                         <td style={tdS}><DollarInput val={row.cost} on={e=>updR("subRows",row.id,"cost",Number(e.target.value))} w={75}/></td>
@@ -8691,10 +8697,10 @@ export default function App() {
               <table style={{ width:"100%", borderCollapse:"collapse", minWidth:420 }}>
                 <thead><tr>{["Vendor","Description","Cost","Markup %","Bid Amt",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {(active.matRows||[]).map(row => {
+                  {(active.matRows||[]).map((row, i) => {
                     const bid = Number(row.cost)*(1+Number(row.markup||0.15));
                     return (
-                      <tr key={row.id}>
+                      <tr key={listKey("mat-row", row, i)}>
                         <td style={tdS}><input style={inp} value={row.vendor} placeholder="Vendor"   onChange={e=>updR("matRows",row.id,"vendor",e.target.value)} disabled={active.locked}/></td>
                         <td style={tdS}><input style={inp} value={row.desc}   placeholder="Material" onChange={e=>updR("matRows",row.id,"desc",e.target.value)}   disabled={active.locked}/></td>
                         <td style={tdS}><DollarInput val={row.cost} on={e=>updR("matRows",row.id,"cost",Number(e.target.value))} w={75}/></td>
@@ -8716,10 +8722,10 @@ export default function App() {
               <table style={{ width:"100%", borderCollapse:"collapse", minWidth:500 }}>
                 <thead><tr>{["Agency / Authority","Permit Type","Cost","Markup %","Bid Amt","Notes",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {(active.permitRows||[]).map(row => {
+                  {(active.permitRows||[]).map((row, i) => {
                     const bid = Number(row.cost)*(1+Number(row.markup||0));
                     return (
-                      <tr key={row.id}>
+                      <tr key={listKey("permit-row", row, i)}>
                         <td style={tdS}><input style={inp} value={row.vendor} placeholder="Issuing agency" onChange={e=>updR("permitRows",row.id,"vendor",e.target.value)} disabled={active.locked}/></td>
                         <td style={tdS}><input style={inp} value={row.desc}   placeholder="Permit description" onChange={e=>updR("permitRows",row.id,"desc",e.target.value)} disabled={active.locked}/></td>
                         <td style={tdS}><DollarInput val={row.cost} on={e=>updR("permitRows",row.id,"cost",Number(e.target.value))} w={75}/></td>
