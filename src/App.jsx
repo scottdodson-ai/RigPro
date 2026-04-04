@@ -896,6 +896,7 @@ const BUILT_IN_REPORTS = [
   { id:"equipment-quoted", name:"Equipment Quoted",         category:"Finance",    desc:"Quoted equipment and shipping/hauling charges",   scope:"org" },
   { id:"addl-costs",       name:"Subcontractors & Materials",category:"Finance",   desc:"Subcontractors, materials, and permits",          scope:"org" },
   { id:"discounts-given",  name:"Discounts Given",          category:"Finance",    desc:"Total discounts given grouped by estimator",      scope:"org" },
+  { id:"sales-adjustment", name:"Sales Adjustment Report",  category:"Activity",   desc:"Estimates with sales adjustments by customer",    scope:"org" },
   { id:"estimator-activity",name:"Estimator Activity",      category:"Activity",   desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
   { id:"neighborhood-report", name:"Neighborhood Report",   category:"Customers",  desc:"Find customers by zipcode or proximity",            scope:"org" },
   { id:"prospect-report",     name:"Prospect Report",       category:"Customers",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
@@ -1212,6 +1213,23 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
         rows:data.map(d=>[d.name,d.jobs.length,fmt2(d.total)]),
         rawRefs:data.map(d=>({type:"group-estimator",key:d.name,jobs:d.jobs})),
         summary:`Discounts given by ${data.length} estimators` };
+    }
+    case "sales-adjustment": {
+      const db={};
+      jobs.forEach(q => {
+         const adjAmt = (q.salesAdjustments||[]).reduce((s,a)=>s+Number(a.amount),0);
+         if (adjAmt !== 0 || (q.salesAdjustments||[]).length > 0) {
+            const k = q.client || "Unknown Customer";
+            if (!db[k]) db[k] = { customer: k, totalAdj: 0, qs: [] };
+            db[k].totalAdj += adjAmt;
+            db[k].qs.push(q);
+         }
+      });
+      const data=Object.values(db).sort((a,b)=>b.totalAdj - a.totalAdj);
+      return { cols:["Customer","Adjusted Quotes","Total Adjustments"], clickHint:"Click a customer to view specific quote adjustments",
+        rows:data.map(d=>[d.customer,d.qs.length,fmt2(d.totalAdj)]),
+        rawRefs:data.map(d=>({type:"group-customer",key:d.customer,jobs:d.qs})),
+        summary:`Sales adjustments across ${data.length} customers` };
     }
     case "estimator-activity": {
       const m={};
