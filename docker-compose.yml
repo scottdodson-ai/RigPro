@@ -29,8 +29,8 @@ services:
       DB_PASSWORD: password123
       DB_NAME: rigpro
       JWT_SECRET: supersecretkey_for_rigpro
-      OLLAMA_URL: http://ollama:11434
-      QDRANT_URL: http://qdrant:6333
+#      OLLAMA_URL: http://ollama:11434
+#      QDRANT_URL: http://qdrant:6333
     volumes:
       - ./server:/app
       - api_node_modules:/app/node_modules
@@ -65,26 +65,26 @@ services:
     networks:
       - rigpro-network
 
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - rigpro-network
-    restart: unless-stopped
-
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - qdrant_data:/qdrant/storage
-    networks:
-      - rigpro-network
-    restart: unless-stopped
+#  ollama:
+#    image: ollama/ollama:latest
+#    ports:
+#      - "11434:11434"
+#    volumes:
+#      - ollama_data:/root/.ollama
+#    networks:
+#      - rigpro-network
+#    restart: unless-stopped
+#
+#  qdrant:
+#    image: qdrant/qdrant:latest
+#    ports:
+#      - "6333:6333"
+#      - "6334:6334"
+#    volumes:
+#      - qdrant_data:/qdrant/storage
+#    networks:
+#      - rigpro-network
+#    restart: unless-stopped
 
 networks:
   rigpro-network:
@@ -94,5 +94,5 @@ volumes:
   db_data:
   api_node_modules:
   web_node_modules:
-  ollama_data:
-  qdrant_data:
+#  ollama_data:
+#  qdrant_data:
