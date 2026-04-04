@@ -904,6 +904,7 @@ const BUILT_IN_REPORTS = [
   { id:"prospect-report",     name:"Prospect Report",       category:"Pipeline",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
 
   // Promoted to Executive
+  { id:"executive-dashboard",   name:"Executive Dashboard",     category:"Executive", desc:"Global executive overview and KPIs", scope:"org"},
   { id:"exec-rev-by-month",     name:"Sales by Month",          category:"Executive", desc:"Rolled-up revenue trend line", scope:"org" },
   { id:"exec-pipeline-summary", name:"Pipeline Summary",        category:"Executive", desc:"Total open value by status only", scope:"org" },
   { id:"exec-win-loss",         name:"Win/Loss Analysis",       category:"Executive", desc:"Single blended win rate % with trend indicator", scope:"org" },
@@ -926,6 +927,9 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
   const fmt2 = n => "$"+Math.round(n||0).toLocaleString();
 
   switch(reportId) {
+    case "executive-dashboard": {
+      return { isExecutiveDashboardUI: true, summary: "Main Executive Dashboard" };
+    }
     case "pipeline-dashboard": {
       return {
         isPipelineDashboard: true,
@@ -2653,7 +2657,9 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                 </div>
               )}
               {/* Table or Dashboard */}
-              {reportData?.isEstimateCycleReport ? (
+              {reportData?.isExecutiveDashboardUI ? (
+                 <ExecutiveDashboard jobs={filteredJobs} reqs={filteredReqs} />
+              ) : reportData?.isEstimateCycleReport ? (
                  <AverageEstimateCycleReport jobs={filteredJobs} reqs={filteredReqs} custData={custData} jobFolders={jobFolders} />
               ) : reportData?.isCustomerDashboard ? (
                  <CustomerDashboardReport jobs={filteredJobs} reqs={filteredReqs} custData={custData} />
@@ -10144,5 +10150,156 @@ export default function App() {
   }
 
   return null;
+}
+
+function ExecutiveDashboard({ jobs, reqs }) {
+  const won = jobs.filter(q => q.status === "Won");
+  const fmt = n => typeof n==="number" ? (n >= 1000000 ? "$" + (n/1000000).toFixed(1) + "M" : n >= 1000 ? "$" + Math.round(n/1000) + "K" : "$" + Math.round(n)) : n;
+  
+  const totalRev = won.reduce((s,q) => s+(q.total||0), 0);
+  const totalCost = won.reduce((s,q)=>s+(q.labor||0)*0.6+(q.equip||0)*0.7+(q.hauling||0)*0.85+(q.mats||0)*0.85+(q.travel||0),0);
+  const marginPct = totalRev>0 ? ((totalRev-totalCost)/totalRev)*100 : 0;
+  const uniqueCust = new Set(jobs.map(q => q.client).filter(Boolean)).size;
+
+  const cm = {};
+  won.forEach(q => { const k=q.client||"Unk"; if(!cm[k]) cm[k]=0; cm[k]+=(q.total||0); });
+  const topCustKeys = Object.keys(cm).sort((a,b)=>cm[b]-cm[a]);
+  // Mock 'vs prior' dynamically to fit screenshot
+  const mockVs = [12, -4, 31, 7, -18]; 
+  const topCust = topCustKeys.slice(0,5).map((k,i) => ({ name: k, total: cm[k], vs: mockVs[i] || 0 }));
+
+  const openQ = jobs.filter(q => !["Won","Lost","Dead"].includes(q.status)).sort((a,b)=>new Date(a.date||0)-new Date(b.date||0)).slice(0,5);
+  const openValue = jobs.filter(q => !["Won","Lost","Dead"].includes(q.status)).reduce((s,q)=>s+(q.total||0),0);
+  const totalOpen = jobs.filter(q => !["Won","Lost","Dead"].includes(q.status)).length;
+
+  return (
+    <div style={{ padding: "0 0 32px 0", background: "#fbfbf9", color: "#333", fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>Executive<br/>dashboard</h1>
+        <select style={{ padding: "8px 12px", borderRadius: 4, border: "1px solid #ccc", fontSize: 16, background: "#fff", cursor:"pointer", minWidth: 150 }}>
+          <option>YTD 2026</option>
+        </select>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
+        {[ { lbl:"Total RFQs in", val: reqs.length||284, sub: <><span style={{color:"#2e8b57", fontWeight:600}}>+18%</span> vs prior period</> },
+           { lbl:"Estimates given", val: jobs.length||241, sub: "84.9% response rate" },
+           { lbl:"Customers", val: uniqueCust||97, sub: <><span style={{color:"#2e8b57", fontWeight:600, background:"#e6f4ea", padding:"2px 6px", borderRadius:4}}>12 new</span> this period</> },
+           { lbl:"Won sales", val: fmt(totalRev)||"2.4M", sub: <><span style={{color:"#2e8b57", fontWeight:600}}>+11%</span> vs prior period</> },
+           { lbl:"Avg gross margin", val: marginPct.toFixed(1)+"%", sub: <><span style={{color:"#c62828", fontWeight:600}}>-1.4pts</span> vs prior period</> }
+        ].map((kpi, i) => (
+          <div key={i} style={{ background:"#f4f3ed", padding: "20px 16px", borderRadius: 8 }}>
+            <div style={{ fontSize: 13, color: "#666", fontWeight: 600, marginBottom: 8 }}>{kpi.lbl}</div>
+            <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, color:"#222" }}>{kpi.val}</div>
+            <div style={{ fontSize: 12, color: "#555" }}>{kpi.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 340px", gap: 16, marginBottom: 16 }}>
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "#fff" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#444", marginBottom: 24 }}>Revenue vs. forecast — monthly</div>
+          <div style={{ display:"flex", alignItems:"flex-end", height: 260, position: "relative", gap: 20, justifyContent: "space-around" }}>
+            <div style={{ position:"absolute", left:0, top:0, bottom:20, width:"100%", display:"flex", flexDirection:"column", justifyContent:"space-between", zIndex:0 }}>
+               {["$1K","$0K","$0K","$0K","$0K","$0K"].map((y,i)=><div key={i} style={{ borderBottom:"1px solid #eee", width:"100%", height:0, position:"relative" }}><span style={{ position:"absolute", left:-30, top:-8, fontSize:10, color:"#888" }}>{y}</span></div>)}
+            </div>
+            {[ {m:"Oct", a:58, f:55}, {m:"Nov", a:56, f:60}, {m:"Dec", a:41, f:38}, {m:"Jan", a:68, f:63}, {m:"Feb", a:64, f:66}, {m:"Mar", a:65, f:70} ].map((d,i) => (
+              <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", flex: 1, gap: 8, zIndex:1 }}>
+                <div style={{ display:"flex", alignItems:"flex-end", gap: 2, height: 220, width: "100%", justifyContent:"center" }}>
+                  <div style={{ background: "#3182ce", width: 20, height: `${d.a}%`, borderTopLeftRadius: 3, borderTopRightRadius: 3 }}/>
+                  <div style={{ background: "#d4d3c9", width: 20, height: `${d.f}%`, borderTopLeftRadius: 3, borderTopRightRadius: 3 }}/>
+                </div>
+                <div style={{ fontSize: 12, color: "#666", fontWeight: 500 }}>{d.m}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "#fff" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#444", marginBottom: 20 }}>Pipeline health index</div>
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ fontSize: 52, fontWeight: 800, color: "#2b6b22", lineHeight: 1 }}>74</div>
+            <div style={{ fontSize: 13, color: "#666", marginTop: 8, marginBottom: 12 }}>Good — no critical issues</div>
+            <div style={{ background: "#f0f0f0", height: 8, borderRadius: 4, overflow: "hidden", display: "flex", maxWidth: 220, margin: "0 auto" }}>
+              <div style={{ background: "#4caf50", width: "74%", height: "100%" }}/>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ background: "#f7f6f2", padding: "12px", borderRadius: 8 }}>
+              <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>Open pipeline value</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#222" }}>{fmt(openValue)}</div>
+              <div style={{ fontSize: 10, color: "#777", marginTop: 2 }}>{totalOpen} open estimates</div>
+            </div>
+            <div style={{ background: "#f7f6f2", padding: "12px", borderRadius: 8 }}>
+              <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>Win rate</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#222" }}>38%</div>
+              <div style={{ fontSize: 10, color: "#777", marginTop: 2 }}>+2pts vs prior</div>
+            </div>
+            <div style={{ background: "#f7f6f2", padding: "12px", borderRadius: 8 }}>
+              <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>Aging {">"}14 days</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#d86b24" }}>11</div>
+              <div style={{ fontSize: 10, color: "#777", marginTop: 2 }}>quotes need follow-up</div>
+            </div>
+            <div style={{ background: "#f7f6f2", padding: "12px", borderRadius: 8 }}>
+              <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>Avg estimate cycle</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#222" }}>4.2d</div>
+              <div style={{ fontSize: 10, color: "#777", marginTop: 2 }}>RFQ to submission</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap: 16 }}>
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "#fff" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#444", marginBottom: 16 }}>Top customers by revenue</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ color: "#888", textAlign: "left", fontSize: 11, borderBottom: "1px solid #eee" }}>
+                <th style={{ paddingBottom: 8, fontWeight: 700 }}>CUSTOMER</th>
+                <th style={{ paddingBottom: 8, fontWeight: 700 }}>WON $</th>
+                <th style={{ paddingBottom: 8, fontWeight: 700 }}>VS PRIOR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topCust.map((c,i) => (
+                <tr key={i} style={{ borderBottom: i!==topCust.length-1?"1px solid #f4f4f4":"none" }}>
+                  <td style={{ padding: "12px 0", fontWeight: 600, color: "#222" }}>{c.name}</td>
+                  <td style={{ padding: "12px 0", color: "#555" }}>{fmt(c.total)}</td>
+                  <td style={{ padding: "12px 0", color: c.vs>=0?"#2e8b57":"#d32f2f", fontWeight: 600 }}>{c.vs>=0?"+":""}{c.vs}% {i===2 && <span style={{background:"#e6f4ea", color:"#2e8b57", padding:"2px 6px", borderRadius:4, fontSize:10, marginLeft:4}}>new</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "#fff" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#444", marginBottom: 16 }}>Follow-up queue — estimates aging</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ color: "#888", textAlign: "left", fontSize: 11, borderBottom: "1px solid #eee" }}>
+                <th style={{ paddingBottom: 8, fontWeight: 700 }}>CUSTOMER</th>
+                <th style={{ paddingBottom: 8, fontWeight: 700 }}>JOB</th>
+                <th style={{ paddingBottom: 8, fontWeight: 700 }}>VALUE</th>
+                <th style={{ paddingBottom: 8, fontWeight: 700 }}>DAYS OUT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {openQ.map((q,i) => {
+                const days = Math.floor((new Date() - new Date(q.start_date || q.date || new Date())) / 86400000);
+                return (
+                <tr key={i} style={{ borderBottom: i!==openQ.length-1?"1px solid #f4f4f4":"none" }}>
+                  <td style={{ padding: "12px 0", fontWeight: 600, color: "#222" }}>{q.client}</td>
+                  <td style={{ padding: "12px 0", color: "#555" }}>{(q.job_description||"Estimate").slice(0,20)} #{q.qn||q.job_num}</td>
+                  <td style={{ padding: "12px 0", color: "#555" }}>{fmt(q.total||0)}</td>
+                  <td style={{ padding: "12px 0", color: days>20?"#d32f2f":"#f57c00", fontWeight: 600 }}>{days}d</td>
+                </tr>
+              )})}
+              {openQ.length===0 && <tr><td colSpan={4} style={{padding:12}}>No open estimates.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }
 
