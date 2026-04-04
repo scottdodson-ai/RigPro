@@ -877,8 +877,8 @@ const BUILT_IN_REPORTS = [
   { id:"operations-dashboard",name:"Operations Dashboard",  category:"Operations", desc:"Overview of operational reports and metrics", scope:"org" },
   { id:"finance-dashboard",   name:"Finance Dashboard",     category:"Finance",    desc:"Financial summaries and overviews", scope:"org" },
   { id:"activity-dashboard",  name:"Activity Dashboard",    category:"Activity",   desc:"Activity metrics and team performance", scope:"org" },
-  { id:"open-rfqs",        name:"Requests for Quotes",      category:"Pipeline",   desc:"All open RFQs grouped by Estimator",              scope:"org" },
-  { id:"inactive-rfqs",    name:"Inactive Requests",        category:"Pipeline",   desc:"All RFQs marked as dead with context",            scope:"org" },
+  { id:"open-rfqs",        name:"Open Requests for Quotes", category:"Pipeline",   desc:"All open RFQs sorted by RFQ Status",              scope:"org" },
+  { id:"inactive-rfqs",    name:"Inactive Requests",        category:"Operations",   desc:"All RFQs marked as dead with context",            scope:"org" },
   { id:"rev-by-customer",  name:"Sales by Customer",      category:"Sales",      desc:"Total won sales ranked by customer",              scope:"org" },
   { id:"rev-by-estimator", name:"Sales by Estimator",     category:"Sales",      desc:"Won sales and win rate per estimator",            scope:"org" },
   { id:"rev-by-month",     name:"Sales by Month",         category:"Sales",      desc:"Monthly won sales trend",                        scope:"org" },
@@ -932,35 +932,25 @@ function buildReportData(reportId, jobs, reqs) {
     }
     case "open-rfqs": {
       // Show open RFQs (excluding "Dead")
-      const openReqs = reqs.filter(r => r.status !== "Dead" && r.status !== "Lost");
+      const openReqs = reqs.filter(r => r.status !== "Dead" && r.status !== "Lost" && r.status !== "Won");
       
       const flatRows = [];
       const rawRefs = [];
       
-      // Group by Estimator
-      const grouped = {};
-      openReqs.forEach(r => {
-        const est = r.salesAssoc || "Unassigned";
-        if (!grouped[est]) grouped[est] = [];
-        grouped[est].push(r);
-      });
-      
-      Object.keys(grouped).sort().forEach(est => {
-         grouped[est]
-           .sort((a,b) => new Date(b.start_date || 0) - new Date(a.start_date || 0))
-           .forEach(r => {
+      openReqs
+        .sort((a,b) => (a.status || "").localeCompare(b.status || ""))
+        .forEach(r => {
              flatRows.push([
-                est,
+                r.salesAssoc || "Unassigned",
                 `${r.rn}: ${r.job_description || r.notes || "No description"} - ${r.company}`,
                 r.status || "Pending",
                 r.start_date || r.date || "Unknown"
              ]);
              rawRefs.push({ type: "rfq", req: r });
-           });
-      });
+        });
 
       return {
-        cols: ["Estimator", "RFQ Description", "Progress Status", "Last Activity Date"],
+        cols: ["Estimator", "RFQ Description", "RFQ Status", "Last Activity Date"],
         clickHint: "Click a row to view the full RFQ details",
         rows: flatRows,
         rawRefs: rawRefs,
@@ -1041,12 +1031,14 @@ function buildReportData(reportId, jobs, reqs) {
         summary:`${data.length} months · Peak: ${fmt2(Math.max(...data.map(r=>r.revenue)))}` };
     }
     case "pipeline-summary": {
-      const statuses=["In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost"];
+      const statuses=["In Progress","In Review","Approved","Adjustments Needed","Submitted"];
       const data=statuses.map(st=>{ const qs=jobs.filter(q=>q.status===st); return {st,qs,total:qs.reduce((s,q)=>s+(q.total||0),0)}; });
+      const totalOpen = data.reduce((s,r)=>s+r.qs.length,0);
+      const totalValue = data.reduce((s,r)=>s+r.total,0);
       return { cols:["Status","Count","Total Value","Avg Deal"], clickHint:"Click a status to see its jobs",
         rows:data.map(r=>[r.st,r.qs.length,fmt2(r.total),r.qs.length?fmt2(Math.round(r.total/r.qs.length)):"—"]),
         rawRefs:data.map(r=>({type:"group-status",key:r.st,jobs:r.qs})),
-        summary:`${jobs.length} total jobs · ${fmt2(jobs.reduce((s,q)=>s+(q.total||0),0))} total value` };
+        summary:`${totalOpen} open jobs · ${fmt2(totalValue)} total value` };
     }
     case "win-loss": {
       const byType={};
