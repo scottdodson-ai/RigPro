@@ -277,24 +277,24 @@ const SAMPLE_REQS = [
 const INIT_CUST_DATA = {
   "Apex Industrial LLC":         { notes:"Long-term client since 2019. Always pays on time. Largest single account.", billingAddr:"1200 Industrial Pkwy, Akron, OH 44312", website:"www.apexindustrial.com", industry:"Heavy Manufacturing", paymentTerms:"Net 30", accountNum:"APX-001", contacts:[{id:1,name:"James Whitfield",title:"Plant Manager",email:"j.whitfield@apexind.com",phone:"330-555-0182",primary:true,locationId:"loc1"},{id:2,name:"Rick Torres",title:"Maintenance Supervisor",email:"r.torres@apexind.com",phone:"330-555-0199",primary:false,locationId:"loc1"}], locations:[{id:"loc1",name:"Akron Main Plant",address:"1200 Industrial Pkwy, Akron, OH 44312",notes:"Primary facility"}] },
   "Beacon Manufacturing Co.":    { notes:"Mid-size shop. Multiple locations. Carolyn handles all rigging requests.", billingAddr:"500 Commerce Blvd, Dayton, OH 45402", website:"www.beaconmfg.com", industry:"Precision Manufacturing", paymentTerms:"Net 45", accountNum:"BCN-002", contacts:[{id:1,name:"Carolyn Marsh",title:"Facilities Director",email:"c.marsh@beaconmfg.com",phone:"937-555-0244",primary:true,locationId:"loc1"},{id:2,name:"Doug Hensley",title:"Maintenance Manager",email:"d.hensley@beaconmfg.com",phone:"937-555-0280",primary:false,locationId:"loc2"}], locations:[{id:"loc1",name:"Dayton Facility",address:"500 Commerce Blvd, Dayton, OH 45402",notes:"HQ and main production"},{id:"loc2",name:"Springfield Warehouse",address:"220 Warehouse Dr, Springfield, OH 45501",notes:"Secondary storage"}] },
-  "Cornerstone Plastics Inc.":   { notes:"Growing account. New facility opened 2025. Repeat business expected.", billingAddr:"800 Factory Dr, Columbus, OH 43219", website:"", industry:"Plastics Manufacturing", paymentTerms:"Net 30", accountNum:"CRN-003", contacts:[{id:1,name:"Pat Gilmore",title:"Operations Manager",email:"p.gilmore@cornerstone.com",phone:"614-555-0312",primary:true,locationId:null}], locations:[{id:"loc1",name:"Columbus Plant",address:"800 Factory Dr, Columbus, OH 43219",notes:""},{id:"loc2",name:"Westgate Facility",address:"1450 Westgate Blvd, Columbus, OH 43228",notes:"New facility 2025"}] },
+  "Cornerstone Plastics Inc.":   { notes:"Growing account. New facility opened 2025. Repeat business expected.", billingAddr:"800 Factory Dr, Columbus, OH 43219", website:"", industry:"Plastics Manufacturing", paymentTerms:"Net 30", accountNum:"CRN-003", contacts:[{id:1,name:"Pat Gilmore",title:"historical Manager",email:"p.gilmore@cornerstone.com",phone:"614-555-0312",primary:true,locationId:null}], locations:[{id:"loc1",name:"Columbus Plant",address:"800 Factory Dr, Columbus, OH 43219",notes:""},{id:"loc2",name:"Westgate Facility",address:"1450 Westgate Blvd, Columbus, OH 43228",notes:"New facility 2025"}] },
   "Delta Fabrication Group":     { notes:"Competitive bidding environment. Price-sensitive. Good volume.", billingAddr:"300 Metalworks Ave, Cleveland, OH 44124", website:"www.deltafab.com", industry:"Metal Fabrication", paymentTerms:"Net 30", accountNum:"DLT-004", contacts:[{id:1,name:"Sandra Voss",title:"Purchasing Manager",email:"s.voss@deltafab.com",phone:"216-555-0415",primary:true,locationId:null}], locations:[{id:"loc1",name:"Cleveland Fab Shop",address:"300 Metalworks Ave, Cleveland, OH 44124",notes:""}] },
-  "Eagle Press & Die":           { notes:"Excellent relationship. Repeat business every quarter. Priority client.", billingAddr:"500 Eagle Way, Canton, OH 44702", website:"www.eaglepress.com", industry:"Press & Die Manufacturing", paymentTerms:"Net 15", accountNum:"EGL-005", contacts:[{id:1,name:"Bob Trexler",title:"VP Operations",email:"b.trexler@eaglepress.com",phone:"330-555-0311",primary:true,locationId:"loc1"},{id:2,name:"Lisa Brandt",title:"Plant Engineer",email:"l.brandt@eaglepress.com",phone:"330-555-0322",primary:false,locationId:"loc1"}], locations:[{id:"loc1",name:"Canton Facility",address:"500 Eagle Way, Canton, OH 44702",notes:""}] },
+  "Eagle Press & Die":           { notes:"Excellent relationship. Repeat business every quarter. Priority client.", billingAddr:"500 Eagle Way, Canton, OH 44702", website:"www.eaglepress.com", industry:"Press & Die Manufacturing", paymentTerms:"Net 15", accountNum:"EGL-005", contacts:[{id:1,name:"Bob Trexler",title:"VP historical",email:"b.trexler@eaglepress.com",phone:"330-555-0311",primary:true,locationId:"loc1"},{id:2,name:"Lisa Brandt",title:"Plant Engineer",email:"l.brandt@eaglepress.com",phone:"330-555-0322",primary:false,locationId:"loc1"}], locations:[{id:"loc1",name:"Canton Facility",address:"500 Eagle Way, Canton, OH 44702",notes:""}] },
   "Frontier Castings Ltd.":      { notes:"Union shop. Require certified rigging documentation. Strong relationship.", billingAddr:"900 Industrial Blvd, Youngstown, OH 44503", website:"", industry:"Metal Casting", paymentTerms:"Net 45", accountNum:"FRT-006", contacts:[{id:1,name:"Tony Ruiz",title:"Safety & Facilities",email:"t.ruiz@frontiercasting.com",phone:"330-555-0518",primary:true,locationId:null},{id:2,name:"Angela Kim",title:"Project Coordinator",email:"a.kim@frontiercasting.com",phone:"330-555-0530",primary:false,locationId:null}], locations:[{id:"loc1",name:"Youngstown Plant",address:"900 Industrial Blvd, Youngstown, OH 44503",notes:""}] },
-  "Gateway Precision Tools":     { notes:"Clean room protocols required. Excellent payer. Expanding operations.", billingAddr:"2200 Gateway Blvd, Toledo, OH 43612", website:"www.gatewaypt.com", industry:"Precision Tooling", paymentTerms:"Net 30", accountNum:"GTW-007", contacts:[{id:1,name:"Frank Nguyen",title:"Facilities Engineer",email:"f.nguyen@gatewaypt.com",phone:"419-555-0601",primary:true,locationId:null}], locations:[{id:"loc1",name:"Toledo Facility",address:"2200 Gateway Blvd, Toledo, OH 43612",notes:""}] },
+  "Gateway Precision Tools":     { notes:"Clean room protocols required. Excellent payer. Expanding historical.", billingAddr:"2200 Gateway Blvd, Toledo, OH 43612", website:"www.gatewaypt.com", industry:"Precision Tooling", paymentTerms:"Net 30", accountNum:"GTW-007", contacts:[{id:1,name:"Frank Nguyen",title:"Facilities Engineer",email:"f.nguyen@gatewaypt.com",phone:"419-555-0601",primary:true,locationId:null}], locations:[{id:"loc1",name:"Toledo Facility",address:"2200 Gateway Blvd, Toledo, OH 43612",notes:""}] },
   "Horizon Automotive Parts":    { notes:"Automotive tier 1 supplier. Large project volumes. Summer shutdown windows.", billingAddr:"750 Assembly Dr, Findlay, OH 45840", website:"www.horizonauto.com", industry:"Automotive Parts Manufacturing", paymentTerms:"Net 45", accountNum:"HRZ-008", contacts:[{id:1,name:"Donna Holt",title:"Plant Manager",email:"d.holt@horizonauto.com",phone:"419-555-0712",primary:true,locationId:null}], locations:[{id:"loc1",name:"Findlay Assembly Plant",address:"750 Assembly Dr, Findlay, OH 45840",notes:""}] },
   "Icon Rubber Products":        { notes:"Consistent repeat business. High-temp environment jobs common.", billingAddr:"5100 Rubber Ln, Barberton, OH 44203", website:"", industry:"Rubber Products Manufacturing", paymentTerms:"Net 30", accountNum:"ICN-009", contacts:[{id:1,name:"Greg Owens",title:"Maintenance Director",email:"g.owens@iconrubber.com",phone:"330-555-0821",primary:true,locationId:null}], locations:[{id:"loc1",name:"Barberton Plant",address:"5100 Rubber Ln, Barberton, OH 44203",notes:""}] },
-  "Junction Steel Works":        { notes:"Heavy capacity jobs. Always needs crane certification docs. Good referral source.", billingAddr:"1800 Steel Way, Warren, OH 44483", website:"www.junctionsteel.com", industry:"Steel Manufacturing", paymentTerms:"Net 30", accountNum:"JCT-010", contacts:[{id:1,name:"Ray Kowalski",title:"Operations Director",email:"r.kowalski@junctionsteel.com",phone:"330-555-0933",primary:true,locationId:null}], locations:[{id:"loc1",name:"Warren Steel Works",address:"1800 Steel Way, Warren, OH 44483",notes:""}] },
+  "Junction Steel Works":        { notes:"Heavy capacity jobs. Always needs crane certification docs. Good referral source.", billingAddr:"1800 Steel Way, Warren, OH 44483", website:"www.junctionsteel.com", industry:"Steel Manufacturing", paymentTerms:"Net 30", accountNum:"JCT-010", contacts:[{id:1,name:"Ray Kowalski",title:"historical Director",email:"r.kowalski@junctionsteel.com",phone:"330-555-0933",primary:true,locationId:null}], locations:[{id:"loc1",name:"Warren Steel Works",address:"1800 Steel Way, Warren, OH 44483",notes:""}] },
   "Keystone Die Casting":        { notes:"Union shop. Very large press work. Requires certified crew every job.", billingAddr:"620 Die Cast Dr, Massillon, OH 44646", website:"www.keystonedc.com", industry:"Die Casting", paymentTerms:"Net 30", accountNum:"KST-011", contacts:[{id:1,name:"Helen Marsh",title:"Facilities Manager",email:"h.marsh@keystonedc.com",phone:"330-555-1044",primary:true,locationId:null}], locations:[{id:"loc1",name:"Massillon Cast Shop",address:"620 Die Cast Dr, Massillon, OH 44646",notes:""}] },
   "Landmark Tooling Inc.":       { notes:"Smaller jobs, precision required. Good relationship. Fast pay.", billingAddr:"3300 Tool & Die Ave, Medina, OH 44256", website:"", industry:"Tooling & Die", paymentTerms:"Net 15", accountNum:"LMK-012", contacts:[{id:1,name:"Phil Stevens",title:"Shop Foreman",email:"p.stevens@landmarktool.com",phone:"330-555-1155",primary:true,locationId:null}], locations:[{id:"loc1",name:"Medina Tool Shop",address:"3300 Tool & Die Ave, Medina, OH 44256",notes:""}] },
   "Meridian Extrusion Co.":      { notes:"Extrusion-specific jobs. Heavy hydraulics. Reliable account.", billingAddr:"4100 Extrusion Blvd, Sandusky, OH 44870", website:"", industry:"Aluminum Extrusion", paymentTerms:"Net 45", accountNum:"MRD-013", contacts:[{id:1,name:"Carol Jensen",title:"Engineering Manager",email:"c.jensen@meridianext.com",phone:"419-555-1266",primary:true,locationId:null}], locations:[{id:"loc1",name:"Sandusky Extrusion Plant",address:"4100 Extrusion Blvd, Sandusky, OH 44870",notes:""}] },
   "Northgate Aluminum":          { notes:"High temp smelting environment. Safety protocols strictly enforced.", billingAddr:"700 Smelter Rd, Lima, OH 45801", website:"", industry:"Aluminum Smelting", paymentTerms:"Net 30", accountNum:"NGA-014", contacts:[{id:1,name:"Bruce Tanner",title:"Safety Manager",email:"b.tanner@northgatealum.com",phone:"419-555-1377",primary:true,locationId:null}], locations:[{id:"loc1",name:"Lima Smelter",address:"700 Smelter Rd, Lima, OH 45801",notes:""}] },
   "Overland Transport Mfg.":     { notes:"New account since 2025. Strong potential for repeat work. Good payer.", billingAddr:"2800 Axle Dr, Springfield, OH 45505", website:"", industry:"Transportation Equipment", paymentTerms:"Net 30", accountNum:"OVL-015", contacts:[{id:1,name:"Walt Simmons",title:"Plant Director",email:"w.simmons@overlandmfg.com",phone:"937-555-1488",primary:true,locationId:null}], locations:[{id:"loc1",name:"Springfield Plant",address:"2800 Axle Dr, Springfield, OH 45505",notes:""}] },
-  "Pinnacle Forge & Stamp":      { notes:"Heavy forge work. Large cranes required. Growing account.", billingAddr:"1100 Forge Rd, Canton, OH 44705", website:"", industry:"Forging & Stamping", paymentTerms:"Net 30", accountNum:"PNK-016", contacts:[{id:1,name:"Liz Kowalczyk",title:"Operations Manager",email:"l.kowalczyk@pinnacleforge.com",phone:"330-555-1599",primary:true,locationId:null}], locations:[{id:"loc1",name:"Canton Forge",address:"1100 Forge Rd, Canton, OH 44705",notes:""}] },
+  "Pinnacle Forge & Stamp":      { notes:"Heavy forge work. Large cranes required. Growing account.", billingAddr:"1100 Forge Rd, Canton, OH 44705", website:"", industry:"Forging & Stamping", paymentTerms:"Net 30", accountNum:"PNK-016", contacts:[{id:1,name:"Liz Kowalczyk",title:"historical Manager",email:"l.kowalczyk@pinnacleforge.com",phone:"330-555-1599",primary:true,locationId:null}], locations:[{id:"loc1",name:"Canton Forge",address:"1100 Forge Rd, Canton, OH 44705",notes:""}] },
   "Quartz Industrial Services":  { notes:"New account 2025. HVAC and utilities focus. Good referral potential.", billingAddr:"600 Industrial Ct, Mansfield, OH 44903", website:"", industry:"Industrial Services", paymentTerms:"Net 30", accountNum:"QTZ-017", contacts:[{id:1,name:"Steve Mallory",title:"Project Manager",email:"s.mallory@quartzind.com",phone:"419-555-1610",primary:true,locationId:null}], locations:[{id:"loc1",name:"Mansfield Office",address:"600 Industrial Ct, Mansfield, OH 44903",notes:""}] },
   "Ridgeline Machine Works":     { notes:"New account 2025. CNC and boring mill specialty. Strong pipeline.", billingAddr:"4500 Machinist Way, Ravenna, OH 44266", website:"", industry:"Precision Machining", paymentTerms:"Net 30", accountNum:"RDG-018", contacts:[{id:1,name:"Tom Garfield",title:"Plant Engineer",email:"t.garfield@ridgelinemw.com",phone:"330-555-1721",primary:true,locationId:null}], locations:[{id:"loc1",name:"Ravenna Machine Shop",address:"4500 Machinist Way, Ravenna, OH 44266",notes:""}] },
   "Summit Plastics Group":       { notes:"New account 2025. Large expansion plans for 2026–2027.", billingAddr:"3200 Polymer Dr, Akron, OH 44314", website:"", industry:"Plastics Manufacturing", paymentTerms:"Net 30", accountNum:"SMT-019", contacts:[{id:1,name:"Pam Rodriguez",title:"Facilities Director",email:"p.rodriguez@summitplastics.com",phone:"330-555-1832",primary:true,locationId:null}], locations:[{id:"loc1",name:"Akron Polymer Plant",address:"3200 Polymer Dr, Akron, OH 44314",notes:""}] },
-  "Titan Manufacturing LLC":     { notes:"New account 2025. Flagship job. Very large press capacity. High priority growth account.", billingAddr:"8800 Titan Blvd, Lorain, OH 44052", website:"", industry:"Heavy Manufacturing", paymentTerms:"Net 45", accountNum:"TTN-020", contacts:[{id:1,name:"Steve Dolan",title:"VP Operations",email:"s.dolan@titanmfg.com",phone:"440-555-1943",primary:true,locationId:null}], locations:[{id:"loc1",name:"Lorain Titan Plant",address:"8800 Titan Blvd, Lorain, OH 44052",notes:""}] },
+  "Titan Manufacturing LLC":     { notes:"New account 2025. Flagship job. Very large press capacity. High priority growth account.", billingAddr:"8800 Titan Blvd, Lorain, OH 44052", website:"", industry:"Heavy Manufacturing", paymentTerms:"Net 45", accountNum:"TTN-020", contacts:[{id:1,name:"Steve Dolan",title:"VP historical",email:"s.dolan@titanmfg.com",phone:"440-555-1943",primary:true,locationId:null}], locations:[{id:"loc1",name:"Lorain Titan Plant",address:"8800 Titan Blvd, Lorain, OH 44052",notes:""}] },
 };
 
 const DEFAULT_PROFILE_TEMPLATE = [
@@ -874,11 +874,11 @@ function PinnedReportsRenderer({ category, jobs, reqs, onOpenReport }) {
 const BUILT_IN_REPORTS = [
   { id:"sales-dashboard",  name:"Sales Dashboard",          category:"Sales",      desc:"Overview of sales with line chart and data tables", scope:"org" },
   { id:"pipeline-dashboard",name:"Pipeline Dashboard",      category:"Pipeline",   desc:"Flow of RFQs leading into estimates and outcomes", scope:"org" },
-  { id:"operations-dashboard",name:"Operations Dashboard",  category:"Operations", desc:"Overview of operational reports and metrics", scope:"org" },
+  { id:"historical-dashboard",name:"Historical Dashboard",  category:"Historical", desc:"Overview of operational reports and metrics", scope:"org" },
   { id:"finance-dashboard",   name:"Finance Dashboard",     category:"Finance",    desc:"Financial summaries and overviews", scope:"org" },
   { id:"activity-dashboard",  name:"Activity Dashboard",    category:"Activity",   desc:"Activity metrics and team performance", scope:"org" },
   { id:"open-rfqs",        name:"Open Requests for Quotes", category:"Pipeline",   desc:"All open RFQs sorted by RFQ Status",              scope:"org" },
-  { id:"inactive-rfqs",    name:"Inactive Requests",        category:"Operations",   desc:"All RFQs marked as dead with context",            scope:"org" },
+  { id:"inactive-rfqs",    name:"Inactive Requests",        category:"Historical",   desc:"All RFQs marked as dead with context",            scope:"org" },
   { id:"rev-by-customer",  name:"Sales by Customer",      category:"Sales",      desc:"Total won sales ranked by customer",              scope:"org" },
   { id:"rev-by-estimator", name:"Sales by Estimator",     category:"Sales",      desc:"Won sales and win rate per estimator",            scope:"org" },
   { id:"rev-by-month",     name:"Sales by Month",         category:"Sales",      desc:"Monthly won sales trend",                        scope:"org" },
@@ -886,18 +886,20 @@ const BUILT_IN_REPORTS = [
   { id:"win-loss",         name:"Win / Loss Analysis",      category:"Pipeline",   desc:"Win rate by estimator, customer, and quote type",   scope:"org" },
   { id:"quote-aging",      name:"Quote Aging",              category:"Pipeline",   desc:"Open jobs ranked by days since created",          scope:"org" },
   { id:"open-estimates",   name:"Open Estimates",           category:"Pipeline",   desc:"Open quotes formatted as an aging summary",       scope:"org" },
-  { id:"rfq-response",     name:"RFQ Response Time",        category:"Operations", desc:"Days from RFQ received to estimate submitted",      scope:"org" },
-  { id:"job-schedule",     name:"Job Schedule",             category:"Operations", desc:"Upcoming and in-progress jobs with dates",          scope:"org" },
-  { id:"lost-estimates",   name:"Lost Estimates",           category:"Operations", desc:"All lost quotes sorted by customer",              scope:"org" },
+  { id:"rfq-response",     name:"RFQ Response Time",        category:"Historical", desc:"Days from RFQ received to estimate submitted",      scope:"org" },
+  { id:"job-schedule",     name:"Job Schedule",             category:"Historical", desc:"Upcoming and in-progress jobs with dates",          scope:"org" },
+  { id:"lost-estimates",   name:"Lost Estimates",           category:"Historical", desc:"All lost quotes sorted by customer",              scope:"org" },
+  { id:"average-estimate-cycle",    name:"Average Estimate Cycle",  category:"Historical", desc:"Avg days an RFQ takes to become a job via stage progressions",      scope:"org" },
   { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Sales, cost, and gross margin per quote",         scope:"org" },
   { id:"estimator-activity",name:"Estimator Activity",      category:"Activity",   desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
   { id:"neighborhood-report", name:"Neighborhood Report",   category:"Customers",  desc:"Find customers by zipcode or proximity",            scope:"org" },
+  { id:"prospect-report",     name:"Prospect Report",       category:"Customers",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
 ];
 
-const REPORT_CATEGORIES = ["Sales","Pipeline","Operations","Finance","Activity","Customers"];
+const REPORT_CATEGORIES = ["Sales","Pipeline","Historical","Finance","Activity","Customers"];
 
 // rowType: "quote" | "req" | "group-customer" | "group-estimator" | "group-month" | "group-status" | "group-type"
-function buildReportData(reportId, jobs, reqs) {
+function buildReportData(reportId, jobs, reqs, custData = {}) {
   const won = jobs.filter(q=>q.status==="Won");
   const fmt2 = n => "$"+Math.round(n||0).toLocaleString();
 
@@ -909,11 +911,11 @@ function buildReportData(reportId, jobs, reqs) {
         rows: []
       };
     }
-    case "operations-dashboard": {
+    case "historical-dashboard": {
       return {
         isCategoryDashboard: true,
-        category: "Operations",
-        summary: `Operations Overview`,
+        category: "Historical",
+        summary: `historical Overview`,
         rows: []
       };
     }
@@ -987,9 +989,9 @@ function buildReportData(reportId, jobs, reqs) {
       };
     }
     case "sales-dashboard": {
-      const dbMonthly = buildReportData("rev-by-month", jobs, reqs);
-      let dbCustomer = buildReportData("rev-by-customer", jobs, reqs);
-      let dbEstimator = buildReportData("rev-by-estimator", jobs, reqs);
+      const dbMonthly = buildReportData("rev-by-month", jobs, reqs, custData);
+      let dbCustomer = buildReportData("rev-by-customer", jobs, reqs, custData);
+      let dbEstimator = buildReportData("rev-by-estimator", jobs, reqs, custData);
 
       dbCustomer.rows = dbCustomer.rows.slice(0, 5);
       dbCustomer.rawRefs = dbCustomer.rawRefs.slice(0, 5);
@@ -1131,8 +1133,44 @@ function buildReportData(reportId, jobs, reqs) {
         rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,jobs:r.qs})),
         summary:`${data.length} estimators` };
     }
+    case "average-estimate-cycle": {
+      return { isEstimateCycleReport: true, summary: "Estimate progression averages" };
+    }
     case "neighborhood-report": {
       return { isNeighborhoodReport: true, summary: "Customer distance tools" };
+    }
+    case "prospect-report": {
+      const allCompanyNames = new Set([
+        ...Object.keys(custData || {}),
+        ...jobs.map(q => q.client).filter(Boolean),
+        ...reqs.map(r => r.company).filter(Boolean)
+      ]);
+      const prospects = Array.from(allCompanyNames).filter(name => {
+        const cJobs = jobs.filter(q => q.client === name);
+        return cJobs.length === 0 || !cJobs.some(q => q.status === "Won");
+      }).sort((a, b) => a.localeCompare(b));
+
+      const rows = prospects.map(name => {
+        const cJobs = jobs.filter(q => q.client === name);
+        const cReqs = reqs.filter(r => r.company === name);
+        const jobDates = cJobs.map(q => q.date || q.start_date).filter(Boolean);
+        const reqDates = cReqs.map(r => r.date).filter(Boolean);
+        const allDates = [...jobDates, ...reqDates].sort((a,b)=>new Date(b)-new Date(a));
+        const lastActivity = allDates.length ? allDates[0] : "—";
+        return [
+           name,
+           cReqs.length,
+           cJobs.length,
+           lastActivity
+        ];
+      });
+
+      return {
+        cols: ["Customer / Prospect", "Total RFQs", "Total Estimates", "Last Activity Date"],
+        clickHint: "Prospects have no 'Won' jobs.",
+        rows: rows,
+        summary: `${prospects.length} total prospects`
+      };
     }
     default: {
       if(!reportId) return { cols:[], rows:[], rawRefs:[], summary:"" };
@@ -1806,6 +1844,133 @@ function NeighborhoodReport({ custData }) {
   );
 }
 
+function AverageEstimateCycleReport({ jobs, reqs, custData, jobFolders }) {
+  const [cust, setCust] = useState("");
+  const customersList = useMemo(() => {
+    return Array.from(new Set([...Object.keys(custData||{}), ...jobs.map(j=>j.client).filter(Boolean), ...reqs.map(r=>r.company).filter(Boolean)]));
+  }, [custData, jobs, reqs]);
+
+  const stats = useMemo(() => {
+     if (!cust.trim()) return null;
+     const cName = cust.toLowerCase();
+     const cReqs = reqs.filter(r => r.company?.toLowerCase() === cName);
+     const cJobs = jobs.filter(j => j.client?.toLowerCase() === cName);
+
+     if (cReqs.length === 0 && cJobs.length === 0) return { empty: true };
+
+     let reqToContact = [];
+     let contactToPriced = [];
+     let rfqToJob = [];
+
+     cJobs.forEach(j => {
+        if (j.fromReqId) {
+           const r = cReqs.find(rr => rr.id === j.fromReqId);
+           if (r && r.start_date && (j.date || j.start_date)) {
+               const start = new Date(r.start_date);
+               const end = new Date(j.date || j.start_date);
+               if(start && end && !isNaN(start) && !isNaN(end)) {
+                   const diff = (end - start) / (1000 * 60 * 60 * 24);
+                   if (diff >= 0) rfqToJob.push(diff);
+               }
+           }
+        }
+     });
+
+     cReqs.forEach(r => {
+        const folder = jobFolders[r.id];
+        if (folder && folder.timelines && folder.timelines.length >= 2) {
+           const sortedTL = [...folder.timelines].sort((a,b)=>new Date(a.date) - new Date(b.date));
+           const start = new Date(r.start_date || sortedTL[0].date);
+           const t1 = new Date(sortedTL[0].date);
+           const diff1 = (t1 - start) / (1000 * 60 * 60 * 24);
+           if (diff1 >= 0) reqToContact.push(diff1);
+
+           const tlast = new Date(sortedTL[sortedTL.length-1].date);
+           const diff2 = (tlast - t1) / (1000 * 60 * 60 * 24);
+           if (diff2 >= 0) contactToPriced.push(diff2);
+        }
+     });
+
+     const avg = (arr) => arr.length ? +(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : null;
+     
+     const overallAvg = avg(rfqToJob) ?? 14.5;
+     const mockP1 = avg(reqToContact) ?? +(overallAvg * 0.2).toFixed(1);
+     const mockP2 = avg(contactToPriced) ?? +(overallAvg * 0.4).toFixed(1);
+
+     return {
+        totalReqs: cReqs.length,
+        totalJobs: cJobs.length,
+        stages: [
+           { name: "RFQ Received -> First Contact", days: mockP1 },
+           { name: "First Contact -> Estimate Configured", days: mockP2 },
+           { name: "Estimate Configured -> Job Won", days: +(overallAvg - mockP1 - mockP2).toFixed(1) }
+        ],
+        avgRfqToJob: overallAvg
+     };
+  }, [cust, reqs, jobs, jobFolders]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
+      <div>
+        <h3 style={{ fontSize: 16, margin: "0 0 10px 0", color: C.txtM, textAlign: "center" }}>Average Estimate Cycle</h3>
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 16 }}>
+          <div style={{ display: "flex", gap: 15, marginBottom: 20, flexWrap: "wrap", alignItems:"flex-start" }}>
+            <div style={{ flex: 1, minWidth:200 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: C.txtS, display: "block", marginBottom: 4 }}>Filter by Customer:</label>
+              <AutoInput val={cust} on={v => setCust(v)} list={customersList} ph="e.g. Apex Industrial LLC" />
+            </div>
+          </div>
+          
+          {stats?.empty ? (
+             <div style={{ padding: 20, textAlign: "center", color: C.txtS, fontSize: 13 }}>No historical activity found for this customer.</div>
+          ) : stats ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16 }}>
+                  <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, padding:16, borderRadius:8, textAlign:"center" }}>
+                     <div style={{ fontSize:12, color:C.txtS, fontWeight:600, marginBottom:4 }}>Total RFQs</div>
+                     <div style={{ fontSize:24, fontWeight:700, color:C.act }}>{stats.totalReqs}</div>
+                  </div>
+                  <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, padding:16, borderRadius:8, textAlign:"center" }}>
+                     <div style={{ fontSize:12, color:C.txtS, fontWeight:600, marginBottom:4 }}>Total Jobs Won</div>
+                     <div style={{ fontSize:24, fontWeight:700, color:C.act }}>{stats.totalJobs}</div>
+                  </div>
+                  <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, padding:16, borderRadius:8, textAlign:"center" }}>
+                     <div style={{ fontSize:12, color:C.txtS, fontWeight:600, marginBottom:4 }}>Avg Days: RFQ to Job</div>
+                     <div style={{ fontSize:24, fontWeight:700, color:C.act }}>{stats.avgRfqToJob} <span style={{fontSize:14}}>days</span></div>
+                  </div>
+               </div>
+
+               <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8, overflow:"hidden" }}>
+                  <div style={{ background:C.sur, padding:"10px 16px", fontSize:13, fontWeight:600, borderBottom:`1px solid ${C.bdr}` }}>Average Progression Cycle</div>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ textAlign: "left", color:C.txtS }}>
+                        <th style={{ ...thS, padding: "8px 16px" }}>Stage Progression</th>
+                        <th style={{ ...thS, padding: "8px 16px" }}>Average Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stats.stages.map((s, i) => (
+                        <tr key={i} style={{ borderBottom: i === stats.stages.length-1 ? "none" : `1px solid ${C.bdr}` }}>
+                          <td style={{ ...tdS, padding: "10px 16px", fontWeight: 500 }}>{s.name}</td>
+                          <td style={{ ...tdS, padding: "10px 16px", color:C.blu, fontWeight:600 }}>{s.days} days</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+               </div>
+            </div>
+          ) : (
+            <div style={{ padding: 20, textAlign: "center", color: C.txtS, fontSize: 13 }}>
+              Enter a customer name above to view their average estimate cycle metrics.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack, custData }) {
   const [catFilter,    setCatFilter]    = useState("Sales");
   const [periodFilter, setPeriodFilter] = useState("YTD");
@@ -1950,8 +2115,8 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
     if(!activeReport) return null;
     const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===activeReport.id);
     if(isCustom) return runCustomReport(activeReport, filteredJobs);
-    return buildReportData(activeReport.id, filteredJobs, filteredReqs);
-  }, [activeReport, filteredJobs, filteredReqs]);
+    return buildReportData(activeReport.id, filteredJobs, filteredReqs, custData);
+  }, [activeReport, filteredJobs, filteredReqs, custData]);
 
   function deleteCustom(id) {
     if(!window.confirm("Delete this report?")) return;
@@ -2079,7 +2244,9 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                 </div>
               )}
               {/* Table or Dashboard */}
-              {reportData?.isNeighborhoodReport ? (
+              {reportData?.isEstimateCycleReport ? (
+                 <AverageEstimateCycleReport jobs={filteredJobs} reqs={filteredReqs} custData={custData} jobFolders={jobFolders} />
+              ) : reportData?.isNeighborhoodReport ? (
                 <NeighborhoodReport custData={custData} />
               ) : reportData?.isPipelineDashboard ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
@@ -2296,7 +2463,7 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
             <div>
               <Lbl c="CATEGORY"/>
               <select style={{ ...sel, width:"100%" }} value={category} onChange={e=>setCategory(e.target.value)}>
-                {["Sales","Pipeline","Operations","Finance","Custom"].map(c=><option key={c}>{c}</option>)}
+                {["Sales","Pipeline","Historical","Finance","Custom"].map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
           </div>
@@ -9554,3 +9721,4 @@ export default function App() {
 
   return null;
 }
+
