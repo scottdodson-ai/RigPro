@@ -897,6 +897,8 @@ const BUILT_IN_REPORTS = [
   { id:"addl-costs",       name:"Subcontractors & Materials",category:"Finance",   desc:"Subcontractors, materials, and permits",          scope:"org" },
   { id:"discounts-given",  name:"Discounts Given",          category:"Finance",    desc:"Total discounts given grouped by estimator",      scope:"org" },
   { id:"sales-adjustment", name:"Sales Adjustment Report",  category:"Activity",   desc:"Estimates with sales adjustments by customer",    scope:"org" },
+  { id:"jobs-by-customer", name:"Jobs by Customer",         category:"Activity",   desc:"Total jobs and completion value by customer",     scope:"org" },
+  { id:"customer-activity-dash", name:"Customer Activity Dashboard", category:"Customers", desc:"Printable drag-and-drop customer activity report", scope:"org" },
   { id:"estimator-activity",name:"Estimator Activity",      category:"Activity",   desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
   { id:"neighborhood-report", name:"Neighborhood Report",   category:"Customers",  desc:"Find customers by zipcode or proximity",            scope:"org" },
   { id:"prospect-report",     name:"Prospect Report",       category:"Customers",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
@@ -1213,6 +1215,23 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
         rows:data.map(d=>[d.name,d.jobs.length,fmt2(d.total)]),
         rawRefs:data.map(d=>({type:"group-estimator",key:d.name,jobs:d.jobs})),
         summary:`Discounts given by ${data.length} estimators` };
+    }
+    case "customer-activity-dash": {
+      return { isCustomerDashboard: true, summary: "Interactive Customer Dashboard" };
+    }
+    case "jobs-by-customer": {
+      const db={};
+      jobs.filter(q=>q.status==="Won").forEach(q => {
+         const k = q.client || "Unknown";
+         if(!db[k]) db[k] = { customer:k, val:0, qs:[] };
+         db[k].val += (q.total||0);
+         db[k].qs.push(q);
+      });
+      const data=Object.values(db).sort((a,b)=>b.val-a.val);
+      return { cols:["Customer", "Completion Value", "Total Jobs Won"], clickHint: "Click a customer to see specific job history",
+        rows:data.map(d=>[d.customer, fmt2(d.val), d.qs.length]),
+        rawRefs:data.map(d=>({type:"group-customer",key:d.customer,jobs:d.qs})),
+        summary:`Jobs completed across ${data.length} customers` };
     }
     case "sales-adjustment": {
       const db={};
@@ -2078,6 +2097,221 @@ function AverageEstimateCycleReport({ jobs, reqs, custData, jobFolders }) {
   );
 }
 
+function CustomerDashboardReport({ jobs, reqs, custData }) {
+  const [cust, setCust] = useState("");
+  const customersList = useMemo(() => Array.from(new Set([...Object.keys(custData||{}), ...jobs.map(j=>j.client).filter(Boolean), ...reqs.map(r=>r.company).filter(Boolean)])), [custData, jobs, reqs]);
+
+  const [layout, setLayout] = useState(["info", "dates", "vol", "trend", "estimators", "rfqChart", "salesChart"]);
+
+  const stats = useMemo(() => {
+     if (!cust.trim()) return null;
+     const cName = cust.toLowerCase();
+     const cReqs = reqs.filter(r => r.company?.toLowerCase() === cName);
+     const cJobs = jobs.filter(j => j.client?.toLowerCase() === cName);
+     const cWon = cJobs.filter(j => j.status === "Won");
+     const refCustMatch = Object.keys(custData||{}).find(k => k.toLowerCase() === cName);
+     const refCust = refCustMatch ? custData[refCustMatch] : {};
+
+     if (!cReqs.length && !cJobs.length && !Object.keys(refCust).length) return { empty: true };
+
+     const allDates = [...cReqs.map(r=>r.date), ...cJobs.map(j=>j.date||j.start_date)].filter(Boolean).map(d=>new Date(d)).sort((a,b)=>a-b);
+     const dateProspect = allDates.length ? allDates[0].toISOString().slice(0,10) : "—";
+     
+     const wonDates = cWon.map(j=>j.startDate||j.date||j.start_date).filter(Boolean).map(d=>new Date(d)).sort((a,b)=>a-b);
+     const dateCustomer = wonDates.length ? wonDates[0].toISOString().slice(0,10) : "—";
+
+     const now = new Date();
+     const sixMo = new Date(now.setMonth(now.getMonth()-6));
+     const recentQs = cJobs.filter(j=>new Date(j.date||j.start_date) > sixMo).length;
+     const oldQs = cJobs.filter(j=>new Date(j.date||j.start_date) <= sixMo).length;
+     const trend = recentQs > oldQs ? "Increasing 📈" : recentQs < oldQs ? "Decreasing 📉" : "Stable ↔️";
+
+     const estSet = new Set();
+     cJobs.forEach(j => { if(j.salesAssoc) estSet.add(j.salesAssoc); });
+     cReqs.forEach(r => { if(r.salesAssoc) estSet.add(r.salesAssoc); });
+     const estimators = Array.from(estSet).join(", ") || "None";
+
+     const salesByYear = {};
+     cWon.forEach(j => {
+        const d = new Date(j.startDate||j.date||j.start_date);
+        if(!isNaN(d)) {
+           const y = d.getFullYear().toString();
+           if(!salesByYear[y]) salesByYear[y] = 0;
+           salesByYear[y] += (j.total || 0);
+        }
+     });
+     const salesData = Object.keys(salesByYear).sort().map(y => ({ label: y, value: salesByYear[y] }));
+
+     const rfqByQ = {};
+     cReqs.forEach(r => {
+        const d = new Date(r.date||r.start_date);
+        if(!isNaN(d)) {
+           const y = d.getFullYear().toString();
+           const q = Math.floor(d.getMonth() / 3) + 1;
+           const k = `${y}-Q${q}`;
+           if(!rfqByQ[k]) rfqByQ[k] = 0;
+           rfqByQ[k]++;
+        }
+     });
+     const rfqData = Object.keys(rfqByQ).sort().map(k => ({ label: k, value: rfqByQ[k] }));
+
+     return {
+         ...refCust,
+         dateProspect,
+         dateCustomer,
+         reqs: cReqs.length,
+         estimates: cJobs.length,
+         jobsWon: cWon.length,
+         trend,
+         recentQs,
+         oldQs,
+         estimators,
+         salesData,
+         rfqData
+     }
+  }, [cust, reqs, jobs, custData]);
+
+  const handleDragStart = (e, id) => { e.dataTransfer.setData("widget", id); };
+  const handleDrop = (e, toId) => {
+     e.preventDefault();
+     const fromId = e.dataTransfer.getData("widget");
+     if (fromId && fromId !== toId) {
+         const newLayout = [...layout];
+         const fromIdx = newLayout.indexOf(fromId);
+         const toIdx = newLayout.indexOf(toId);
+         newLayout.splice(fromIdx, 1);
+         newLayout.splice(toIdx, 0, fromId);
+         setLayout(newLayout);
+     }
+  };
+  const allowDrop = (e) => e.preventDefault();
+
+  const widgets = {
+     "info": (
+        <div style={{ flex: 1, minWidth: 280, background: C.bg, border: `1px solid ${C.bdr}`, padding: 16, borderRadius: 8 }}>
+            <div style={{ fontSize: 13, color: C.txtS, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Contact Info</div>
+            <div style={{ fontSize: 14 }}><b>Account:</b> {stats?.accountNum || "N/A"}</div>
+            {stats?.contacts?.map(c => (
+               <div key={c.id} style={{ marginTop: 8, fontSize: 13 }}>
+                  <div style={{ fontWeight: 600 }}>{c.name} - {c.title}</div>
+                  <div>📧 {c.email}</div>
+                  <div>📞 {c.phone}</div>
+               </div>
+            ))}
+            {(!stats?.contacts || stats.contacts.length === 0) && <div style={{ fontSize:13, color:C.txtS}}>No contacts on file</div>}
+        </div>
+     ),
+     "dates": (
+        <div style={{ flex: 1, minWidth: 280, background: C.bg, border: `1px solid ${C.bdr}`, padding: 16, borderRadius: 8 }}>
+            <div style={{ fontSize: 13, color: C.txtS, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>History Milestones</div>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+               <span style={{ fontSize: 14, fontWeight: 500 }}>Became Prospect</span>
+               <span style={{ fontSize: 14, color: C.txtM }}>{stats?.dateProspect}</span>
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between" }}>
+               <span style={{ fontSize: 14, fontWeight: 500 }}>Became Customer</span>
+               <span style={{ fontSize: 14, color: C.txtM }}>{stats?.dateCustomer}</span>
+            </div>
+        </div>
+     ),
+     "vol": (
+        <div style={{ flex: 1, minWidth: 280, background: C.bg, border: `1px solid ${C.bdr}`, padding: 16, borderRadius: 8 }}>
+            <div style={{ fontSize: 13, color: C.txtS, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Volume Metrics</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, textAlign: "center" }}>
+               <div><div style={{fontSize:24, fontWeight:700, color:C.act}}>{stats?.reqs||0}</div><div style={{fontSize:11, color:C.txtS}}>RFQs</div></div>
+               <div><div style={{fontSize:24, fontWeight:700, color:C.act}}>{stats?.estimates||0}</div><div style={{fontSize:11, color:C.txtS}}>Estimates</div></div>
+               <div><div style={{fontSize:24, fontWeight:700, color:C.grn}}>{stats?.jobsWon||0}</div><div style={{fontSize:11, color:C.txtS}}>Jobs Won</div></div>
+            </div>
+        </div>
+     ),
+     "trend": (
+        <div style={{ flex: 1, minWidth: 280, background: C.bg, border: `1px solid ${C.bdr}`, padding: 16, borderRadius: 8 }}>
+            <div style={{ fontSize: 13, color: C.txtS, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Activity Trends</div>
+            <div style={{ fontSize: 24, fontWeight: 700, textAlign: "center", marginBottom: 4 }}>{stats?.trend}</div>
+            <div style={{ fontSize: 12, color: C.txtS, textAlign: "center" }}>{stats?.recentQs} recent quotes vs {stats?.oldQs} older</div>
+        </div>
+     ),
+     "estimators": (
+        <div style={{ flex: 1, minWidth: 280, background: C.bg, border: `1px solid ${C.bdr}`, padding: 16, borderRadius: 8 }}>
+            <div style={{ fontSize: 13, color: C.txtS, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Estimators on Account</div>
+            <div style={{ fontSize: 14 }}>{stats?.estimators}</div>
+        </div>
+     ),
+     "rfqChart": (
+        <div style={{ flex: 1, minWidth: 280, background: C.bg, border: `1px solid ${C.bdr}`, padding: 16, borderRadius: 8 }}>
+            <div style={{ fontSize: 13, color: C.txtS, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>RFQs by Quarter</div>
+            {stats?.rfqData?.length ? (
+               <div style={{ height: 120, display: "flex", alignItems: "flex-end", gap: 12, marginTop: 16 }}>
+                  {stats.rfqData.map(d => {
+                     const max = Math.max(...stats.rfqData.map(x=>x.value), 1);
+                     const h = (d.value / max) * 100;
+                     return (
+                        <div key={d.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                           <div style={{ fontSize: 10, color: C.txtS }}>{d.value}</div>
+                           <div style={{ width: "100%", maxWidth: 40, background: C.blu, height: `${h}%`, minHeight: 4, borderRadius: "4px 4px 0 0", transition: "height 0.3s ease" }}></div>
+                           <div style={{ fontSize: 10, color: C.txtM }}>{d.label.slice(2)}</div>
+                        </div>
+                     )
+                  })}
+               </div>
+            ) : <div style={{ fontSize:13, color:C.txtS, marginTop: 16 }}>No RFQ data</div>}
+        </div>
+     ),
+     "salesChart": (
+        <div style={{ flex: "1 1 100%", background: C.bg, border: `1px solid ${C.bdr}`, padding: 16, borderRadius: 8 }}>
+            <div style={{ fontSize: 13, color: C.txtS, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Sales by Year</div>
+            {stats?.salesData?.length ? (
+               <div style={{ height: 260, marginTop: 10 }}>
+                   <SalesLineChart data={stats.salesData} />
+               </div>
+            ) : <div style={{ fontSize:13, color:C.txtS, marginTop: 16 }}>No sales data for won jobs</div>}
+        </div>
+     )
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
+      {/* Hide controls on print */}
+      <style>{`@media print { .no-print { display: none !important; } .print-break { page-break-inside: avoid; } }`}</style>
+      
+      <div className="no-print" style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 16 }}>
+         <label style={{ fontSize: 12, fontWeight: 600, color: C.txtS, display: "block", marginBottom: 4 }}>Filter by Customer:</label>
+         <div style={{ maxWidth: 400 }}>
+           <AutoInput val={cust} on={v => setCust(v)} list={customersList} ph="e.g. Apex Industrial LLC" />
+         </div>
+      </div>
+      
+      {stats?.empty ? (
+         <div style={{ padding: 20, textAlign: "center", color: C.txtS, fontSize: 13 }}>No historical activity found for this customer.</div>
+      ) : stats ? (
+         <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "24px 32px" }}>
+            <div style={{ borderBottom: `2px solid ${C.bdr}`, paddingBottom: 16, marginBottom: 24, display:"flex", justifyContent:"space-between" }}>
+               <div>
+                  <h2 style={{ fontSize: 28, margin: 0, fontWeight: 800 }}>{Object.keys(custData||{}).find(k=>k.toLowerCase()===cust.toLowerCase()) || cust}</h2>
+                  <div style={{ fontSize: 14, color: C.txtS, marginTop: 4 }}>Customer Activity Dashboard</div>
+               </div>
+               <button className="no-print" onClick={()=>window.print()} style={{ ...mkBtn("outline"), height: 36 }}>🖨️ Print Report</button>
+            </div>
+            
+            <div className="no-print" style={{ fontSize: 11, color: C.txtS, marginBottom: 16, fontStyle: "italic" }}>
+               Drag and drop the widgets below to customize your printed layout.
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+               {layout.map(id => (
+                  <div key={id} draggable onDragStart={(e)=>handleDragStart(e, id)} onDragOver={allowDrop} onDrop={(e)=>handleDrop(e, id)}
+                       className="print-break"
+                       style={{ cursor: "grab", flex: "1 1 calc(50% - 16px)", minWidth: 280, display:"flex" }}>
+                     {widgets[id]}
+                  </div>
+               ))}
+            </div>
+         </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack, custData }) {
   const [catFilter,    setCatFilter]    = useState("Sales");
   const [periodFilter, setPeriodFilter] = useState("YTD");
@@ -2353,6 +2587,8 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
               {/* Table or Dashboard */}
               {reportData?.isEstimateCycleReport ? (
                  <AverageEstimateCycleReport jobs={filteredJobs} reqs={filteredReqs} custData={custData} jobFolders={jobFolders} />
+              ) : reportData?.isCustomerDashboard ? (
+                 <CustomerDashboardReport jobs={filteredJobs} reqs={filteredReqs} custData={custData} />
               ) : reportData?.isNeighborhoodReport ? (
                 <NeighborhoodReport custData={custData} />
               ) : reportData?.isPipelineDashboard ? (
