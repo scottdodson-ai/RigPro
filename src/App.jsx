@@ -6308,8 +6308,9 @@ function VectorBrowser({ token }) {
       {/* Corpus table */}
       <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 10, overflow: "hidden" }}>
         <div style={{ padding: "12px 18px", borderBottom: `1px solid ${C.bdr}`, background: C.bg, fontWeight: 700, fontSize: 13 }}>Embeddable Corpus (MySQL Sources)</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 600 }}>
+            <thead>
             <tr style={{ background: C.bg }}>
               {["Source", "Description", "Records", "Status"].map(h => (
                 <th key={h} style={{ ...thS, padding: "10px 18px", borderBottom: `1px solid ${C.bdrM}`, textAlign: "left" }}>{h}</th>
@@ -6336,6 +6337,7 @@ function VectorBrowser({ token }) {
             ))}
           </tbody>
         </table>
+        </div>
         <div style={{ padding: "10px 18px", borderTop: `1px solid ${C.bdr}`, fontSize: 11, color: C.txtS }}>
           Last refreshed: {data?.timestamp ? new Date(data.timestamp).toLocaleTimeString() : "—"}
         </div>
@@ -6377,22 +6379,25 @@ function DatabaseBrowser({ token }) {
   return (
     <div style={{ marginTop: 40, borderTop: `1px solid ${C.bdr}`, paddingTop: 30 }}>
       <div style={{ fontSize: 20, fontWeight: 800, color: C.acc, marginBottom: 4 }}>Data Browser</div>
-      <div style={{ fontSize: 12, color: C.txtS, marginBottom: 16 }}>Live view of MySQL database records (limited to first 100 rows).</div>
-      <div style={{ display: "flex", gap: 20, alignItems: "start" }}>
-        <div style={{ width: 180, flexShrink: 0 }}>
-          <Lbl c="TABLES" />
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: C.txtS }}>Live view of MySQL database records (limited to first 100 rows).</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Lbl c="SELECT TABLE" />
+          <select 
+            value={selectedTable || ""} 
+            onChange={(e) => setSelectedTable(e.target.value)}
+            style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.bdr}`, background: C.bg, fontSize: 13, textTransform: "capitalize", cursor: "pointer", minWidth: 180 }}
+          >
+            <option value="" disabled>-- Select Database Table --</option>
             {tables.map(t => (
-              <button key={t}
-                style={{ ...mkBtn(selectedTable===t?"primary":"ghost"), justifyContent:"start", fontSize:12, padding:"6px 14px", textTransform:"capitalize" }}
-                onClick={()=>setSelectedTable(t)}>
-                {t.replace('_',' ')}
-              </button>
+              <option key={t} value={t}>{t.replace('_', ' ')}</option>
             ))}
-          </div>
+          </select>
         </div>
-        <div style={{ flex:1, minWidth:0 }}>
-          {selectedTable ? (
+      </div>
+      
+      <div style={{ width: "100%" }}>
+        {selectedTable ? (
             <Card style={{ padding:16, margin:0, border:`1.5px solid ${C.accB}`, borderRadius:10 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                 <div style={{ fontWeight:800, fontSize:15, color:C.acc }}>Table: {selectedTable}</div>
@@ -6436,10 +6441,9 @@ function DatabaseBrowser({ token }) {
             </Card>
           ) : (
             <div style={{ height:120, display:"flex", alignItems:"center", justifyContent:"center", background:"#fafafa", borderRadius:10, border:`2px dashed ${C.bdr}`, color:C.txtS, fontSize:13 }}>
-              Select a table from the sidebar to preview live data
+              Select a table from the dropdown above to preview live data
             </div>
           )}
-        </div>
       </div>
     </div>
   );
