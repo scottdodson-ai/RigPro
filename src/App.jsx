@@ -886,25 +886,25 @@ const BUILT_IN_REPORTS = [
   { id:"win-loss",         name:"Win / Loss Analysis",      category:"Pipeline",   desc:"Win rate by estimator, customer, and quote type",   scope:"org" },
   { id:"quote-aging",      name:"Quote Aging",              category:"Pipeline",   desc:"Open jobs ranked by days since created",          scope:"org" },
   { id:"open-estimates",   name:"Open Estimates",           category:"Pipeline",   desc:"Open quotes formatted as an aging summary",       scope:"org" },
-  { id:"rfq-response",     name:"RFQ Response Time",        category:"Historical", desc:"Days from RFQ received to estimate submitted",      scope:"org" },
-  { id:"job-schedule",     name:"Job Schedule",             category:"Historical", desc:"Upcoming and in-progress jobs with dates",          scope:"org" },
+  { id:"rfq-response",     name:"RFQ Response Time",        category:"Activity", desc:"Days from RFQ received to estimate submitted",      scope:"org" },
+  { id:"job-schedule",     name:"Job Schedule",             category:"Pipeline", desc:"Upcoming and in-progress jobs with dates",          scope:"org" },
   { id:"lost-estimates",   name:"Lost Estimates",           category:"Historical", desc:"All lost quotes sorted by customer",              scope:"org" },
-  { id:"average-estimate-cycle",    name:"Average Estimate Cycle",  category:"Historical", desc:"Avg days an RFQ takes to become a job via stage progressions",      scope:"org" },
+  { id:"average-estimate-cycle",    name:"Average Estimate Cycle",  category:"Activity", desc:"Avg days an RFQ takes to become a job via stage progressions",      scope:"org" },
   { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Sales, cost, and gross margin per quote",         scope:"org" },
   { id:"labor-hours",      name:"Labor Hours Quoted",       category:"Finance",    desc:"Labor breakdown and average bill rates",          scope:"org" },
   { id:"travel-quoted",    name:"Travel Quoted",            category:"Finance",    desc:"Quoted travel expenses including markup",         scope:"org" },
   { id:"equipment-quoted", name:"Equipment Quoted",         category:"Finance",    desc:"Quoted equipment and shipping/hauling charges",   scope:"org" },
   { id:"addl-costs",       name:"Subcontractors & Materials",category:"Finance",   desc:"Subcontractors, materials, and permits",          scope:"org" },
   { id:"discounts-given",  name:"Discounts Given",          category:"Finance",    desc:"Total discounts given grouped by estimator",      scope:"org" },
-  { id:"sales-adjustment", name:"Sales Adjustment Report",  category:"Activity",   desc:"Estimates with sales adjustments by customer",    scope:"org" },
-  { id:"jobs-by-customer", name:"Jobs by Customer",         category:"Activity",   desc:"Total jobs and completion value by customer",     scope:"org" },
+  { id:"sales-adjustment", name:"Sales Adjustment Report",  category:"Finance",   desc:"Estimates with sales adjustments by customer",    scope:"org" },
+  { id:"jobs-by-customer", name:"Jobs by Customer",         category:"Customers",   desc:"Total jobs and completion value by customer",     scope:"org" },
   { id:"customer-activity-dash", name:"Customer Activity Dashboard", category:"Customers", desc:"Printable drag-and-drop customer activity report", scope:"org" },
   { id:"estimator-activity",name:"Estimator Activity",      category:"Activity",   desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
   { id:"neighborhood-report", name:"Neighborhood Report",   category:"Customers",  desc:"Find customers by zipcode or proximity",            scope:"org" },
-  { id:"prospect-report",     name:"Prospect Report",       category:"Customers",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
+  { id:"prospect-report",     name:"Prospect Report",       category:"Pipeline",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
 ];
 
-const REPORT_CATEGORIES = ["Sales","Pipeline","Customers","Historical","Finance","Activity"];
+const REPORT_CATEGORIES = ["Sales","Pipeline","Customers","Historical","Finance","Activity","Executive"];
 
 // rowType: "quote" | "req" | "group-customer" | "group-estimator" | "group-month" | "group-status" | "group-type"
 function buildReportData(reportId, jobs, reqs, custData = {}) {

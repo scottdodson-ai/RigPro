@@ -1,0 +1,51 @@
+# RigPro3 Reports & Categories Overview
+
+The reporting module in RigPro3 is highly structured, categorizing a wide array of reports into specific business functions. The categories are designed to prioritize Sales, Pipeline, and Customer views, along with Historical, Finance, and Activity metrics.
+
+## 1. Sales
+This category focuses on revenue generation and the distribution of won work over time, entity, or associate.
+- **Sales Dashboard**: An overview of sales performance, featuring a line chart for quick visual trend analysis alongside detailed data tables.
+- **Sales by Customer**: Highlights total won sales amounts and ranks them by customer to identify the most valuable accounts.
+- **Sales by Estimator**: Breaks down won sales and calculates the win rate on a per-estimator basis to track individual sales performance.
+- **Sales by Month**: Visualizes month-over-month won sales trends to identify seasonality and overall growth.
+
+## 2. Pipeline
+This category is dedicated to active opportunities, tracking the progression from RFQ to final estimate.
+- **Pipeline Dashboard**: Provides a comprehensive look at the flow of Requests for Quotes (RFQs) and how they eventually convert into estimates and closed deals.
+- **Open Requests for Quotes**: Lists all currently open RFQs, sorted systematically by their active status.
+- **Pipeline Summary**: Offers a snapshot of all open jobs by their current status, tied to the total monetary value on the line.
+- **Win / Loss Analysis**: Delves into the success rates of quotes based on the estimator, the customer involved, and the specific quote type.
+- **Quote Aging**: Ranks open jobs according to how many days have passed since their creation, highlighting stagnant opportunities.
+- **Open Estimates**: Displays open quotes formatted specifically as an aging summary.
+
+## 3. Historical
+This category looks backward at closed lost records, operational history, and timeline-based metrics.
+- **Historical Dashboard**: Provides a summary view of past operational reports and performance metrics.
+- **Inactive Requests**: Summarizes all RFQs that have been marked as dead, retaining essential context for future analysis.
+- **RFQ Response Time**: Tracks the number of days taken from receiving an RFQ to submitting the corresponding estimate.
+- **Job Schedule**: Consolidates upcoming and in-progress tasks along with their specific dates for historical timeline tracking.
+- **Lost Estimates**: Lists all rejected or lost quotes, sorted by customer to help identify lost opportunity trends.
+- **Average Estimate Cycle**: Calculates the average duration it takes for an RFQ to mature into a won job through historical progression tracking.
+
+## 4. Finance
+This category zeroes in on the direct numbers, profit margins, costs, and specific financial adjustments on an estimate level.
+- **Finance Dashboard**: Gives high-level financial summaries and overviews of the business.
+- **Cost & Margin Analysis**: Details the sales value, direct costs, and ultimate gross margin achieved on a per-quote basis.
+- **Labor Hours Quoted**: Breaks down the quoted labor costs and calculates average billing rates.
+- **Travel Quoted**: Summarizes all quoted travel-related expenses, including specified markups.
+- **Equipment Quoted**: Details equipment usage costs alongside any involved shipping and hauling charges.
+- **Subcontractors & Materials**: Groups external costs, including subcontractor fees, materials purchased, and required permits.
+- **Discounts Given**: Tracks the total volume of discounts provided, mapping them back to individual estimators.
+
+## 5. Activity
+This category metrics the actions and adjustments being taken within the platform by users.
+- **Activity Dashboard**: Displays overarching metrics and overall team performance related to system activity.
+- **Sales Adjustment Report**: Tracks estimates that have experienced specific sales adjustments, organized by customer.
+- **Jobs by Customer**: Summarizes both the total number and the total completion value of jobs handled for each customer.
+- **Estimator Activity**: Measures productivity by displaying the number of quotes created, submitted, and ultimately won by each estimator.
+
+## 6. Customers
+This category is dedicated specifically to the customer CRM perspective and geographic outreach.
+- **Customer Activity Dashboard**: A dynamic, printable drag-and-drop dashboard showing a full report of activity on a given customer.
+- **Neighborhood Report**: A specialized report that enables users to locate and sort customers by zipcode or geographical proximity.
+- **Prospect Report**: Lists prospects that do not currently have any "Won" jobs on record, alongside their historical activity trails.
