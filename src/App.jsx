@@ -648,7 +648,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
           .app-brand-address { font-size: 8px !important; line-height: 1.1; letter-spacing: .2px !important; }
           .desktop-nav { display: none !important; }
           .hamburger-btn { display: flex !important; margin-left: auto; }
-          .mobile-inline { display: flex !important; max-width: 58vw !important; }
+          .mobile-inline { display: flex !important; max-width: calc(100% - 14px) !important; }
         }
         @media (min-width: 768px) and (max-width: 1024px) {
           .app-header-shell { padding: 5px 12px 8px !important; }
@@ -741,7 +741,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
               alignItems: "center",
               gap: 6,
               overflowX: "auto",
-              maxWidth: "60vw",
+              maxWidth: "calc(100% - 14px)",
               paddingLeft: 8,
             }}
           >
@@ -7796,7 +7796,7 @@ export default function App() {
 
   const NotifPanel = () => (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.3)", zIndex:400, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
-      <div style={{ background:C.sur, width:"100%", maxWidth:360, height:"100vh", overflowY:"auto", boxShadow:"-3px 0 16px rgba(0,0,0,.12)", display:"flex", flexDirection:"column" }}>
+      <div style={{ background:C.sur, width:"100%", maxWidth:"min(360px, 90vw)", height:"100vh", overflowY:"auto", boxShadow:"-3px 0 16px rgba(0,0,0,.12)", display:"flex", flexDirection:"column" }}>
         <div style={{ padding:"14px 16px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:C.sur }}>
           <span style={{ fontWeight:700, fontSize:15 }}>Notifications</span>
           <button onClick={()=>setShowNotifs(false)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:C.txtS }}>×</button>
@@ -8540,8 +8540,8 @@ export default function App() {
                   {(active.equipRows||[]).map(row => {
                     const eq    = eqMap[row.code] || EQUIPMENT[0];
                     const gOv   = eqOv[row.code];
-                    const bd    = gOv ? gOv.daily : eq.daily;
-                    const daily = row.overRate ? Number(row.overDaily) : bd;
+                    const bd    = Number(gOv?.daily ?? eq.daily_rate ?? 0);
+                    const daily = row.overRate ? Number(row.overDaily ?? bd) : bd;
                     const sub   = daily*row.days + Number(row.ship||0);
                     return (
                       <tr key={row.id}>
