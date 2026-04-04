@@ -653,23 +653,51 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
           boxShadow: "0 1px 4px rgba(0,0,0,.06)",
         }}
       >
+        {/* Desktop actions row: right-aligned above menu */}
+        <div className="desktop-nav" style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:4 }}>
+          {token && profileUser && (
+            <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => setProfileOpen(true)}>
+              <span aria-hidden="true">👤</span>
+              <span>{displayName} (@{profileUser.username})</span>
+            </button>
+          )}
+          {extra}
+          {token ? (
+            <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
+          ) : (
+            view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px" }} onClick={() => setView("login")}>Login</button>
+          )}
+        </div>
+
         {/* Top row: logo + nav */}
         <div style={{ display:"flex", alignItems:"center", minHeight:54 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginRight:16 }}>
-            {comp.logoSrc ? (
-              <img src={comp.logoSrc} alt="Logo" style={{ width:36, height:36, objectFit:"contain", borderRadius:4, background:"#fff", border:`2px solid ${C.accB}` }}/>
-            ) : (
-              <div style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏗</div>
-            )}
-            <div style={{ display:"flex", flexDirection:"column" }}>
-              <div style={{ fontFamily:"Georgia,serif", fontSize:14, color:C.acc, fontWeight:800, lineHeight:1.1 }}>
-                {comp.name.split(" ")[0]}
-              </div>
-              {comp.name.split(" ").length > 1 && (
-                <div style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
-                  {comp.name.replace(comp.name.split(" ")[0] + " ", "")}
-                </div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginRight:16 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              {comp.logoSrc ? (
+                <img src={comp.logoSrc} alt="Logo" style={{ width:36, height:36, objectFit:"contain", borderRadius:4, background:"#fff", border:`2px solid ${C.accB}` }}/>
+              ) : (
+                <div style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏗</div>
               )}
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center" }}>
+                <div style={{ fontFamily:"Georgia,serif", fontSize:14, color:C.acc, fontWeight:800, lineHeight:1.1 }}>
+                  {comp.name.split(" ")[0]}
+                </div>
+                <div style={{ fontSize:9, color:C.txtS, letterSpacing:.35, textTransform:"uppercase", marginTop:1, fontWeight:700 }}>
+                  RigPro v3.1
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
+              Industrial Rigging,
+            </div>
+            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
+              Machinery Moving,
+            </div>
+            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
+              Heavy Haul Transport
+            </div>
+            <div style={{ fontSize:9, color:C.txtS, letterSpacing:.3, marginTop:1 }}>
+              3385 Miller Park Road · Akron, OH 44312
             </div>
           </div>
 
@@ -680,25 +708,6 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
             ))}
             {crumb && <><span style={{ color:C.bdr, margin:"0 2px" }}>›</span><span style={{ color:C.txtS, fontSize:12, whiteSpace:"nowrap" }}>{crumb}</span></>}
           </div>
-
-          {token && profileUser && view === "dash" && (
-            <div className="desktop-nav" style={{ display:"flex", marginLeft:"auto" }}>
-              <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => setProfileOpen(true)}>
-                <span aria-hidden="true">👤</span>
-                <span>{displayName} (@{profileUser.username})</span>
-              </button>
-            </div>
-          )}
-
-          {view === "dash" && (
-            <div className="desktop-nav" style={{ display:"flex", marginLeft:8 }}>
-              {token ? (
-                <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
-              ) : (
-                view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px" }} onClick={() => setView("login")}>Login</button>
-              )}
-            </div>
-          )}
 
           {/* Mobile inline actions (same top line as logo + hamburger) */}
           <div
@@ -727,20 +736,6 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
           </button>
         </div>
 
-        {/* Second row: actions far-right (desktop) */}
-        <div className="desktop-nav" style={{ display:"flex", justifyContent:"flex-end", gap:10, flexWrap:"wrap" }}>
-          {token && profileUser && view !== "dash" && (
-            <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px" }} onClick={() => setProfileOpen(true)}>
-              {displayName} (@{profileUser.username})
-            </button>
-          )}
-          {extra}
-          {view !== "dash" && token ? (
-            <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
-          ) : (
-            view !== "dash" && view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px" }} onClick={() => setView("login")}>Login</button>
-          )}
-        </div>
       </div>
 
       {menuOpen && (
@@ -7921,24 +7916,6 @@ export default function App() {
         </div>
       }/>
       <div style={{ padding:"16px", maxWidth:1160, margin:"0 auto" }}>
-        <Card>
-          <div style={{ display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
-            {companyInfo.logoSrc ? (
-              <img src={companyInfo.logoSrc} alt="Logo" style={{ width:56, height:56, objectFit:"contain", borderRadius:8, background:"#fff", border:`2px solid ${C.accB}` }}/>
-            ) : (
-              <div style={{ width:56, height:56, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, flexShrink:0 }}>🏗</div>
-            )}
-            <div>
-              <div style={{ fontSize:20, fontWeight:700 }}>{companyInfo.name}</div>
-              <div style={{ fontSize:12, color:C.txtS }}>{companyInfo.address}</div>
-              <div style={{ fontSize:11, color:C.txtS, marginTop:1 }}>{companyInfo.services}</div>
-            </div>
-            <div style={{ marginLeft:"auto", textAlign:"right" }}>
-              <div style={{ fontSize:11, color:C.txtS }}>Estimating System</div>
-              <div style={{ fontSize:13, fontWeight:700, color:C.acc }}>RigPro v3.1</div>
-            </div>
-          </div>
-        </Card>
         <style>{`
           .desktop-act-btns { display: block; }
           .mobile-act-btns { display: none; }
