@@ -1179,7 +1179,7 @@ async function ensureCompanyInfoTable() {
   `);
 }
 
-  // GET COMPANY INFO
+// GET COMPANY INFO
   app.get('/api/admin/company-info', authenticateToken, authenticateAdmin, async (req, res) => {
     try {
       await ensureCompanyInfoTable();
@@ -1220,6 +1220,88 @@ async function ensureCompanyInfoTable() {
     } catch (error) {
       console.error('Failed to update company info:', error);
       res.status(500).json({ error: 'Failed to update company info' });
+    }
+  });
+
+  async function ensurePhiConfigTable() {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS phi_config (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        company_id INT DEFAULT 1,
+        win_base DECIMAL(5,2) DEFAULT 30,
+        vol_base INT DEFAULT 10,
+        margin_base DECIMAL(5,2) DEFAULT 28,
+        stale_pct_base DECIMAL(5,2) DEFAULT 15,
+        response_days_base INT DEFAULT 4,
+        win_ind DECIMAL(5,2) DEFAULT 30,
+        vol_ind INT DEFAULT 30,
+        margin_ind DECIMAL(5,2) DEFAULT 28,
+        stale_pct_ind DECIMAL(5,2) DEFAULT 20,
+        response_days_ind INT DEFAULT 5,
+        blend_company INT DEFAULT 70,
+        blend_industry INT DEFAULT 30,
+        w_aging INT DEFAULT 30,
+        w_winrate INT DEFAULT 25,
+        w_volume INT DEFAULT 20,
+        w_margin INT DEFAULT 15,
+        w_speed INT DEFAULT 10,
+        band_atrisk INT DEFAULT 40,
+        band_fair INT DEFAULT 60,
+        band_good INT DEFAULT 75,
+        band_excellent INT DEFAULT 90,
+        stale_days INT DEFAULT 14,
+        response_flag_hrs INT DEFAULT 48,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        updated_by INT
+      )
+    `);
+    await db.query('INSERT IGNORE INTO phi_config (id, company_id) VALUES (1, 1)');
+  }
+
+  // GET PHI CONFIG
+  app.get('/api/admin/phi-config', authenticateToken, authenticateAdmin, async (req, res) => {
+    try {
+      await ensurePhiConfigTable();
+      const [rows] = await db.query('SELECT * FROM phi_config LIMIT 1');
+      res.json(rows[0] || {});
+    } catch (error) {
+      console.error('Failed to fetch phi config:', error);
+      res.status(500).json({ error: 'Failed to fetch phi config' });
+    }
+  });
+
+  // UPDATE PHI CONFIG
+  app.put('/api/admin/phi-config', authenticateToken, authenticateAdmin, async (req, res) => {
+    try {
+      await ensurePhiConfigTable();
+      const data = req.body;
+      
+      // Validation rules according to Section 8.2
+      if (data.blend_company + data.blend_industry !== 100) {
+        return res.status(400).json({ error: 'blend_company + blend_industry must equal 100' });
+      }
+      if (data.w_aging + data.w_winrate + data.w_volume + data.w_margin + data.w_speed !== 100) {
+        return res.status(400).json({ error: 'Component weights must sum to 100' });
+      }
+      if (!(data.band_atrisk < data.band_fair && data.band_fair < data.band_good && data.band_good < data.band_excellent)) {
+        return res.status(400).json({ error: 'Score bands must be ascending: At Risk < Fair < Good < Excellent' });
+      }
+
+      const keys = Object.keys(data).filter(k => !['id', 'company_id', 'updated_at', 'updated_by'].includes(k));
+      if (keys.length === 0) return res.json({ message: 'No changes provided' });
+
+      keys.push('updated_by');
+      const values = keys.filter(k => k !== 'updated_by').map(k => data[k]);
+      values.push(req.user.userId);
+
+      const setClause = keys.map(k => `\`${k}\` = ?`).join(', ');
+      await db.query(`UPDATE phi_config SET ${setClause} WHERE id = 1`, values);
+
+      const [updated] = await db.query('SELECT * FROM phi_config LIMIT 1');
+      res.json(updated[0]);
+    } catch (error) {
+      console.error('Failed to update phi config:', error);
+      res.status(500).json({ error: 'Failed to update phi config' });
     }
   });
 

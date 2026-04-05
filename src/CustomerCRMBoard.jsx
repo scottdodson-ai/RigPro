@@ -57,49 +57,58 @@ const CustomerCRMBoard = (props) => {
       <div style={{ padding:"14px", maxWidth:1280, margin:"0 auto" }}>
         
         {/* CRM CONTROLS PANEL (STICKY) */}
-        <div style={{ position:"sticky", top:0, zIndex:1000, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
+        <div style={{ position:"sticky", top:0, zIndex:10, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
           <div style={{ display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", maxWidth:1280, margin:"0 auto" }}>
-            <div style={{ display:"flex", gap:1, background:C.acc, border:`1px solid ${C.acc}`, borderRadius:10, padding:3, height:42, boxSizing:"border-box" }}>
-              <button style={{ background:custView==="card"?"#fff":"transparent", color:custView==="card"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>{ 
-                if (gridRef.current) gridRef.current.scrollTop = 0;
-                setGridScroll(0);
-                setCustView("card"); 
-              }}>Card View</button>
-              <button style={{ background:custView==="list"?"#fff":"transparent", color:custView==="list"?C.acc:"#fff", border:"none", padding:"0 18px", fontSize:12, fontWeight:800, borderRadius:8, cursor:"pointer", transition:"0.2s" }} onClick={()=>setCustView("list")}>List View</button>
-            </div>
             <div style={{ flex:1 }}>
                <Lbl c="CUSTOMER DIRECT SEARCH"/><input style={{ ...inp, width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px", boxSizing:"border-box" }} placeholder="Search for a customer name..." value={search} onChange={e=>setSearch(e.target.value)}/>
             </div>
           </div>
         </div>
 
-        {custView === "list" ? (
-          /* CRM LIST VIEW: SIDEBAR + DETAIL */
-          <div style={{ background:"#fff", border:`1px solid ${C.bdr}`, borderRadius:16, height:"78vh", minHeight:650, overflow:"hidden", display:"flex", boxShadow:"0 20px 60px rgba(0,0,0,0.08)" }}>
-            
-            {/* SIDEBAR DIRECTORY */}
-            <div style={{ width:340, borderRight:`1px solid ${C.bdr}`, background:"#f8fafc", display:"flex", flexDirection:"column" }}>
-              <div style={{ padding:"22px 25px", background:"#fff", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <div style={{ fontSize:11, fontWeight:900, color:C.acc, letterSpacing:1.5 }}>CUSTOMERS</div>
-                <div style={{ background:C.acc, color:"#fff", borderRadius:12, padding:"3px 12px", fontSize:11, fontWeight:900 }}>{customers.length}</div>
-              </div>
-              <div style={{ flex:1, overflowY:"auto" }}>
-                {customers.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).map(c => (
-                  <div key={c.name} onClick={()=>setSelC(c.name)} style={{ padding:"18px 25px", cursor:"pointer", borderBottom:`1px solid ${C.bdrL}`, background:selC===c.name?C.accL:"transparent", borderLeft:selC===c.name?`6px solid ${C.acc}`:"6px solid transparent", transition:"0.15s" }}>
-                    <div style={{ fontSize:14, fontWeight:selC===c.name?800:600, color:selC===c.name?C.acc:C.txt }}>{c.name}</div>
-                    <div style={{ fontSize:10, color:C.txtS, fontWeight:700, marginTop:4, opacity:0.6 }}>CUSTOMER ID: # {custData[c.name]?.customer_num || "N/A"}</div>
+        {/* CUSTOMER CARD GRID */}
+        <div ref={gridRef} style={{ 
+            display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))", gap:25, 
+            marginTop: 20,
+            overflowY:"auto", padding:"10px 10px 30px 10px", 
+          }}>
+            {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).map(c => {
+              const custJobs = c.quotes || []; 
+              const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
+              return (
+                <Card key={c.name} style={{ cursor:"pointer", padding:25, borderRadius:20, transition:"0.2s", border: selC === c.name ? `2.5px solid ${C.acc}` : `1px solid ${C.bdrL}` }} onClick={()=>{ 
+                  if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
+                  setSelC(c.name); 
+                }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                    <div style={{ fontWeight:900, fontSize:17 }}>{c.name}</div>
+                    {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>CUSTOMER</span>}
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div style={{ fontSize:22, fontWeight:900, color:C.acc, marginBottom:15 }}>{fmt(tot)}</div>
+                  <div style={{ display:"flex", gap:20, borderTop:`1px solid ${C.bdrL}`, paddingTop:15 }}>
+                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>MASTER JOBS</div><div style={{fontSize:15, fontWeight:800}}>{custJobs.length}</div></div>
+                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>TOTAL BILLINGS</div><div style={{fontSize:15, fontWeight:800, color:C.grn}}>{fmt(tot)}</div></div>
+                  </div>
+                </Card>
+              );
+            })}
+        </div>
 
-            {/* PROFILE DETAIL PANEL */}
-            <div style={{ flex:1, overflowY:"auto", padding:60, background:"#fff" }}>
-              {selC ? (
-                <div style={{ maxWidth:950, margin:"0 auto" }}>
+        {/* PROFILE MODAL OVERLAY */}
+        {selC && (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:800, overflowY:"auto", padding:"20px 16px", display:"flex", justifyContent:"center", alignItems:"flex-start" }}>
+            <div style={{ background:"#fff", width:"100%", maxWidth:1200, borderRadius:12, boxShadow:"0 20px 50px rgba(0,0,0,0.3)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
+               {/* Modal Header */}
+               <div style={{ background:C.bg, padding:"14px 20px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10 }}>
+                 <button onClick={()=>setSelC(null)} style={{ ...mkBtn("outline"), padding:"6px 14px", fontSize:12, borderColor:C.bdr, color:C.txtM, background:"#fff", fontWeight:700 }}>← Back to Search Grid</button>
+                 <div style={{ fontWeight:800, fontSize:15, color:C.txt }}>{selC}</div>
+                 <button onClick={()=>setSelC(null)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS, lineHeight:1, padding:"0 4px" }}>×</button>
+               </div>
+
+               {/* Modal Content */}
+               <div style={{ flex:1, overflowY:"auto", padding:"40px 20px", background:"#fff" }}>
+                 <div style={{ maxWidth:950, margin:"0 auto" }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
                     <div style={{ display:"flex", gap:15, alignItems:"center", justifyContent:"flex-end" }}>
-                      <button style={{ ...mkBtn("outline"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.acc}`, color:C.acc, fontWeight:800 }} onClick={()=>{ setCustView("card"); }}>← Return to Search Grid</button>
                       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
                         <button 
                           style={{ ...mkBtn("ghost"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.blu}`, color:C.blu, fontWeight:800, opacity:jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? 0.75 : 1, cursor: jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? "not-allowed" : "pointer" }} 
@@ -188,50 +197,8 @@ const CustomerCRMBoard = (props) => {
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", color:C.txtS, opacity:0.6 }}>
-                  <div style={{ fontSize:120, marginBottom:30 }}>🏢</div>
-                  <div style={{ fontSize:32, fontWeight:900, color:C.txt, letterSpacing:"-1px" }}>CUSTOMER MASTER DATABASE</div>
-                  <div style={{ fontSize:18, marginTop:12 }}>Select a directory entry to initialize profile data visualization</div>
-                </div>
-              )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div ref={gridRef} style={{ 
-            display:"grid", 
-            gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))", 
-            gap:25, 
-            height:"78vh", 
-            minHeight:650, 
-            overflowY:"auto", 
-            padding:30, 
-            background:"#f8fafc", 
-            borderRadius:16, 
-            border:`1px solid ${C.bdr}`,
-            boxShadow:"inset 0 2px 10px rgba(0,0,0,0.02)"
-          }}>
-            {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).map(c => {
-              const custJobs = c.quotes || []; 
-              const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
-              return (
-                <Card key={c.name} style={{ cursor:"pointer", padding:25, borderRadius:20, transition:"0.2s", border: selC === c.name ? `2.5px solid ${C.acc}` : `1px solid ${C.bdrL}` }} onClick={()=>{ 
-                  if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
-                  setSelC(c.name); 
-                  setCustView("list"); 
-                }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                    <div style={{ fontWeight:900, fontSize:17 }}>{c.name}</div>
-                    {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>CUSTOMER</span>}
-                  </div>
-                  <div style={{ fontSize:22, fontWeight:900, color:C.acc, marginBottom:15 }}>{fmt(tot)}</div>
-                  <div style={{ display:"flex", gap:20, borderTop:`1px solid ${C.bdrL}`, paddingTop:15 }}>
-                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>MASTER JOBS</div><div style={{fontSize:15, fontWeight:800}}>{custJobs.length}</div></div>
-                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>TOTAL BILLINGS</div><div style={{fontSize:15, fontWeight:800, color:C.grn}}>{fmt(tot)}</div></div>
-                  </div>
-                </Card>
-              );
-            })}
           </div>
         )}
 

@@ -248,4 +248,36 @@ CREATE TABLE IF NOT EXISTS job_folders (
     FOREIGN KEY (rfq_id) REFERENCES rfqs(id) ON DELETE CASCADE
 );
 
+-- 9. PHI Configuration
+CREATE TABLE IF NOT EXISTS phi_config (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT DEFAULT 1,
+    win_base DECIMAL(5,2) DEFAULT 30,
+    vol_base INT DEFAULT 10,
+    margin_base DECIMAL(5,2) DEFAULT 28,
+    stale_pct_base DECIMAL(5,2) DEFAULT 15,
+    response_days_base INT DEFAULT 4,
+    win_ind DECIMAL(5,2) DEFAULT 30,
+    vol_ind INT DEFAULT 30,
+    margin_ind DECIMAL(5,2) DEFAULT 28,
+    stale_pct_ind DECIMAL(5,2) DEFAULT 20,
+    response_days_ind INT DEFAULT 5,
+    blend_company INT DEFAULT 70,
+    blend_industry INT DEFAULT 30,
+    w_aging INT DEFAULT 30,
+    w_winrate INT DEFAULT 25,
+    w_volume INT DEFAULT 20,
+    w_margin INT DEFAULT 15,
+    w_speed INT DEFAULT 10,
+    band_atrisk INT DEFAULT 40,
+    band_fair INT DEFAULT 60,
+    band_good INT DEFAULT 75,
+    band_excellent INT DEFAULT 90,
+    stale_days INT DEFAULT 14,
+    response_flag_hrs INT DEFAULT 48,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_by INT
+);
+
+INSERT IGNORE INTO phi_config (company_id) VALUES (1);
 

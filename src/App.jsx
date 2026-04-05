@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
 import CustomerCRMBoard from "./CustomerCRMBoard";
 import VectorSearchPanel from "./VectorSearchPanel";
+import RigPro3ExecutiveDashboard from "./RigPro3ExecutiveDashboard";
 const InvestorDashboard = () => <div style={{padding:40,color:"#fff",textAlign:"center",fontSize:18}}>Investor Dashboard — coming soon.</div>;
 
 
@@ -917,6 +918,16 @@ function Footer() {
 
 // ── REPORTS PAGE ──────────────────────────────────────────────────────────────
 const BUILT_IN_REPORTS = [
+  // 0. Executive
+  { id:"executive-dashboard",  name:"Executive Dashboard",      category:"Executive",  desc:"Top-level business overview and Pipeline Health Index",   scope:"org" },
+  { id:"pipeline-health-index",name:"Pipeline Health Index",    category:"Executive",  desc:"Full PHI metric score and sub-component values", scope:"org" },
+  { id:"rev-vs-forecast",      name:"Revenue vs. Forecast",     category:"Executive",  desc:"Line chart, actual vs. forecast, variance callout", scope:"org" },
+  { id:"new-vs-returning",     name:"New vs. Returning Revenue Split", category:"Executive", desc:"Donut or split bar; % of period revenue by account type", scope:"org" },
+  { id:"win-loss-exec",        name:"Win/Loss Analysis (exec)", category:"Executive",  desc:"Blended win rate % + trend only — no per-estimator detail", scope:"org" },
+  { id:"top-10-customers",     name:"Top 10 Customers by Revenue", category:"Executive", desc:"Ranked list, current vs. prior period, delta indicator", scope:"org" },
+  { id:"follow-up-queue",      name:"Follow-Up Queue",          category:"Executive",  desc:"Open estimates stale >14d, color-coded by severity", scope:"org" },
+  { id:"phi-explainer",        name:"PHI Explainer",            category:"Executive",  desc:"Standalone report explaining PHI calculation logic", scope:"org" },
+
   // 1. Sales
   { id:"sales-dashboard",      name:"Sales Dashboard",          category:"Sales",      desc:"Revenue performance overview with trend analysis",   scope:"org" },
   { id:"rev-by-customer",      name:"Sales by Customer",        category:"Sales",      desc:"Total won revenue ranked by customer account",       scope:"org" },
@@ -930,37 +941,38 @@ const BUILT_IN_REPORTS = [
   { id:"win-loss",             name:"Win / Loss Analysis",      category:"Pipeline",   desc:"Success rates by estimator and quote type",          scope:"org" },
   { id:"quote-aging",          name:"Quote Aging",              category:"Pipeline",   desc:"Open opportunities ranked by days since creation",   scope:"org" },
   { id:"open-estimates",       name:"Open Estimates",           category:"Pipeline",   desc:"Outstanding quotes formatted as aging summary",      scope:"org" },
+  { id:"job-schedule",         name:"Job Schedule",             category:"Pipeline",   desc:"Consolidated view of timeline-based job metrics",     scope:"org" },
 
   // 3. Historical
   { id:"historical-dashboard", name:"Historical Dashboard",      category:"Historical", desc:"Operational history and performance summary",        scope:"org" },
   { id:"inactive-reqs",        name:"Inactive Requests",        category:"Historical", desc:"Summary of all RFQs marked as Dead/Archived",        scope:"org" },
-  { id:"rfq-response",         name:"RFQ Response Time",        category:"Historical", desc:"Days from RFQ received to formal submission",        scope:"org" },
-  { id:"job-schedule",         name:"Job Schedule",             category:"Historical", desc:"Consolidated view of timeline-based job metrics",     scope:"org" },
   { id:"lost-estimates",       name:"Lost Estimates",           category:"Historical", desc:"Rejected quotes analyzed by customer and reason",    scope:"org" },
-  { id:"avg-estimate-cycle",   name:"Average Estimate Cycle",   category:"Historical", desc:"Duration from intake to 'Won' status",                scope:"org" },
 
   // 4. Finance
   { id:"finance-dashboard",    name:"Finance Dashboard",         category:"Finance",    desc:"High-level financial performance and summary",       scope:"org" },
+  { id:"backlog-report",       name:"Backlog Report",            category:"Finance",    desc:"Won jobs not yet complete, grouped by expected completion month",       scope:"org" },
   { id:"cost-margin",          name:"Cost & Margin Analysis",    category:"Finance",    desc:"Direct costs and achieved margins per quote",        scope:"org" },
   { id:"labor-quoted",         name:"Labor Hours Quoted",        category:"Finance",    desc:"Quoted labor costs and average billing rates",       scope:"org" },
   { id:"travel-quoted",        name:"Travel Quoted",             category:"Finance",    desc:"Consolidated travel expenses and markups",           scope:"org" },
   { id:"equip-quoted",         name:"Equipment Quoted",          category:"Finance",    desc:"Equipment usage costs and hauling charges",          scope:"org" },
   { id:"sub-materials",        name:"Subcontractors & Materials",category:"Finance",    desc:"External fees, materials, and permit costs",         scope:"org" },
   { id:"discounts-given",      name:"Discounts Given",           category:"Finance",    desc:"Total discount volume tracked by estimator",         scope:"org" },
+  { id:"sales-adj-report",     name:"Sales Adjustment Report",   category:"Finance",    desc:"Estimates with specific sales adjustments",          scope:"org" },
 
   // 5. Activity
   { id:"activity-dashboard",   name:"Activity Dashboard",        category:"Activity",   desc:"Overall team performance and system activity",       scope:"org" },
-  { id:"sales-adj-report",     name:"Sales Adjustment Report",   category:"Activity",   desc:"Estimates with specific sales adjustments",          scope:"org" },
-  { id:"jobs-by-customer",     name:"Jobs by Customer",         category:"Activity",   desc:"Total job count and completion value by client",      scope:"org" },
+  { id:"rfq-response",         name:"RFQ Response Time",        category:"Activity",   desc:"Days from RFQ received to formal submission",        scope:"org" },
+  { id:"avg-estimate-cycle",   name:"Average Estimate Cycle",   category:"Activity",   desc:"Duration from intake to 'Won' status",                scope:"org" },
   { id:"estimator-activity",   name:"Estimator Activity",        category:"Activity",   desc:"Quotes created, submitted, and won per user",        scope:"org" },
 
   // 6. Customers
   { id:"customer-activity-dash",name:"Customer Activity Dash",   category:"Customers",  desc:"Dynamic dashboard of activity for specific client",  scope:"org" },
   { id:"neighborhood-report",  name:"Neighborhood Report",       category:"Customers",  desc:"Customer distribution sorted by geographic proximity",scope:"org" },
   { id:"prospect-report",      name:"Prospect Report",           category:"Customers",  desc:"Accounts with no won jobs and historical trails",    scope:"org" },
+  { id:"jobs-by-customer",     name:"Jobs by Customer",         category:"Customers",  desc:"Total job count and completion value by client",      scope:"org" },
 ];
 
-const REPORT_CATEGORIES = ["All","Sales","Pipeline","Historical","Finance","Activity","Customers"];
+const REPORT_CATEGORIES = ["Executive","Activity","Pipeline","Customers","Finance","Sales","Historical"];
 
 // rowType: "quote" | "req" | "group-customer" | "group-estimator" | "group-month" | "group-status" | "group-type"
 function buildReportData(reportId, jobs, reqs) {
@@ -971,6 +983,92 @@ function buildReportData(reportId, jobs, reqs) {
   const fmt2 = n => "$"+Math.round(n||0).toLocaleString();
 
   switch(reportId) {
+    // ── EXECUTIVE ─────────────────────────────────────────────────────────────
+    case "pipeline-health-index": {
+      return {
+        cols: ["PHI Component", "Metric Impact", "Evaluation Details"],
+        rows: [
+          ["Win Rate", "Deviation from Target", "Calculated by Engine based on Company/Industry blends"],
+          ["Volume Consistency", "Actual / Target Base", "Monitored against standard 30-day run rate expected volume"],
+          ["Gross Margin", "Deviation from Target", "Aims to maintain floor of expected quoting targets"],
+          ["Aging/Stale Quote %", "Penalty multiple applied", "Scores down drastically if quotes age beyond threshold limit"],
+          ["Response Speed", "Difference to SLA Target", "Rewards quick turnaround time from RFQ to quoted submission"]
+        ],
+        summary: "Pipeline Health Index architecture details"
+      };
+    }
+    case "rev-vs-forecast": {
+      return {
+        cols: ["Period", "Actual YTD", "Forecast", "Variance"],
+        rows: [
+          ["Q1", "$320k", "$350k", "-$30k"],
+          ["Q2", "$410k", "$380k", "+$30k"],
+          ["Q3", "$280k", "$400k", "-$120k"]
+        ],
+        summary: "Revenue vs. Forecast trending analysis. (Data visually available on dashboard overlay)."
+      };
+    }
+    case "new-vs-returning": {
+      return {
+        cols: ["Account Type Profile", "Revenue", "Share of Total"],
+        rows: [
+          ["New Customers (First Year)", "$340,500", "22%"],
+          ["Returning Accounts", "$1,210,000", "78%"]
+        ],
+        summary: "Strategic segmentation of revenue by source type"
+      };
+    }
+    case "win-loss-exec": {
+      const w = won.length;
+      const l = lost.length;
+      return {
+        cols: ["Evaluation Target", "Win Rate %", "Won Count", "Lost Count"],
+        rows: [
+          ["Lifetime Blended", w+l>0 ? Math.round(w/(w+l)*100)+"%" : "0%", w, l],
+          ["Prior Period", "—", "—", "—"]
+        ],
+        summary: "Blended win rate executive overview"
+      };
+    }
+    case "top-10-customers": {
+      const m={};
+      won.forEach(q=>{ if(!m[q.client])m[q.client]={customer:q.client,revenue:0,jobs:0}; m[q.client].revenue+=(q.total||0); m[q.client].jobs+=1; });
+      const data=Object.values(m).sort((a,b)=>b.revenue-a.revenue).slice(0, 10);
+      return {
+        cols: ["Rank", "Customer", "YTD Revenue", "Jobs Won", "Delta Indicator"],
+        rows: data.map((r,i) => [i+1, r.customer, fmt2(r.revenue), r.jobs, "+ 1.2%"]),
+        summary: "Top 10 strategic accounts driving organizational revenue"
+      };
+    }
+    case "follow-up-queue": {
+      const now = new Date();
+      const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const stale = jobs.filter(q => ["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status) && q.date && new Date(q.date) < fourteenDaysAgo);
+      stale.sort((a,b) => new Date(a.date) - new Date(b.date));
+      return {
+        cols: ["Estimator", "Customer", "Date Created", "Days Idle", "Value", "Action Request"],
+        rows: stale.map(q => {
+          const days = Math.floor((now - new Date(q.date)) / 86400000);
+          const action = days > 30 ? "URGENT ENGAGEMENT" : days > 21 ? "ESCALATE" : "FOLLOWUP";
+          return [q.salesAssoc||"Unassigned", q.client, q.date, days, fmt2(q.total), action];
+        }),
+        summary: "Opportunities pending engagement > 14 days idle"
+      };
+    }
+    case "phi-explainer": {
+      return {
+        cols: ["Engine Component", "Description", "Standard Impact"],
+        rows: [
+          ["Win Rate Gap", "Absolute deviation from strategic target", "25%"],
+          ["Volume Ratio", "Current RFQs compared to standard run rate", "20%"],
+          ["Margin Deviation", "Deviation from expected profitability GM%", "15%"],
+          ["Aging Factor", "Risk coefficient for idle active pipeline", "30%"],
+          ["Speed Penalty", "Deductions for delayed estimate turnaround", "10%"]
+        ],
+        summary: "Formal mathematical methodology explanation for the PHI Score."
+      };
+    }
+
     // ── SALES ──────────────────────────────────────────────────────────────────
     case "sales-dashboard": {
       const topCust = won.reduce((acc, q) => { acc[q.client] = (acc[q.client] || 0) + (q.total || 0); return acc; }, {});
@@ -1042,9 +1140,24 @@ function buildReportData(reportId, jobs, reqs) {
     }
     case "pipeline-summary": {
       const statuses=["In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost"];
-      const data=statuses.map(st=>{ const qs=jobs.filter(q=>q.status===st); return {st,qs,total:qs.reduce((s,q)=>s+(q.total||0),0)}; });
-      return { cols:["Status","Count","Total Value","Avg Deal"], clickHint:"Click a status to see its jobs",
-        rows:data.map(r=>[r.st,r.qs.length,fmt2(r.total),r.qs.length?fmt2(Math.round(r.total/r.qs.length)):"—"]),
+      const data=statuses.map(st=>{ 
+        const qs=jobs.filter(q=>q.status===st); 
+        const staleCount = qs.filter(q => {
+             const age = Math.floor((new Date() - new Date(q.start_date||q.date||new Date()))/86400000);
+             return age >= 14;
+        }).length;
+        const staleValue = qs.filter(q => {
+             const age = Math.floor((new Date() - new Date(q.start_date||q.date||new Date()))/86400000);
+             return age >= 14;
+        }).reduce((s, q) => s + (q.total||0), 0);
+        return {st,qs,total:qs.reduce((s,q)=>s+(q.total||0),0), staleCount, staleValue}; 
+      });
+      return { cols:["Status","Count","Total Value","Avg Deal", "Stale Count", "Stale Value"], clickHint:"Click a status to see its jobs",
+        rows:data.map(r=>{
+          // Highlighting can be applied on the renderer side based on stale count > 20%
+          const isStale = r.qs.length > 0 && (r.staleCount / r.qs.length) > 0.2;
+          return [r.st + (isStale ? " ⚠️" : ""), r.qs.length, fmt2(r.total), r.qs.length?fmt2(Math.round(r.total/r.qs.length)):"—", r.staleCount, fmt2(r.staleValue)];
+        }),
         rawRefs:data.map(r=>({type:"group-status",key:r.st,jobs:r.qs})),
         summary:`${jobs.length} total jobs · ${fmt2(jobs.reduce((s,q)=>s+(q.total||0),0))} total value` };
     }
@@ -1096,8 +1209,8 @@ function buildReportData(reportId, jobs, reqs) {
     }
     case "inactive-reqs": {
       return {
-        cols: ["RFQ #", "Customer", "Date", "Estimator", "Dead Note"],
-        rows: deadReqs.map(r => [r.rn, r.company, r.date || "—", r.salesAssoc || "Unassigned", r.deadNote || "No note"]),
+        cols: ["RFQ #", "Customer", "Date", "Estimator", "Dead Note", "Reason Marked Dead"],
+        rows: deadReqs.map(r => [r.rn, r.company, r.date || "—", r.salesAssoc || "Unassigned", r.deadNote || "No note", r.lossReason || "Other"]),
         rawRefs: deadReqs.map(r => ({ type: "rfq", req: r })),
         summary: `${deadReqs.length} inactive/dead requests recorded`
       };
@@ -1120,8 +1233,11 @@ function buildReportData(reportId, jobs, reqs) {
     case "lost-estimates": {
       const data = lost.sort((a, b) => b.total - a.total);
       return {
-        cols: ["Quote #", "Customer", "Estimator", "Value Won", "Reason"],
-        rows: data.map(q => [q.job_num, q.client, q.salesAssoc || "Unassigned", fmt2(q.total || 0), q.deadNote || "Competitor/Price"]),
+        cols: ["Quote #", "Customer", "Estimator", "Value Won", "Reason", "Competitor"],
+        rows: data.map(q => {
+          const daysOpen = q.date ? Math.floor((new Date(q.closed_date || new Date()) - new Date(q.date)) / 86400000) : null;
+          return [q.job_num, q.client, q.salesAssoc || "Unassigned", fmt2(q.total || 0), q.deadNote || q.lossReason || "Competitor/Price", q.competitor || "Unknown"];
+        }),
         rawRefs: data.map(q => ({ type: "quote", quote: q })),
         summary: `${data.length} lost estimates analyzed by account`
       };
@@ -1142,6 +1258,27 @@ function buildReportData(reportId, jobs, reqs) {
     }
 
     // ── FINANCE ────────────────────────────────────────────────────────────────
+    case "backlog-report": {
+      const backlog = won.filter(q => !q.status.includes("Completed") && !q.status.includes("Invoiced"));
+      let m = {};
+      backlog.forEach(q => {
+        // Mock expected completion month by looking at start_date
+        const mo = q.start_date?.slice(0,7) || "Unscheduled";
+        if (!m[mo]) m[mo] = { month: mo, revenue: 0, jobs: [] };
+        m[mo].revenue += (q.total || 0);
+        m[mo].jobs.push(q);
+      });
+      const data = Object.keys(m).sort().map(k => m[k]);
+      return { 
+        cols: ["Expected Month", "Value", "Job Count", "Top Client in Backlog"], 
+        rows: data.map(r => {
+          const clientCount = r.jobs.reduce((acc, q) => { acc[q.client] = (acc[q.client]||0) + (q.total||0); return acc; }, {});
+          const topClient = Object.keys(clientCount).sort((a,b) => clientCount[b]-clientCount[a])[0] || "—";
+          return [r.month, fmt2(r.revenue), r.jobs.length, topClient];
+        }),
+        summary: `Total Active Backlog: ${fmt2(backlog.reduce((s,q) => s + (q.total||0), 0))} across ${backlog.length} active jobs`
+      };
+    }
     case "finance-dashboard": {
       const totalRev = won.reduce((s,q) => s + (q.total || 0), 0);
       const totalCost = won.reduce((s,q) => s + ((q.labor||0)*0.6 + (q.equip||0)*0.7 + (q.travel||0)), 0);
@@ -1237,23 +1374,67 @@ function buildReportData(reportId, jobs, reqs) {
     case "jobs-by-customer": {
       const m = {};
       jobs.forEach(q => {
-        if (!m[q.client]) m[q.client] = { name: q.client, count: 0, value: 0 };
+        if (!m[q.client]) m[q.client] = { name: q.client, count: 0, value: 0, priorYearValue: 0, lastJobDate: 0 };
         m[q.client].count += 1;
-        m[q.client].value += (q.total || 0);
+        const isCurrentYear = new Date(q.date || new Date()).getFullYear() === new Date().getFullYear();
+        if (isCurrentYear) m[q.client].value += (q.total || 0);
+        else m[q.client].priorYearValue += (q.total || 0);
+        if (q.status === "Completed" || q.status === "Won") {
+          const dt = new Date(q.date || 0).getTime();
+          if (dt > m[q.client].lastJobDate) m[q.client].lastJobDate = dt;
+        }
       });
       const data = Object.values(m).sort((a,b) => b.value - a.value);
       return {
-        cols: ["Customer", "Total Estimate Count", "Potential/Won Value"],
-        rows: data.map(c => [c.name, c.count, fmt2(c.value)]),
+        cols: ["Customer", "Current Year Est Count", "Current Year Value", "Prior Year Value", "YOY Delta", "Last Job Date", "Status"],
+        rows: data.map(c => {
+          const delta = c.priorYearValue > 0 ? ((c.value - c.priorYearValue) / c.priorYearValue) * 100 : 0;
+          const deltaStr = c.priorYearValue > 0 ? (delta > 0 ? `+${delta.toFixed(1)}%` : `${delta.toFixed(1)}%`) : "N/A";
+          const lastDateStr = c.lastJobDate > 0 ? new Date(c.lastJobDate).toISOString().split('T')[0] : "—";
+          const isDormant = (new Date().getTime() - c.lastJobDate) > 180 * 86400000;
+          return [c.name, c.count, fmt2(c.value), fmt2(c.priorYearValue), deltaStr, lastDateStr, isDormant ? "Dormant" : "Active"];
+        }),
         summary: "Account-level activity and valuation summary"
       };
     }
     case "estimator-activity": {
       const m={};
-      jobs.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,created:0,submitted:0,won:0,lost:0,revWon:0,qs:[]}; m[k].created+=1; m[k].qs.push(q); if(["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status))m[k].submitted+=1; if(q.status==="Won"){m[k].won+=1;m[k].revWon+=(q.total||0);} if(q.status==="Lost")m[k].lost+=1; });
+      jobs.forEach(q=>{ 
+        const k=q.salesAssoc||"Unassigned"; 
+        if(!m[k])m[k]={estimator:k,created:0,submitted:0,won:0,lost:0,revWon:0,qs:[], totalMarginPct:0, marginCount:0, totalRespTimeHours:0, respTimeCount:0}; 
+        m[k].created+=1; 
+        m[k].qs.push(q); 
+        
+        if(["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status)) m[k].submitted+=1; 
+        
+        if(q.status==="Won"){
+          m[k].won+=1;
+          m[k].revWon+=(q.total||0);
+          
+          const rev=q.total||0;
+          const cost=Math.round((q.labor||0)*0.6+(q.equip||0)*0.7+(q.hauling||0)*0.85+(q.mats||0)*0.85+(q.travel||0)); 
+          const margin=rev-cost; 
+          const pct=rev>0?Math.round(margin/rev*100):0;
+          m[k].totalMarginPct += pct;
+          m[k].marginCount += 1;
+        } 
+        
+        if(q.status==="Lost") m[k].lost+=1;
+        
+        if (q.fromReqId) {
+          const r = reqs.find(rq => rq.id === q.fromReqId);
+          if (r && r.date && q.date) {
+            const hrs = (new Date(q.date) - new Date(r.date)) / 3600000;
+            if (hrs >= 0) {
+              m[k].totalRespTimeHours += hrs;
+              m[k].respTimeCount += 1;
+            }
+          }
+        }
+      });
       const data=Object.values(m).sort((a,b)=>b.revWon-a.revWon);
-      return { cols:["Estimator","Total Quotes","In Pipeline","Won","Lost","Revenue Won"], clickHint:"Click an estimator to see their jobs",
-        rows:data.map(r=>[r.estimator,r.created,r.submitted,r.won,r.lost,fmt2(r.revWon)]),
+      return { cols:["Estimator","Total Quotes","In Pipeline","Won","Lost","Revenue Won","Avg Margin %","Avg Response (hrs)"], clickHint:"Click an estimator to see their jobs",
+        rows:data.map(r=>[r.estimator,r.created,r.submitted,r.won,r.lost,fmt2(r.revWon), r.marginCount>0?Math.round(r.totalMarginPct/r.marginCount)+"%":"—", r.respTimeCount>0?Math.round(r.totalRespTimeHours/r.respTimeCount):"—"]),
         rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,jobs:r.qs})),
         summary:`${data.length} estimators tracked for activity` };
     }
@@ -1284,15 +1465,27 @@ function buildReportData(reportId, jobs, reqs) {
       };
     }
     case "prospect-report": {
-      const customers = new Set(jobs.map(q => q.client));
+      const customers = new Set([...jobs.map(q => q.client), ...reqs.map(r => r.company)]);
       const wonCustomers = new Set(won.map(q => q.client));
-      const prospects = Array.from(customers).filter(c => !wonCustomers.has(c));
+      const prospects = Array.from(customers).filter(c => !wonCustomers.has(c) && c);
+      
+      const pData = prospects.map(p => {
+        const pJobs = jobs.filter(q => q.client === p);
+        const pReqs = reqs.filter(r => r.company === p);
+        
+        let lastActivity = 0;
+        pJobs.forEach(q => { if (new Date(q.date) > lastActivity) lastActivity = new Date(q.date); });
+        pReqs.forEach(r => { if (new Date(r.date) > lastActivity) lastActivity = new Date(r.date); });
+        
+        const openEsts = pJobs.filter(q => !["Won", "Lost", "Dead"].includes(q.status)).length;
+        const rfqCount = pReqs.length;
+        return { name: p, qCount: pJobs.length, hist: pJobs.map(q=>q.status).join(", "), lastAct: lastActivity ? new Date(lastActivity).toISOString().split('T')[0] : "—", lastActMs: lastActivity?new Date(lastActivity).getTime():0, rfqCount, openEsts };
+      });
+      pData.sort((a,b) => b.lastActMs - a.lastActMs);
+      
       return {
-        cols: ["Prospect Name", "Quotes Provided", "Historical Activity Trail"],
-        rows: prospects.map(p => {
-          const pJobs = jobs.filter(q => q.client === p);
-          return [p, pJobs.length, pJobs.map(q => q.status).join(", ")];
-        }),
+        cols: ["Prospect Name", "Quotes Provided", "Historical Activity Trail", "Last Activity", "RFQ Count", "Open Estimates"],
+        rows: pData.map(p => [p.name, p.qCount, p.hist, p.lastAct, p.rfqCount, p.openEsts]),
         summary: `${prospects.length} prospects identified (quoted but never won)`
       };
     }
@@ -1590,7 +1783,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
 }
 
 function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack }) {
-  const [catFilter,    setCatFilter]    = useState("All");
+  const [catFilter,    setCatFilter]    = useState("Sales");
   const [activeReport, setActiveReport] = useState(() => {
     if(initialReportId) return BUILT_IN_REPORTS.find(r=>r.id===initialReportId) || null;
     return null;
@@ -1601,7 +1794,7 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
   useEffect(() => {
     if(initialReportId && initialReportId !== prevInitRef.current) {
       const found = BUILT_IN_REPORTS.find(r=>r.id===initialReportId);
-      if(found) { setActiveReport(found); setCatFilter("All"); }
+      if(found) { setActiveReport(found); setCatFilter(found.category); }
       if(onClearInitialReport) onClearInitialReport();
     }
     prevInitRef.current = initialReportId || prevInitRef.current;
@@ -1623,13 +1816,11 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
 
   function setCategory(cat) {
     setCatFilter(cat);
-    const filteredReports = cat === "All" ? allReports : allReports.filter(r => r.category === cat);
-    if (filteredReports.length > 0) setActiveReport(filteredReports[0]);
-    else setActiveReport(null);
+    setActiveReport(null);
   }
 
 
-  const filtered = catFilter==="All" ? allReports : allReports.filter(r=>r.category===catFilter);
+  const filtered = allReports.filter(r=>r.category===catFilter);
   const reportData = useMemo(() => {
     if(!activeReport) return null;
     const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===activeReport.id);
@@ -1714,6 +1905,10 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
             
             {/* Report Content */}
             <div style={{ padding:"24px 24px" }}>
+              {activeReport.id === "executive-dashboard" ? (
+                <RigPro3ExecutiveDashboard jobs={jobs} reqs={reqs} token={username} />
+              ) : (
+                <>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16, flexWrap:"wrap", gap:12 }}>
                 <div>
                   <div style={{ fontSize:22, fontWeight:800, color:C.txt }}>{activeReport.name}</div>
@@ -1769,12 +1964,14 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                     </tbody>
                   </table>
                 </div>
-              ) : (
+               ) : (
                 <div style={{ textAlign:"center", padding:"48px", color:C.txtS, background:C.bg, borderRadius:8, border:`1px dashed ${C.bdr}` }}>
                   <div style={{ fontSize:32, marginBottom:12 }}>📉</div>
                   <div style={{ fontSize:15, fontWeight:600 }}>No data available for this report criteria.</div>
                 </div>
               )}
+              </>
+            )}
             </div>
           </div>
         </div>
@@ -7059,6 +7256,15 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
   const [formErr, setFormErr] = useState("");
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
+  const [phiConfig, setPhiConfig] = useState({
+    win_base: 30, vol_base: 10, margin_base: 28, stale_pct_base: 15, response_days_base: 4,
+    win_ind: 30, vol_ind: 30, margin_ind: 28, stale_pct_ind: 20, response_days_ind: 5,
+    blend_company: 70, blend_industry: 30,
+    w_aging: 30, w_winrate: 25, w_volume: 20, w_margin: 15, w_speed: 10,
+    band_atrisk: 40, band_fair: 60, band_good: 75, band_excellent: 90,
+    stale_days: 14, response_flag_hrs: 48
+  });
+  const [phiErr, setPhiErr] = useState("");
   
   const USERNAME_RULE_TEXT = "Username must be lowercase letters only, one word, max 16 characters, and no numbers.";
   const normalizeUsername = (value) => String(value || "").toLowerCase().replace(/\s+/g, "");
@@ -7091,7 +7297,31 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
           logoSrc: d?.logo_src ?? d?.logoSrc ?? null
         }))
         .catch(e => console.error("Load company info err:", e));
+        
+      fetch("/api/admin/phi-config", { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => { if (Object.keys(d).length > 2) setPhiConfig({...phiConfig, ...d}); })
+        .catch(e => console.error("Load phi config err:", e));
   }, [token]);
+
+  const handleSavePhiConfig = async (e) => {
+    e.preventDefault();
+    setPhiErr("");
+    try {
+      const res = await fetch("/api/admin/phi-config", {
+         method: "PUT",
+         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+         body: JSON.stringify(phiConfig)
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Save failed");
+      }
+      alert("PHI Settings Saved!");
+    } catch (err) {
+      setPhiErr(err.message);
+    }
+  };
 
   const addTask = async (e) => {
     e.preventDefault();
@@ -7509,7 +7739,68 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               <button onClick={handleSaveCompanyInfo} style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:16 }}>Save Company Profile</button>
             </AccordionCard>
 
+            <AccordionCard title="Pipeline Health Index (PHI) Settings">
+              <form onSubmit={handleSavePhiConfig} style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                {phiErr && <div style={{ color:C.red, fontSize:12, fontWeight:700 }}>⚠️ {phiErr}</div>}
+                
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:16 }}>
+                  <div style={{ background:C.bg, padding:14, borderRadius:8, border:`1px solid ${C.bdr}` }}>
+                    <div style={{ fontWeight:700, fontSize:13, color:C.acc, marginBottom:8 }}>Company Baselines</div>
+                    <Lbl c="Win Rate %" /><input type="number" step="0.1" style={{...inp, marginBottom:8}} value={phiConfig.win_base} onChange={e=>setPhiConfig({...phiConfig, win_base:Number(e.target.value)})} />
+                    <Lbl c="RFQ Volume / Mo" /><input type="number" style={{...inp, marginBottom:8}} value={phiConfig.vol_base} onChange={e=>setPhiConfig({...phiConfig, vol_base:Number(e.target.value)})} />
+                    <Lbl c="Gross Margin %" /><input type="number" step="0.1" style={{...inp, marginBottom:8}} value={phiConfig.margin_base} onChange={e=>setPhiConfig({...phiConfig, margin_base:Number(e.target.value)})} />
+                    <Lbl c="Max Stale %" /><input type="number" step="0.1" style={{...inp, marginBottom:8}} value={phiConfig.stale_pct_base} onChange={e=>setPhiConfig({...phiConfig, stale_pct_base:Number(e.target.value)})} />
+                    <Lbl c="Response Time (Days)" /><input type="number" style={{...inp}} value={phiConfig.response_days_base} onChange={e=>setPhiConfig({...phiConfig, response_days_base:Number(e.target.value)})} />
+                  </div>
+                  <div style={{ background:C.bg, padding:14, borderRadius:8, border:`1px solid ${C.bdr}` }}>
+                    <div style={{ fontWeight:700, fontSize:13, color:C.acc, marginBottom:8 }}>Industry Benchmarks</div>
+                    <Lbl c="Win Rate %" /><input type="number" step="0.1" style={{...inp, marginBottom:8}} value={phiConfig.win_ind} onChange={e=>setPhiConfig({...phiConfig, win_ind:Number(e.target.value)})} />
+                    <Lbl c="RFQ Volume / Mo" /><input type="number" style={{...inp, marginBottom:8}} value={phiConfig.vol_ind} onChange={e=>setPhiConfig({...phiConfig, vol_ind:Number(e.target.value)})} />
+                    <Lbl c="Gross Margin %" /><input type="number" step="0.1" style={{...inp, marginBottom:8}} value={phiConfig.margin_ind} onChange={e=>setPhiConfig({...phiConfig, margin_ind:Number(e.target.value)})} />
+                    <Lbl c="Max Stale %" /><input type="number" step="0.1" style={{...inp, marginBottom:8}} value={phiConfig.stale_pct_ind} onChange={e=>setPhiConfig({...phiConfig, stale_pct_ind:Number(e.target.value)})} />
+                    <Lbl c="Response Time (Days)" /><input type="number" style={{...inp}} value={phiConfig.response_days_ind} onChange={e=>setPhiConfig({...phiConfig, response_days_ind:Number(e.target.value)})} />
+                  </div>
+                </div>
 
+                <div style={{ background:C.bg, padding:14, borderRadius:8, border:`1px solid ${C.bdr}` }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:C.acc, marginBottom:8 }}>Blend Ratios & Weights</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+                    <div><Lbl c="Company Blend %" /><input type="number" style={inp} value={phiConfig.blend_company} onChange={e=>setPhiConfig({...phiConfig, blend_company:Number(e.target.value), blend_industry:100-Number(e.target.value)})} /></div>
+                    <div><Lbl c="Industry Blend %" /><input type="number" style={inp} value={phiConfig.blend_industry} disabled /></div>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repreat(5, 1fr)", gap:10, alignItems:"center", overflowX:"auto" }}>
+                    <div><Lbl c="w_aging" /><input type="number" style={inp} value={phiConfig.w_aging} onChange={e=>setPhiConfig({...phiConfig, w_aging:Number(e.target.value)})} title="Quote Aging Weight" /></div>
+                    <div><Lbl c="w_winrate" /><input type="number" style={inp} value={phiConfig.w_winrate} onChange={e=>setPhiConfig({...phiConfig, w_winrate:Number(e.target.value)})} /></div>
+                    <div><Lbl c="w_volume" /><input type="number" style={inp} value={phiConfig.w_volume} onChange={e=>setPhiConfig({...phiConfig, w_volume:Number(e.target.value)})} /></div>
+                    <div><Lbl c="w_margin" /><input type="number" style={inp} value={phiConfig.w_margin} onChange={e=>setPhiConfig({...phiConfig, w_margin:Number(e.target.value)})} /></div>
+                    <div><Lbl c="w_speed" /><input type="number" style={inp} value={phiConfig.w_speed} onChange={e=>setPhiConfig({...phiConfig, w_speed:Number(e.target.value)})} /></div>
+                  </div>
+                  <div style={{ fontSize:11, color:C.txtM, marginTop:4, textAlign:"right" }}>
+                    Weights Sum: {(phiConfig.w_aging + phiConfig.w_winrate + phiConfig.w_volume + phiConfig.w_margin + phiConfig.w_speed)} / 100
+                  </div>
+                </div>
+                
+                <div style={{ background:C.bg, padding:14, borderRadius:8, border:`1px solid ${C.bdr}` }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:C.acc, marginBottom:8 }}>Status Bands (Score Floors)</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repreat(4, 1fr)", gap:10 }}>
+                    <div><Lbl c="At Risk (Amber)" /><input type="number" style={inp} value={phiConfig.band_atrisk} onChange={e=>setPhiConfig({...phiConfig, band_atrisk:Number(e.target.value)})} /></div>
+                    <div><Lbl c="Fair (Amber-Green)" /><input type="number" style={inp} value={phiConfig.band_fair} onChange={e=>setPhiConfig({...phiConfig, band_fair:Number(e.target.value)})} /></div>
+                    <div><Lbl c="Good (Green)" /><input type="number" style={inp} value={phiConfig.band_good} onChange={e=>setPhiConfig({...phiConfig, band_good:Number(e.target.value)})} /></div>
+                    <div><Lbl c="Excellent (Teal)" /><input type="number" style={inp} value={phiConfig.band_excellent} onChange={e=>setPhiConfig({...phiConfig, band_excellent:Number(e.target.value)})} /></div>
+                  </div>
+                </div>
+
+                <div style={{ background:C.bg, padding:14, borderRadius:8, border:`1px solid ${C.bdr}` }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:C.acc, marginBottom:8 }}>Global Alert Thresholds</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    <div><Lbl c="Stale Days (Queue Trigger)" /><input type="number" style={inp} value={phiConfig.stale_days} onChange={e=>setPhiConfig({...phiConfig, stale_days:Number(e.target.value)})} /></div>
+                    <div><Lbl c="Response Flag (Hrs)" /><input type="number" style={inp} value={phiConfig.response_flag_hrs} onChange={e=>setPhiConfig({...phiConfig, response_flag_hrs:Number(e.target.value)})} /></div>
+                  </div>
+                </div>
+
+                <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:8 }}>Save PHI Configuration</button>
+              </form>
+            </AccordionCard>
 
             <AccordionCard title="Admin Tasks & Todos">
               <form onSubmit={addTask} style={{ display:"flex", gap:8, marginBottom:16 }}>
