@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
 import CustomerCRMBoard from "./CustomerCRMBoard";
 import VectorSearchPanel from "./VectorSearchPanel";
+import PhiConfigPanel from "./PhiConfigPanel";
 const InvestorDashboard = () => <div style={{padding:40,color:"#fff",textAlign:"center",fontSize:18}}>Investor Dashboard — coming soon.</div>;
 
 
@@ -8845,9 +8846,12 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                 </div>
               </div>
             </div>
+
+            <PhiConfigPanel token={token} />
+
           </div>
         </div>
-
+        
 
         {/* VECTOR DB SECTION */}
         {showVectorDB && <VectorBrowser token={token} />}

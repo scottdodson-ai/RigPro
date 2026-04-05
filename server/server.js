@@ -1116,6 +1116,42 @@ async function ensureCompanyInfoTable() {
     }
   });
 
+// GET PHI CONFIG
+app.get('/api/admin/phi-config', authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM phi_config LIMIT 1');
+    if (rows.length === 0) return res.json({});
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Failed to fetch phi config:', error);
+    res.status(500).json({ error: 'Failed to fetch phi config' });
+  }
+});
+
+// UPDATE PHI CONFIG
+app.put('/api/admin/phi-config', authenticateToken, authenticateAdmin, async (req, res) => {
+  const data = req.body;
+  try {
+    const [existing] = await db.query('SELECT company_id FROM phi_config LIMIT 1');
+    if (existing.length === 0) await db.query('INSERT INTO phi_config (company_id) VALUES (1)');
+    
+    const validKeys = Object.keys(data).filter(k => !['company_id','updated_at','updated_by'].includes(k));
+    const values = validKeys.map(k => data[k]);
+    values.push(req.user.userId);
+    
+    if (validKeys.length > 0) {
+      const updateFields = validKeys.map(k => `${k} = ?`).join(', ');
+      await db.query(`UPDATE phi_config SET ${updateFields}, updated_by = ?`, values);
+    }
+    
+    const [updated] = await db.query('SELECT * FROM phi_config LIMIT 1');
+    res.json(updated[0]);
+  } catch (error) {
+    console.error('Failed to update phi config:', error);
+    res.status(500).json({ error: 'Failed to update phi config' });
+  }
+});
+
 // VECTOR SEARCH (Protected)
 app.post('/api/search/vector', authenticateToken, async (req, res) => {
   const { query, collection = 'all', limit = 8 } = req.body || {};
