@@ -799,19 +799,29 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
             style={{
               display: "none",
               marginLeft: "auto",
-              alignItems: "center",
+              alignItems: "flex-end",
               gap: 6,
-              overflowX: "auto",
+              flexDirection: "column",
               maxWidth: "calc(100% - 14px)",
               paddingLeft: 8,
+              paddingTop: 4,
+              paddingBottom: 4
             }}
           >
-            {extra}
-            {token ? (
-              <button style={{ ...mkBtn("danger"), fontSize:10, padding:"5px 8px" }} onClick={handleLogout}>Logout</button>
-            ) : (
-              view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:10, padding:"5px 10px" }} onClick={() => setView("login")}>Login</button>
-            )}
+            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              {token && profileUser && (
+                <button style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:6, color:C.txt, fontWeight:600, fontSize:12, padding:"4px 8px" }} onClick={() => setProfileOpen(true)}>
+                  <div style={{ width:20, height:20, borderRadius:"50%", background:C.acc, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700 }}>{profileUser.first_name?.[0]||"U"}</div>
+                  Hi, {profileUser.first_name || profileUser.username}
+                </button>
+              )}
+              {token ? (
+                <button style={{ ...mkBtn("danger"), fontSize:10, padding:"5px 8px" }} onClick={handleLogout}>Logout</button>
+              ) : (
+                view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:10, padding:"5px 10px" }} onClick={() => setView("login")}>Login</button>
+              )}
+            </div>
+            {extra && <div style={{ display:"flex", alignItems:"center", gap:6 }}>{extra}</div>}
           </div>
 
           {/* Hamburger (mobile) */}
@@ -8146,7 +8156,28 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 export default function App() {
   const [token,      setToken]      = useState(localStorage.getItem("token") || "");
   const [role,       setRole]       = useState(localStorage.getItem("role") || "user");
-  const [view,       setView]       = useState(localStorage.getItem("token") ? "dash" : "landing");
+  const [viewState,  setViewState]  = useState(localStorage.getItem("token") ? "dash" : "landing");
+  const [viewHistory, setViewHistory] = useState([]);
+  const view = viewState;
+  const setView = (v) => {
+    setViewState(prev => {
+      const next = typeof v === "function" ? v(prev) : v;
+      if (prev !== next) {
+        if (["dash","customers","rfqs","reports","admin"].includes(next)) setViewHistory([]);
+        else setViewHistory(h => [...h, prev]);
+      }
+      return next;
+    });
+  };
+  const goBack = () => {
+    let target = "dash";
+    setViewHistory(h => {
+      const copy = [...h];
+      if (copy.length > 0) target = copy.pop();
+      return copy;
+    });
+    setViewState(target);
+  };
   const [profileUser, setProfileUser] = useState(null);
   const [rfqStageFilter, setRfqStageFilter] = useState("all");
   const [appUsers,   setAppUsers]   = useState([]);
@@ -9016,6 +9047,8 @@ export default function App() {
           </div>
         }/>
         <div className="app-page-container" style={{ maxWidth:1160 }}>
+          <button style={{ ...mkBtn("outline"), marginBottom:16, padding:"6px 12px", fontSize:12, borderColor:C.bdr, color:C.txtM, background:"#fff" }} onClick={goBack}>← Back</button>
+
           {active.fromReqId    && <div style={{ background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.blue }}>Pre-filled from a Quote Request.</div>}
           {active.isChangeOrder && <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:"#6d28d9" }}>Change Order — linked to original won quote.</div>}
           {active.isHistorical && <div style={{ background:C.accL, border:`1px solid ${C.accB}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.acc, fontWeight:700 }}>HISTORICAL ESTIMATE — Metrics manually established.</div>}
