@@ -1190,11 +1190,11 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
         summary:`${withResp.length} of ${data.length} RFQs have estimates · Avg response: ${avg} days` };
     }
     case "job-schedule": {
-      const jobs=jobs.filter(q=>q.status==="Won"&&q.startDate).sort((a,b)=>a.startDate>b.startDate?1:-1);
+      const schedJobs=jobs.filter(q=>q.status==="Won"&&q.startDate).sort((a,b)=>a.startDate>b.startDate?1:-1);
       return { cols:["Job #","Customer","Description","Start","End","Value"], clickHint:"Click a job to open its quote",
-        rows:jobs.map(q=>[q.jobNum||q.job_num,q.client,q.job_description,q.startDate||"—",q.compDate||"TBD",fmt2(q.total||0)]),
-        rawRefs:jobs.map(q=>({type:"quote",quote:q})),
-        summary:`${jobs.length} scheduled jobs` };
+        rows:schedJobs.map(q=>[q.jobNum||q.job_num,q.client,q.job_description,q.startDate||"—",q.compDate||"TBD",fmt2(q.total||0)]),
+        rawRefs:schedJobs.map(q=>({type:"quote",quote:q})),
+        summary:`${schedJobs.length} scheduled jobs` };
     }
     case "cost-margin": {
       const data=won.map(q=>{ const rev=q.total||0; const cost=Math.round((q.labor||0)*0.6+(q.equip||0)*0.7+(q.hauling||0)*0.85+(q.mats||0)*0.85+(q.travel||0)); const margin=rev-cost; const pct=rev>0?Math.round(margin/rev*100):0; return {q,rev,cost,margin,pct}; }).sort((a,b)=>b.pct-a.pct);
