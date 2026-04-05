@@ -1045,7 +1045,7 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
     }
     case "historical-dashboard": {
       return {
-        isCategoryDashboard: true,
+        isHistoricalDashboardUI: true,
         category: "Historical",
         summary: `historical Overview`,
         rows: []
@@ -2761,6 +2761,8 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
               {/* Table or Dashboard */}
               {reportData?.isExecutiveDashboardUI ? (
                  <ExecutiveDashboard jobs={filteredJobs} reqs={filteredReqs} phiConfig={phiConfig} />
+              ) : reportData?.isHistoricalDashboardUI ? (
+                 <HistoricalDashboard jobs={filteredJobs} reqs={filteredReqs} />
               ) : reportData?.isFinanceDashboardUI ? (
                  <FinanceDashboard jobs={filteredJobs} />
               ) : reportData?.isPhiExplainer ? (
@@ -9213,6 +9215,174 @@ function FinanceDashboard({ jobs }) {
              </svg>
            </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function HistoricalDashboard({ jobs, reqs }) {
+  const fmt = n => typeof n==="number" ? (n >= 1000000 ? "$" + (n/1000000).toFixed(1) + "M" : n >= 1000 ? "$" + Math.round(n/1000) + "K" : "$" + Math.round(n)) : n;
+  const C = { sur: "#ffffff", bdr: "#e2e8f0", txt: "#1e293b", txtS: "#64748b" };
+
+  const mDb = {};
+  for(let i=11; i>=0; i--) {
+     const d = new Date(); d.setMonth(d.getMonth()-i);
+     mDb[d.toISOString().slice(0,7)] = { won:0, lost:0, rev:0, cost:0 };
+  }
+  
+  jobs.forEach(q => {
+    const d = q.date || q.start_date || "";
+    if (d) {
+      const mo = d.slice(0,7);
+      if (mDb[mo]) {
+        if (q.status === "Won") {
+           mDb[mo].won++;
+           mDb[mo].rev += (q.total||0);
+           mDb[mo].cost += ((q.labor||0)*0.6 + (q.equip||0)*0.7 + (q.travel||0) + (q.mats||0)*0.85 + (q.hauling||0)*0.85 + (q.subs||0)*0.85);
+        }
+        if (q.status === "Lost") mDb[mo].lost++;
+      }
+    }
+  });
+
+  const labels = Object.keys(mDb).sort();
+  const shortLabels = labels.map(l => l.slice(5,7) + "/" + l.slice(2,4));
+
+  // 1. Closed Jobs (Won + Lost)
+  const actLevels = labels.map(k => mDb[k].won + mDb[k].lost);
+  const maxAct = Math.max(...actLevels, 10);
+  const getX = (i, total) => 50 + (i * ((300 - 80) / Math.max(total-1,1)));
+  const getYAct = v => 250 - 40 - ((v) / maxAct * (250 - 70));
+
+  // 2. Win Rate
+  const winRateData = labels.map(k => {
+    const t = mDb[k].won + mDb[k].lost;
+    return t > 0 ? (mDb[k].won / t * 100) : 0;
+  });
+  const maxWR = Math.max(...winRateData, 50);
+  const getYWR = v => 250 - 40 - ((v) / maxWR * (250 - 70));
+  const ptsWR = winRateData.map((d,i)=>`${getX(i,12)},${getYWR(d)}`).join(" ");
+
+  // 3. Margin Trend
+  const marginData = labels.map(k => mDb[k].rev>0 ? ((mDb[k].rev-mDb[k].cost)/mDb[k].rev*100) : 0);
+  const maxM = Math.max(...marginData, 40);
+  const minM = Math.min(...marginData, 10);
+  const getYM = v => 250 - 40 - ((v - minM) / (maxM - minM) * (250 - 70));
+  const ptsM = marginData.map((d,i)=>`${getX(i,12)},${getYM(d)}`).join(" ");
+
+  // 4. Lost Customers Table
+  const lCust = {};
+  jobs.forEach(q => {
+    if(q.status === "Lost" && q.client) {
+      if(!lCust[q.client]) lCust[q.client] = { name: q.client, count:0, val:0 };
+      lCust[q.client].count++;
+      lCust[q.client].val += (q.total||0);
+    }
+  });
+  const topLost = Object.values(lCust).sort((a,b)=>b.val - a.val).slice(0,5);
+
+  // 5. Inactive RFQ Count
+  const curr = reqs.filter(r => new Date(r.date) >= new Date(Date.now() - 30*86400000) && (r.status === "Dead" || r.status === "Lost")).length;
+  const old = reqs.filter(r => {
+    const d = new Date(r.date);
+    return d >= new Date(Date.now() - 60*86400000) && d < new Date(Date.now() - 30*86400000) && (r.status === "Dead" || r.status === "Lost");
+  }).length;
+  const delta = curr - old;
+
+  // 6. Avg Est Cycle
+  let sumDays = 0, countD = 0;
+  jobs.filter(q=>q.status==="Won").forEach(q => {
+     if(q.fromReqId) {
+        const req = reqs.find(r=>r.id===q.fromReqId);
+        if(req && req.date && q.date) {
+           const d = Math.floor((new Date(q.date) - new Date(req.date))/86400000);
+           if(d>=0 && d<365) { sumDays+=d; countD++; }
+        }
+     }
+  });
+  const avgCyc = countD>0 ? Math.round(sumDays/countD) : 0;
+
+  return (
+    <div style={{ padding: "0 0 32px 0", background: "#fbfbf9", color: "#333", fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>Historical<br/>dashboard</h1>
+      </div>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20, marginBottom: 32 }}>
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 20 }}>
+          <div style={{ color: C.txtS, fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Inactive RFQs (30D)</div>
+          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, display:"flex", alignItems:"baseline", gap:8 }}>
+             {curr}
+             <span style={{ fontSize: 13, fontWeight: 600, color: delta > 0 ? "#dc2626" : "#10b981" }}>({delta>0?"+":""}{delta} vs 30D Prior)</span>
+          </div>
+        </div>
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 20 }}>
+          <div style={{ color: C.txtS, fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Avg Won Estimate Cycle</div>
+          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, color: "#8b5cf6" }}>{avgCyc} days</div>
+          <div style={{ fontSize: 11, color: C.txtS, marginTop: 4 }}>RFQ to Won tracking (Last 12M)</div>
+        </div>
+      </div>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginBottom: 32 }}>
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 24 }}>
+          <h3 style={{ margin: "0 0 20px 0", fontSize: 16, color: C.txt }}>Closed Jobs by Month</h3>
+           <div style={{ overflowX:"auto" }}>
+             <svg width={300} height={250}>
+               {actLevels.map((v,i)=>(
+                 <rect key={i} x={getX(i,12)-8} y={getYAct(v)} width={16} height={250-40-getYAct(v)} fill="#3b82f6" rx={2} />
+               ))}
+               {shortLabels.map((l,i)=>(<text key={i} x={getX(i,12)} y={230} fill="#94a3b8" fontSize={10} textAnchor="middle">{l}</text>))}
+             </svg>
+           </div>
+        </div>
+
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 24 }}>
+          <h3 style={{ margin: "0 0 20px 0", fontSize: 16, color: C.txt }}>Win Rate Trend (%)</h3>
+           <div style={{ overflowX:"auto" }}>
+             <svg width={300} height={250}>
+               <line x1={30} y1={getYWR(35)} x2={300} y2={getYWR(35)} stroke="#cbd5e1" strokeDasharray="5,5" />
+               <text x={280} y={getYWR(35)-5} fill="#64748b" fontSize={10} textAnchor="end">35% Target</text>
+               <polyline points={ptsWR} fill="none" stroke="#10b981" strokeWidth={3} />
+               {winRateData.map((v,i)=>(<circle key={i} cx={getX(i,12)} cy={getYWR(v)} r={4} fill="#10b981" />))}
+               {shortLabels.map((l,i)=>(<text key={i} x={getX(i,12)} y={230} fill="#94a3b8" fontSize={10} textAnchor="middle">{l}</text>))}
+             </svg>
+           </div>
+        </div>
+
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 24 }}>
+          <h3 style={{ margin: "0 0 20px 0", fontSize: 16, color: C.txt }}>Average Margin Trend</h3>
+           <div style={{ overflowX:"auto" }}>
+             <svg width={300} height={250}>
+               <polyline points={ptsM} fill="none" stroke="#0ea5e9" strokeWidth={3} />
+               {marginData.map((v,i)=>(<circle key={i} cx={getX(i,12)} cy={getYM(v)} r={4} fill="#0ea5e9" />))}
+               {shortLabels.map((l,i)=>(<text key={i} x={getX(i,12)} y={230} fill="#94a3b8" fontSize={10} textAnchor="middle">{l}</text>))}
+             </svg>
+           </div>
+        </div>
+      </div>
+
+      <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 24 }}>
+        <h3 style={{ margin: "0 0 20px 0", fontSize: 16, color: C.txt }}>Top Lost-To Customers</h3>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+          <thead>
+            <tr style={{ background: "#f8fafc", borderBottom: `2px solid ${C.bdr}`, textAlign:"left" }}>
+              <th style={{ padding: 12 }}>Customer</th>
+              <th style={{ padding: 12 }}>Lost Quotes</th>
+              <th style={{ padding: 12 }}>Lost Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {topLost.length === 0 ? (
+               <tr><td colSpan={3} style={{ padding: "20px", textAlign: "center", color: C.txtS }}>No lost quotes recorded... yet!</td></tr>
+            ) : topLost.map((c,i) => (
+               <tr key={i} style={{ borderBottom: `1px solid ${C.bdr}` }}>
+                 <td style={{ padding: 12, fontWeight: 500 }}>{c.name}</td>
+                 <td style={{ padding: 12 }}>{c.count}</td>
+                 <td style={{ padding: 12, color: "#dc2626" }}>{fmt(c.val)}</td>
+               </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
