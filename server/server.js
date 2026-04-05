@@ -108,6 +108,7 @@ async function ensureUserProfileColumns() {
     { name: 'last_name',   def: 'VARCHAR(100)' },
     { name: 'cell_phone',  def: 'VARCHAR(50)' },
     { name: 'is_disabled', def: 'TINYINT(1) NOT NULL DEFAULT 0' },
+    { name: 'avatar',      def: 'LONGTEXT' },
   ];
   for (const { name, def } of columnsToAdd) {
     const [rows] = await db.query(
@@ -153,7 +154,7 @@ app.post('/api/login', async (req, res) => {
 
   try {
     await ensureUserProfileColumns();
-    const [rows] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, password_hash FROM users WHERE username = ?', [normalizedUsername]);
+    const [rows] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar, password_hash FROM users WHERE username = ?', [normalizedUsername]);
     const user = rows[0];
 
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
@@ -179,6 +180,7 @@ app.post('/api/login', async (req, res) => {
       role: user.role,
       email: user.email || '',
       cell_phone: user.cell_phone || '',
+      avatar: user.avatar || null,
       is_disabled: Number(user.is_disabled) === 1
     } });
   } catch (error) {
@@ -350,7 +352,7 @@ app.get('/api/me', authenticateToken, async (req, res) => {
   try {
     await ensureUserProfileColumns();
     const [rows] = await db.query(
-      'SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled FROM users WHERE id = ? LIMIT 1',
+      'SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar FROM users WHERE id = ? LIMIT 1',
       [req.user.userId]
     );
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
@@ -361,30 +363,31 @@ app.get('/api/me', authenticateToken, async (req, res) => {
 });
 
 app.put('/api/me', authenticateToken, async (req, res) => {
-  const { email, cell_phone, password, role } = req.body || {};
+  const { email, cell_phone, avatar, password, role } = req.body || {};
   try {
     await ensureUserProfileColumns();
-    const [rows] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled FROM users WHERE id = ? LIMIT 1', [req.user.userId]);
+    const [rows] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar FROM users WHERE id = ? LIMIT 1', [req.user.userId]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
     const existing = rows[0];
+    const nextAvatar = typeof avatar !== 'undefined' ? avatar : existing.avatar;
     const nextRole = req.user.role === 'admin' && role ? role : existing.role;
 
     if (password) {
       const passwordHash = await bcrypt.hash(password, 10);
       await db.query(
-        'UPDATE users SET email = ?, cell_phone = ?, role = ?, password_hash = ? WHERE id = ?',
-        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextRole, passwordHash, req.user.userId]
+        'UPDATE users SET email = ?, cell_phone = ?, avatar = ?, role = ?, password_hash = ? WHERE id = ?',
+        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextAvatar, nextRole, passwordHash, req.user.userId]
       );
     } else {
       await db.query(
-        'UPDATE users SET email = ?, cell_phone = ?, role = ? WHERE id = ?',
-        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextRole, req.user.userId]
+        'UPDATE users SET email = ?, cell_phone = ?, avatar = ?, role = ? WHERE id = ?',
+        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextAvatar, nextRole, req.user.userId]
       );
     }
 
     const [updatedRows] = await db.query(
-      'SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled FROM users WHERE id = ? LIMIT 1',
+      'SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar FROM users WHERE id = ? LIMIT 1',
       [req.user.userId]
     );
     res.json(updatedRows[0]);
@@ -479,7 +482,7 @@ app.get('/api/admin/tables', authenticateToken, authenticateAdmin, async (req, r
 app.get('/api/admin/users', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
     await ensureUserProfileColumns();
-    const [users] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, created_at FROM users');
+    const [users] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar, created_at FROM users');
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch users' });
@@ -498,14 +501,14 @@ app.post('/api/admin/users', authenticateToken, authenticateAdmin, async (req, r
   try {
     await ensureUserProfileColumns();
     const passwordHash = await bcrypt.hash(password, 10);
-    const [result] = await db.query(
-      'INSERT INTO users (first_name, last_name, username, email, cell_phone, password_hash, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', passwordHash, role || 'user']
+     const [result] = await db.query(
+      'INSERT INTO users (first_name, last_name, username, email, cell_phone, avatar, password_hash, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, passwordHash, role || 'user']
     );
     if (is_disabled) {
       await db.query('UPDATE users SET is_disabled = 1 WHERE id = ?', [result.insertId]);
     }
-    res.json({ id: result.insertId, first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', role: role || 'user', is_disabled: !!is_disabled });
+    res.json({ id: result.insertId, first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', avatar: avatar || null, role: role || 'user', is_disabled: !!is_disabled });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Username already exists' });
     res.status(500).json({ error: 'Failed to create user' });
@@ -550,17 +553,17 @@ app.put('/api/admin/users/:id', authenticateToken, authenticateAdmin, async (req
       // Update with new password
       const passwordHash = await bcrypt.hash(password, 10);
       await db.query(
-        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, password_hash = ?, role = ?, is_disabled = ? WHERE id = ?',
-        [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', passwordHash, role, nextDisabled, userId]
+        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, avatar = ?, password_hash = ?, role = ?, is_disabled = ? WHERE id = ?',
+        [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, passwordHash, role, nextDisabled, userId]
       );
     } else {
       // Update without changing password
       await db.query(
-        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, role = ?, is_disabled = ? WHERE id = ?',
-        [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', role, nextDisabled, userId]
+        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, avatar = ?, role = ?, is_disabled = ? WHERE id = ?',
+        [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, role, nextDisabled, userId]
       );
     }
-    res.json({ id: Number(userId), first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', role, is_disabled: nextDisabled === 1 });
+    res.json({ id: Number(userId), first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', avatar: avatar || null, role, is_disabled: nextDisabled === 1 });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Username already exists' });
     res.status(500).json({ error: 'Failed to update user' });

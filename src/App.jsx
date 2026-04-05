@@ -498,12 +498,14 @@ const DollarInput = ({ val, on, w=80 }) => (
   </div>
 );
 
-const AccordionCard = ({ title, children, defaultOpen=false, style={} }) => {
-  const [open, setOpen] = useState(defaultOpen);
+const AccordionCard = ({ title, children, defaultOpen=false, isOpen, onToggle, style={} }) => {
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const open   = isOpen !== undefined ? isOpen : internalOpen;
+  const toggle = () => { if(onToggle) onToggle(!open); else setInternalOpen(!open); };
   return (
-    <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, overflow:"hidden", marginBottom:12, boxShadow:open?"0 4px 20px rgba(0,0,0,0.04)":"none", transition:"all 0.3s ease", ...style }}>
+    <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, overflow:open ? "visible" : "hidden", marginBottom:12, boxShadow:open?"0 4px 20px rgba(0,0,0,0.04)":"none", transition:"all 0.3s ease", ...style }}>
       <div 
-        onClick={() => setOpen(!open)}
+        onClick={toggle}
         style={{ padding:"14px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", background:open ? C.accL : "transparent", userSelect:"none" }}
       >
         <div style={{ fontWeight:800, fontSize:14, color:C.acc, display:"flex", alignItems:"center", gap:10, letterSpacing:0.5, textTransform:"uppercase" }}>
@@ -512,7 +514,7 @@ const AccordionCard = ({ title, children, defaultOpen=false, style={} }) => {
         </div>
         <div style={{ fontSize:10, color:open?C.acc:C.txtS, fontWeight:700, opacity:0.6 }}>{open ? "COLLAPSE" : "EXPAND"}</div>
       </div>
-      <div style={{ maxHeight: open ? "2000px" : "0", overflow:"hidden", transition:"max-height 0.4s ease-in-out, opacity 0.3s", opacity: open ? 1 : 0 }}>
+      <div style={{ maxHeight: open ? "4000px" : "0", overflow: open ? "visible" : "hidden", transition:"max-height 0.4s ease-in-out, opacity 0.3s", opacity: open ? 1 : 0 }}>
         <div style={{ padding:20, borderTop:`1px solid ${C.bdr}` }}>{children}</div>
       </div>
     </div>
@@ -603,6 +605,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
           email: d.email || "",
           cell_phone: d.cell_phone || "",
           role: d.role || "user",
+          avatar: d.avatar || null,
           password: ""
         });
       })
@@ -617,6 +620,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
       const payload = {
         email: profileForm.email,
         cell_phone: profileForm.cell_phone,
+        avatar: profileForm.avatar || null,
         password: profileForm.password || undefined,
       };
       if (profileUser?.role === "admin") payload.role = profileForm.role;
@@ -636,6 +640,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
         username: data.username || "",
         email: data.email || "",
         cell_phone: data.cell_phone || "",
+        avatar: data.avatar || null,
         role: data.role || "user",
         password: ""
       });
@@ -719,9 +724,15 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
         <div className="desktop-nav desktop-actions-row" style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:4 }}>
           {extra}
           {token && profileUser && (
-            <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", display:"inline-flex", alignItems:"center", gap:6 }} onClick={() => setProfileOpen(true)}>
-              <span aria-hidden="true">👤</span>
-              <span>{displayName} (@{profileUser.username})</span>
+            <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", display:"inline-flex", alignItems:"center", gap:6, borderRadius:20 }} onClick={() => setProfileOpen(true)}>
+              <div style={{ width:20, height:20, background:C.accL, borderRadius:"50%", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", border:`1px solid ${C.bdr}` }}>
+                {profileUser.avatar ? (
+                  <img src={profileUser.avatar} alt="Me" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                ) : (
+                  <span style={{ fontSize:10, fontWeight:700, color:C.acc }}>{(profileUser.first_name?.[0] || profileUser.username?.[0] || "?").toUpperCase()}</span>
+                )}
+              </div>
+              <span style={{ fontWeight:700 }}>{displayName}</span>
             </button>
           )}
           {token ? (
@@ -854,6 +865,23 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
               <div>
                 <Lbl c="NEW PASSWORD (OPTIONAL)"/>
                 <input id="profile-password" name="new_password" autoComplete="new-password" style={inp} type="password" value={profileForm.password} onChange={(e)=>setProfileForm(p=>({ ...p, password:e.target.value }))} />
+              </div>
+              <div>
+                <Lbl c="PROFILE PICTURE"/>
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4 }}>
+                  {profileForm.avatar ? (
+                    <div style={{ position:"relative" }}>
+                      <img src={profileForm.avatar} alt="Avatar" style={{ height:48, width:48, borderRadius:"50%", border:`1.5px solid ${C.acc}`, objectFit:"cover" }}/>
+                      <button type="button" onClick={()=>setProfileForm({...profileForm, avatar:null})} style={{ position:"absolute", top:-6, right:-6, background:C.red, color:"#fff", border:"none", borderRadius:"50%", width:18, height:18, fontSize:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", paddingBottom:2 }}>×</button>
+                    </div>
+                  ) : (
+                    <div style={{ width:48, height:48, background:C.bg, border:`1px dashed ${C.bdr}`, display:"flex", alignItems:"center", justifyContent:"center", color:C.txtS, fontSize:11, borderRadius:"50%" }}>No Img</div>
+                  )}
+                  <input type="file" accept="image/*" onChange={(e)=>{
+                    const f = e.target.files[0];
+                    if(f){ const rd=new FileReader(); rd.onload=ev=>setProfileForm({...profileForm, avatar:ev.target.result}); rd.readAsDataURL(f); }
+                  }} style={{ fontSize:12, maxWidth:200 }}/>
+                </div>
               </div>
               {profileErr && <div style={{ fontSize:12, color:C.red, fontWeight:700 }}>⚠ {profileErr}</div>}
               <div className="app-modal-actions" style={{ display:"flex", justifyContent:"flex-end", gap:10, marginTop:4 }}>
@@ -1875,10 +1903,9 @@ function RecentQuotesCard({ jobs, openEdit, setView }) {
   const filtered = custFilter==="all" ? jobs : jobs.filter(q=>q.client===custFilter);
 
   return (
-    <Card>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, flexWrap:"wrap", gap:8 }}>
-        <Sec c="Recent Quotes"/>
-        <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 9px" }} onClick={()=>setView("customers")}>View All</button>
+    <>
+      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+        <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px" }} onClick={()=>setView("customers")}>View All Customers</button>
       </div>
       <div style={{ position:"relative", marginBottom:15 }}>
         <button 
@@ -1933,7 +1960,7 @@ function RecentQuotesCard({ jobs, openEdit, setView }) {
           </tbody>
         </table>
       </div>
-    </Card>
+    </>
   );
 }
 
@@ -1978,13 +2005,10 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
   };
 
   return (
-    <Card>
-      {/* Header */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, flexWrap:"wrap", gap:8 }}>
-        <Sec c="Requests for Quote"/>
-        <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 9px" }} onClick={()=>setView("rfqs")}>View All</button>
+    <>
+      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+        <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px" }} onClick={()=>setView("rfqs")}>View All RFQs</button>
       </div>
-
       <div style={{ position:"relative", marginBottom:15 }}>
         <button 
           style={{ ...mkBtn("primary"), background:C.acc, color:"#fff", border:"none", width:"100%", justifyContent:"space-between", padding:"10px 14px", fontSize:14 }}
@@ -2126,7 +2150,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
         </div>
       )}
 
-    </Card>
+    </>
   );
 }
 
@@ -6584,7 +6608,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       rd.readAsDataURL(file);
     }
   };
-  const [newUser, setNewUser] = useState({ first_name: "", last_name: "", username: "", password: "", role: "estimator", email: "", cell_phone: "" });
+  const [newUser, setNewUser] = useState({ first_name: "", last_name: "", username: "", password: "", role: "estimator", email: "", cell_phone: "", avatar: null });
   const [editingUser, setEditingUser] = useState(null);
   const [formErr, setFormErr] = useState("");
   const [tasks, setTasks] = useState([]);
@@ -6732,7 +6756,8 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
         username: normalizedUsername,
         email: editingUser.email || "",
         cell_phone: editingUser.cell_phone || "",
-        role: editingUser.role
+        role: editingUser.role,
+        avatar: editingUser.avatar || null
       };
       if (editingUser.password) updateData.password = editingUser.password;
       
@@ -6956,7 +6981,13 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                 {users.map(u => (
                   <div key={u.id} style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-start", justifyContent:"space-between", gap:10, background:u.is_disabled ? "#fff1f2" : C.sur, border:`1px solid ${u.is_disabled ? C.redBdr : C.bdr}`, padding:"12px 16px", borderRadius:8 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10, flex:"1 1 180px", minWidth:0 }}>
-                                      <div style={{ width:28, height:28, background:C.accL, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, color:C.acc, fontSize:10 }}>{(u.first_name?.[0] || u.username?.[0] || "?").toUpperCase()}</div>
+                      <div style={{ width:32, height:32, background:C.accL, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, color:C.acc, fontSize:10, overflow:"hidden", border:`1px solid ${C.bdr}` }}>
+                        {u.avatar ? (
+                          <img src={u.avatar} alt={u.username} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                        ) : (
+                          (u.first_name?.[0] || u.username?.[0] || "?").toUpperCase()
+                        )}
+                      </div>
                       <div style={{ minWidth:0 }}>
                                         <div style={{ fontWeight:700, fontSize:13 }}>{`${u.first_name || ""} ${u.last_name || ""}`.trim() || u.username}</div>
                                         <div style={{ fontSize:11, color:C.txtS }}>@{u.username}</div>
@@ -7061,6 +7092,23 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                     <option value="manager">Manager</option>
                     <option value="admin">Administrator</option>
                   </select>
+                </div>
+                <div>
+                  <Lbl c="PROFILE PICTURE (OPTIONAL)"/>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4 }}>
+                    {newUser.avatar ? (
+                      <div style={{ position:"relative" }}>
+                        <img src={newUser.avatar} alt="Avatar" style={{ height:40, width:40, borderRadius:"50%", border:`1px solid ${C.bdr}`, objectFit:"cover" }}/>
+                        <button type="button" onClick={()=>setNewUser({...newUser, avatar:null})} style={{ position:"absolute", top:-6, right:-6, background:C.red, color:"#fff", border:"none", borderRadius:"50%", width:16, height:16, fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", paddingBottom:2 }}>×</button>
+                      </div>
+                    ) : (
+                      <div style={{ width:40, height:40, background:C.bg, border:`1px dashed ${C.bdr}`, display:"flex", alignItems:"center", justifyContent:"center", color:C.txtS, fontSize:10, borderRadius:"50%" }}>Img</div>
+                    )}
+                    <input type="file" accept="image/*" onChange={(e)=>{
+                      const f = e.target.files[0];
+                      if(f){ const rd=new FileReader(); rd.onload=ev=>setNewUser({...newUser, avatar:ev.target.result}); rd.readAsDataURL(f); }
+                    }} style={{ fontSize:12, maxWidth:180 }}/>
+                  </div>
                 </div>
                 {formErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {formErr}</div>}
                 <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:6 }}>Create User</button>
@@ -7191,6 +7239,23 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                     <option value="manager">Manager</option>
                     <option value="admin">Administrator</option>
                   </select>
+                </div>
+                <div>
+                  <Lbl c="PROFILE PICTURE"/>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4 }}>
+                    {editingUser.avatar ? (
+                      <div style={{ position:"relative" }}>
+                        <img src={editingUser.avatar} alt="Avatar" style={{ height:40, width:40, borderRadius:"50%", border:`1px solid ${C.bdr}`, objectFit:"cover" }}/>
+                        <button type="button" onClick={()=>setEditingUser({...editingUser, avatar:null})} style={{ position:"absolute", top:-6, right:-6, background:C.red, color:"#fff", border:"none", borderRadius:"50%", width:16, height:16, fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", paddingBottom:2 }}>×</button>
+                      </div>
+                    ) : (
+                      <div style={{ width:40, height:40, background:C.bg, border:`1px dashed ${C.bdr}`, display:"flex", alignItems:"center", justifyContent:"center", color:C.txtS, fontSize:10, borderRadius:"50%" }}>Img</div>
+                    )}
+                    <input type="file" accept="image/*" onChange={(e)=>{
+                      const f = e.target.files[0];
+                      if(f){ const rd=new FileReader(); rd.onload=ev=>setEditingUser({...editingUser, avatar:ev.target.result}); rd.readAsDataURL(f); }
+                    }} style={{ fontSize:12, maxWidth:180 }}/>
+                  </div>
                 </div>
                 <div>
                   <Lbl c="PASSWORD (leave blank to keep current)"/>
@@ -7340,6 +7405,7 @@ export default function App() {
   const [adjModal,     setAdjModal]     = useState(null);  // quote to adjust
   const [deadModal,    setDeadModal]    = useState(null);  // {type:"rfq"|"quote", item}
   const [dashReportId, setDashReportId] = useState(null); // report to open when navigating from dashboard
+  const [dashAcc,      setDashAcc]      = useState("metrics"); // current open accordion in Dashboard
   const [wonOnly,      setWonOnly]      = useState(false); // filter customers view
   const [custView,     setCustView]     = useState("list"); // "list" or "card"
   const [jobListFilter, setJobListFilter] = useState(null); // customer name to filter Master Jobs list
@@ -7785,12 +7851,37 @@ export default function App() {
             Sec={Sec}
           />
         )}
-        <DashboardMetrics jobs={jobs} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
-        {/* ── SALESMAN TRACKING CHARTS ─────────────────────────────────── */}
-        <SalesmanCharts jobs={jobs} reqs={reqs}/>
+        <AccordionCard 
+          title="📊 Performance Metrics" 
+          isOpen={dashAcc==="metrics"} 
+          onToggle={open => setDashAcc(open ? "metrics" : null)}
+        >
+          <DashboardMetrics jobs={jobs} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
+        </AccordionCard>
 
-        <RFQDashCard reqs={reqs} jobs={jobs} jobFolders={jobFolders} setJobFolders={setJobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal} rfqStageFilter={rfqStageFilter}/>
-        <RecentQuotesCard jobs={jobs} openEdit={openEdit} setView={setView}/>
+        <AccordionCard 
+          title="📈 Sales Analytics" 
+          isOpen={dashAcc==="sales"} 
+          onToggle={open => setDashAcc(open ? "sales" : null)}
+        >
+          <SalesmanCharts jobs={jobs} reqs={reqs}/>
+        </AccordionCard>
+
+        <AccordionCard 
+          title="📝 Requests for Quote" 
+          isOpen={dashAcc==="rfqs"} 
+          onToggle={open => setDashAcc(open ? "rfqs" : null)}
+        >
+          <RFQDashCard reqs={reqs} jobs={jobs} jobFolders={jobFolders} setJobFolders={setJobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal} rfqStageFilter={rfqStageFilter}/>
+        </AccordionCard>
+
+        <AccordionCard 
+          title="📜 Recent Quotes" 
+          isOpen={dashAcc==="recent"} 
+          onToggle={open => setDashAcc(open ? "recent" : null)}
+        >
+          <RecentQuotesCard jobs={jobs} openEdit={openEdit} setView={setView}/>
+        </AccordionCard>
       </div>
       <Footer />
     </div>
