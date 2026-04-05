@@ -1055,13 +1055,14 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
                 `${r.rn}: ${r.job_description || r.notes || "No description"} - ${r.company}`,
                 r.start_date || r.date || "Unknown",
                 r.deadDate || "—",
+                r.deadReason || "—",
                 r.deadNote || "—"
              ]);
              rawRefs.push({ type: "rfq", req: r });
         });
 
       return {
-        cols: ["RFQ Description", "Date Received", "Date Marked Dead", "Estimator Note"],
+        cols: ["RFQ Description", "Date Received", "Date Marked Dead", "Reason", "Estimator Note"],
         clickHint: "Click a row to view the full RFQ details",
         rows: flatRows,
         rawRefs: rawRefs,
@@ -1117,11 +1118,16 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
     }
     case "pipeline-summary": {
       const statuses=["In Progress","In Review","Approved","Adjustments Needed","Submitted"];
-      const data=statuses.map(st=>{ const qs=jobs.filter(q=>q.status===st); return {st,qs,total:qs.reduce((s,q)=>s+(q.total||0),0)}; });
+      const data=statuses.map(st=>{ 
+        const qs=jobs.filter(q=>q.status===st); 
+        const staleQs=qs.filter(q=> Math.floor((new Date() - new Date(q.date || q.start_date || new Date())) / 86400000) > 14);
+        return {st,qs,total:qs.reduce((s,q)=>s+(q.total||0),0), staleCount: staleQs.length, staleTotal: staleQs.reduce((s,q)=>s+(q.total||0),0)}; 
+      });
       const totalOpen = data.reduce((s,r)=>s+r.qs.length,0);
       const totalValue = data.reduce((s,r)=>s+r.total,0);
-      return { cols:["Status","Count","Total Value","Avg Deal"], clickHint:"Click a status to see its jobs",
-        rows:data.map(r=>[r.st,r.qs.length,fmt2(r.total),r.qs.length?fmt2(Math.round(r.total/r.qs.length)):"—"]),
+      return { cols:["Status","Count","Total Value","Avg Deal","Stale Count (>14d)","Stale Value"], clickHint:"Click a status to see its jobs. Amber rows indicate >20% stale.",
+        rows:data.map(r=>[r.st,r.qs.length,fmt2(r.total),r.qs.length?fmt2(Math.round(r.total/r.qs.length)):"—",r.staleCount,fmt2(r.staleTotal)]),
+        rowStyles:data.map(r=> r.qs.length > 0 && (r.staleCount / r.qs.length) > 0.2 ? { background: "#fff3cd" } : {}),
         rawRefs:data.map(r=>({type:"group-status",key:r.st,jobs:r.qs})),
         summary:`${totalOpen} open jobs · ${fmt2(totalValue)} total value` };
     }
@@ -1168,24 +1174,30 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
       const lostQ = jobs.filter(q => q.status === "Lost");
       lostQ.sort((a,b) => (a.client || "").localeCompare(b.client || ""));
       return { 
-        cols: ["Customer", "Quote #", "Description", "Value", "Notes"], 
+        cols: ["Customer", "Quote #", "Description", "Value", "Loss Reason", "Competitor", "Days Open"], 
         clickHint: "Click a quote to open it",
-        rows: lostQ.map(q => [
-          q.client, 
-          q.job_num || q.qn,
-          q.job_description || q.desc,
-          fmt2(q.total || 0),
-          q.notes || "—"
-        ]),
+        rows: lostQ.map(q => {
+          const daysFromSub = q.lostDate && q.date ? Math.floor((new Date(q.lostDate) - new Date(q.date)) / 86400000) : "—";
+          return [
+            q.client, 
+            q.job_num || q.qn,
+            q.job_description || q.desc,
+            fmt2(q.total || 0),
+            q.lossReason || "—",
+            q.competitor || "—",
+            daysFromSub !== "—" ? daysFromSub + " days" : "—"
+          ];
+        }),
         rawRefs: lostQ.map(q => ({type:"quote", quote:q})),
         summary: `${lostQ.length} lost estimates` 
       };
     }
     case "rfq-response": {
-      const data=reqs.filter(r=>r.date).map(r=>{ const linked=jobs.find(q=>q.fromReqId===r.id); const days=linked?Math.floor((new Date(linked.date)-new Date(r.date))/86400000):null; return {r,linked,days}; }).sort((a,b)=>{ if(a.days===null)return 1; if(b.days===null)return -1; return a.days-b.days; });
+      const data=reqs.filter(r=>r.date).map(r=>{ const linked=jobs.find(q=>q.fromReqId===r.id); const days=linked?Math.floor((new Date(linked.date)-new Date(r.date))/86400000):null; return {r,linked,days}; }).sort((a,b)=>{ if(a.days===null)return 1; if(b.days===null)return -1; return b.days-a.days; });
       const withResp=data.filter(d=>d.days!==null); const avg=withResp.length?Math.round(withResp.reduce((s,d)=>s+d.days,0)/withResp.length):0;
-      return { cols:["RFQ #","Customer","RFQ Date","Est. Date","Response Time"], clickHint:"Click an RFQ to open its Job Folder · Click estimate column to open the quote",
-        rows:data.map(({r,linked,days})=>[r.rn,r.company,r.date,linked?linked.date:"No estimate",days!==null?days+" days":"—"]),
+      return { cols:["RFQ #","Customer","Estimator","RFQ Date","Est. Date","Response Time"], clickHint:"Amber logic triggers on > 48hr (> 2 days) response time.",
+        rows:data.map(({r,linked,days})=>[r.rn,r.company,r.sales_assoc||r.salesAssoc||"Unassigned",r.date,linked?linked.date:"No estimate",days!==null?days+" days":"—"]),
+        rowStyles:data.map(({days}) => days !== null && days > 2 ? { background: "#ffeeba", color: "#856404" } : {}),
         rawRefs:data.map(({r,linked})=>({type:"rfq",req:r,quote:linked||null})),
         summary:`${withResp.length} of ${data.length} RFQs have estimates · Avg response: ${avg} days` };
     }
@@ -1277,14 +1289,21 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
          const discAmt = (q.discounts||[]).reduce((s,d)=>s+Number(d.discAmt),0);
          if (discAmt > 0) {
             const k=q.salesAssoc||"Unassigned";
-            if(!db[k])db[k]={name:k,total:0,jobs:[]};
+            if(!db[k])db[k]={name:k,total:0,jobs:[], rev:0, cost:0};
             db[k].total+=discAmt;
+            db[k].rev+=(q.total||0);
+            db[k].cost+=Math.round((q.labor||0)*0.6+(q.equip||0)*0.7+(q.hauling||0)*0.85+(q.mats||0)*0.85+(q.travel||0));
             db[k].jobs.push(q);
          }
       });
       const data=Object.values(db).sort((a,b)=>b.total-a.total);
-      return { cols:["Estimator","Discounted Quotes","Total Discounts Given"], clickHint:"Click an estimator to view customer & quote breakdown",
-        rows:data.map(d=>[d.name,d.jobs.length,fmt2(d.total)]),
+      return { cols:["Estimator","Discounted Quotes","Total Discounts","Margin w/o Disc","Margin Impact"], clickHint:"Click an estimator to view customer & quote breakdown",
+        rows:data.map(d=>{
+           const actualMargin = d.rev > 0 ? ((d.rev - d.cost) / d.rev)*100 : 0;
+           const noDiscMargin = (d.rev + d.total) > 0 ? ((d.rev + d.total - d.cost) / (d.rev + d.total))*100 : 0;
+           const diff = actualMargin - noDiscMargin;
+           return [d.name, d.jobs.length, fmt2(d.total), noDiscMargin.toFixed(1)+"%", diff.toFixed(1)+"pts"];
+        }),
         rawRefs:data.map(d=>({type:"group-estimator",key:d.name,jobs:d.jobs})),
         summary:`Discounts given by ${data.length} estimators` };
     }
@@ -1293,15 +1312,32 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
     }
     case "jobs-by-customer": {
       const db={};
+      const now = new Date();
+      const cyStart = new Date(now.getFullYear(), 0, 1);
+      const pyStart = new Date(now.getFullYear() - 1, 0, 1);
       jobs.filter(q=>q.status==="Won").forEach(q => {
          const k = q.client || "Unknown";
-         if(!db[k]) db[k] = { customer:k, val:0, qs:[] };
+         if(!db[k]) db[k] = { customer:k, val:0, qs:[], cyVal:0, pyVal:0, lastJob: null };
          db[k].val += (q.total||0);
+         const dt = new Date(q.date || q.start_date || q.compDate || "2000-01-01");
+         if (dt > (db[k].lastJob || new Date("2000-01-01"))) db[k].lastJob = dt;
+         if (dt >= cyStart) db[k].cyVal += (q.total||0);
+         else if (dt >= pyStart && dt < cyStart) db[k].pyVal += (q.total||0);
          db[k].qs.push(q);
       });
       const data=Object.values(db).sort((a,b)=>b.val-a.val);
-      return { cols:["Customer", "Completion Value", "Total Jobs Won"], clickHint: "Click a customer to see specific job history",
-        rows:data.map(d=>[d.customer, fmt2(d.val), d.qs.length]),
+      return { cols:["Customer", "Total Won $", "Total Jobs", "YOY Delta", "Last Job Date"], clickHint: "Click a customer to see specific job history. Amber rows indicate Dormant (>180 days).",
+        rows:data.map(d=> {
+           const yoy = d.pyVal ? Math.round(((d.cyVal - d.pyVal) / d.pyVal)*100) : 0;
+           const yoyStr = yoy > 0 ? `+${yoy}%` : `${yoy}%`;
+           const days = Math.floor((now - (d.lastJob||now))/86400000);
+           const lastJobStr = d.lastJob ? d.lastJob.toISOString().split('T')[0] : "—";
+           return [d.customer, fmt2(d.val), d.qs.length, d.pyVal ? yoyStr : "N/A", lastJobStr + (days > 180 ? " (Dormant)" : "")];
+        }),
+        rowStyles:data.map(d=> {
+           const days = Math.floor((now - (d.lastJob||now))/86400000);
+           return days > 180 ? { background: "#fff3cd" } : {};
+        }),
         rawRefs:data.map(d=>({type:"group-customer",key:d.customer,jobs:d.qs})),
         summary:`Jobs completed across ${data.length} customers` };
     }
@@ -1324,10 +1360,22 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
     }
     case "estimator-activity": {
       const m={};
-      jobs.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,created:0,submitted:0,won:0,lost:0,revWon:0,qs:[]}; m[k].created+=1; m[k].qs.push(q); if(["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status))m[k].submitted+=1; if(q.status==="Won"){m[k].won+=1;m[k].revWon+=(q.total||0);} if(q.status==="Lost")m[k].lost+=1; });
-      const data=Object.values(m).sort((a,b)=>b.revWon-a.revWon);
-      return { cols:["Estimator","Total Quotes","In Pipeline","Won","Lost","Sales Won"], clickHint:"Click an estimator to see their jobs",
-        rows:data.map(r=>[r.estimator,r.created,r.submitted,r.won,r.lost,fmt2(r.revWon)]),
+      jobs.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,created:0,submitted:0,won:0,lost:0,revWon:0,costWon:0,qs:[], rfqDays:[]}; m[k].created+=1; m[k].qs.push(q); if(["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status))m[k].submitted+=1; if(q.status==="Won"){m[k].won+=1;m[k].revWon+=(q.total||0); m[k].costWon+=Math.round((q.labor||0)*0.6+(q.equip||0)*0.7+(q.hauling||0)*0.85+(q.mats||0)*0.85+(q.travel||0));} if(q.status==="Lost")m[k].lost+=1; });
+      reqs.forEach(r => {
+        if(r.date) {
+          const k = r.sales_assoc || r.salesAssoc || "Unassigned";
+          if (!m[k]) m[k] = {estimator: k, created: 0, submitted: 0, won: 0, lost: 0, revWon: 0, costWon: 0, qs: [], rfqDays: []};
+          const linked = jobs.find(q=>q.fromReqId===r.id);
+          if (linked && linked.date) m[k].rfqDays.push(Math.floor((new Date(linked.date) - new Date(r.date))/86400000));
+        }
+      });
+      const data=Object.values(m).sort((a,b)=>(b.revWon||0)-(a.revWon||0));
+      return { cols:["Estimator","Total Quotes","In Pipeline","Won","Lost","Sales Won","Avg Margin","Avg Response"], clickHint:"Click an estimator to see their jobs",
+        rows:data.map(r=>{
+          const margin = r.revWon > 0 ? ((r.revWon - (r.costWon||0)) / r.revWon)*100 : 0;
+          const avgResp = (r.rfqDays||[]).length > 0 ? Math.round((r.rfqDays||[]).reduce((a,b)=>a+b,0)/(r.rfqDays||[]).length*24) + " hrs" : "—";
+          return [r.estimator, r.created||0, r.submitted||0, r.won||0, r.lost||0, fmt2(r.revWon||0), margin.toFixed(1)+"%", avgResp];
+        }),
         rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,jobs:r.qs})),
         summary:`${data.length} estimators` };
     }
@@ -1355,16 +1403,18 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
         const reqDates = cReqs.map(r => r.date).filter(Boolean);
         const allDates = [...jobDates, ...reqDates].sort((a,b)=>new Date(b)-new Date(a));
         const lastActivity = allDates.length ? allDates[0] : "—";
+        const openEsts = cJobs.filter(q => !["Won","Lost","Dead"].includes(q.status)).length;
         return [
            name,
            cReqs.length,
            cJobs.length,
+           openEsts,
            lastActivity
         ];
-      });
+      }).sort((a,b)=>new Date(b[4]==="—"?0:b[4])-new Date(a[4]==="—"?0:a[4]));
 
       return {
-        cols: ["Customer / Prospect", "Total RFQs", "Total Estimates", "Last Activity Date"],
+        cols: ["Customer / Prospect", "Total RFQs", "Total Estimates", "Open Estimates", "Last Activity Date"],
         clickHint: "Prospects have no 'Won' jobs.",
         rows: rows,
         summary: `${prospects.length} total prospects`
@@ -1841,7 +1891,7 @@ function ReportTable({ data, drillCb }) {
     return <div style={{ textAlign:"center", padding:"24px", color:C.txtS, fontSize:13 }}>No data available.</div>;
   }
   
-  const combined = data.rows.map((row, i) => ({ row, rawRef: data.rawRefs?.[i] }));
+  const combined = data.rows.map((row, i) => ({ row, rawRef: data.rawRefs?.[i], rowStyle: data.rowStyles?.[i] }));
   const filteredCombined = filterStr.trim() !== ""
     ? combined.filter(c => c.row.some(cell => String(cell).toLowerCase().includes(filterStr.toLowerCase())))
     : combined;
@@ -1907,10 +1957,10 @@ function ReportTable({ data, drillCb }) {
             const rawRef = c.rawRef;
             return (
               <tr key={i}
-                style={{ borderBottom:`1px solid ${C.bdr}`, cursor:rawRef?"pointer":"default" }}
+                style={{ borderBottom:`1px solid ${C.bdr}`, cursor:rawRef?"pointer":"default", ...(c.rowStyle||{}) }}
                 onClick={()=>rawRef&&drillCb&&drillCb(rawRef)}
-                onMouseEnter={e=>{ if(rawRef) e.currentTarget.style.background=C.accL; }}
-                onMouseLeave={e=>{ e.currentTarget.style.background=""; }}>
+                onMouseEnter={e=>{ if(rawRef) e.currentTarget.style.filter="brightness(0.95)"; }}
+                onMouseLeave={e=>{ e.currentTarget.style.filter=""; }}>
                 {row.map((cell,j)=>(
                   <td key={j} style={{ ...tdS, padding:"9px 12px", fontWeight:j===0?600:400, textAlign:colAlignments[j] }}>{cell}</td>
                 ))}
