@@ -604,6 +604,30 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
   }
 });
 
+// UPDATE RECORD IN TABLE (Admin Only)
+app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, async (req, res) => {
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators'];
+  const table = req.params.table;
+  const id = req.params.id;
+  const data = req.body;
+
+  if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
+
+  try {
+    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at');
+    if (keys.length === 0) return res.json({ message: 'No change needed' });
+
+    const values = keys.map(k => (typeof data[k] === 'object' && data[k] !== null) ? JSON.stringify(data[k]) : data[k]);
+    const setClause = keys.map(k => `\`${k}\` = ?`).join(', ');
+
+    const [result] = await db.query(`UPDATE \`${table}\` SET ${setClause} WHERE id = ?`, [...values, id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`[API] Table update error (${table}):`, error);
+    res.status(500).json({ error: 'Update failed', details: error.message });
+  }
+});
+
 // VECTOR DB / AI MODEL STATUS (Admin Only)
 app.get('/api/admin/vector-db', authenticateToken, authenticateAdmin, async (req, res) => {
   const AI_HOST = process.env.AI_HOST || 'http://ai:8080';

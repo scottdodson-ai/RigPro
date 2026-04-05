@@ -498,6 +498,27 @@ const DollarInput = ({ val, on, w=80 }) => (
   </div>
 );
 
+const AccordionCard = ({ title, children, defaultOpen=false, style={} }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, overflow:"hidden", marginBottom:12, boxShadow:open?"0 4px 20px rgba(0,0,0,0.04)":"none", transition:"all 0.3s ease", ...style }}>
+      <div 
+        onClick={() => setOpen(!open)}
+        style={{ padding:"14px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", background:open ? C.accL : "transparent", userSelect:"none" }}
+      >
+        <div style={{ fontWeight:800, fontSize:14, color:C.acc, display:"flex", alignItems:"center", gap:10, letterSpacing:0.5, textTransform:"uppercase" }}>
+           <span style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", transition:"transform 0.2s", display:"inline-block", fontSize:10 }}>▶</span>
+           {title}
+        </div>
+        <div style={{ fontSize:10, color:open?C.acc:C.txtS, fontWeight:700, opacity:0.6 }}>{open ? "COLLAPSE" : "EXPAND"}</div>
+      </div>
+      <div style={{ maxHeight: open ? "2000px" : "0", overflow:"hidden", transition:"max-height 0.4s ease-in-out, opacity 0.3s", opacity: open ? 1 : 0 }}>
+        <div style={{ padding:20, borderTop:`1px solid ${C.bdr}` }}>{children}</div>
+      </div>
+    </div>
+  );
+};
+
 function CostBar({ labor, travel, equip, hauling, mats }) {
   const total = labor+travel+equip+hauling+mats || 1;
   const bars  = [{ l:"Labor",v:labor,c:C.ora },{ l:"Travel",v:travel,c:C.blue },{ l:"Equip",v:equip,c:C.teal },{ l:"Haul",v:hauling,c:C.purp },{ l:"Mats",v:mats,c:C.lime }];
@@ -6187,13 +6208,10 @@ function VectorBrowser({ token }) {
   const totalDocs = Object.values(data?.indexedCounts || {}).reduce((a, b) => a + (Number(b) || 0), 0);
 
   return (
-    <div style={{ marginTop: 40, borderTop: `1px solid ${C.bdr}`, paddingTop: 30 }}>
+    <div style={{}}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: C.acc, marginBottom: 2, display: "flex", alignItems: "center", gap: 8 }}>
-            🧠 Vector Database
-          </div>
           <div style={{ fontSize: 12, color: C.txtS }}>AI model context, slots, and embeddable corpus overview.</div>
         </div>
         <button onClick={load} disabled={loading}
@@ -6352,6 +6370,8 @@ function DatabaseBrowser({ token }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tableSearch, setTableSearch] = useState("");
+  const [editingRow, setEditingRow] = useState(null);
+  const [updating, setUpdating] = useState(false);
 
   const tables = ['users', 'estimators', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
 
@@ -6370,15 +6390,43 @@ function DatabaseBrowser({ token }) {
     ? data
     : data.filter((row) =>
         headers.some((h) => {
-          const fieldNameMatch = String(h || "").toLowerCase().includes(searchTerm);
-          const fieldValueMatch = String(row[h] ?? "").toLowerCase().includes(searchTerm);
-          return fieldNameMatch || fieldValueMatch;
+          const val = row[h];
+          if (val === null || val === undefined) return false;
+          return String(val).toLowerCase().includes(searchTerm);
         })
       );
 
+  const saveEdit = async (updatedData) => {
+    if (!editingRow || !editingRow.id) return;
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/admin/tables/${selectedTable}/${editingRow.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(updatedData)
+      });
+      if (!res.ok) {
+        let msg = `Server error (${res.status})`;
+        try {
+          const d = await res.json();
+          msg = d.error || msg;
+        } catch (jErr) {
+          // Fallback to plain text if JSON fails
+        }
+        throw new Error(msg);
+      }
+      setData(prev => prev.map(r => r.id === editingRow.id ? { ...r, ...updatedData } : r));
+      setEditingRow(null);
+    } catch (e) {
+      console.error("Update error:", e);
+      alert("Error updating record: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
-    <div style={{ marginTop: 40, borderTop: `1px solid ${C.bdr}`, paddingTop: 30 }}>
-      <div style={{ fontSize: 20, fontWeight: 800, color: C.acc, marginBottom: 4 }}>Data Browser</div>
+    <div style={{}}>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <div style={{ fontSize: 12, color: C.txtS }}>Live view of MySQL database records (limited to first 100 rows).</div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -6420,12 +6468,21 @@ function DatabaseBrowser({ token }) {
                 <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
                   <thead style={{ position:"sticky", top:0, zIndex:10 }}>
                     <tr style={{ background:C.bg }}>
+                      <th style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}`, position:"sticky", left:0, background:C.bg, zIndex:11, boxShadow:"2px 0 5px rgba(0,0,0,0.05)" }}>Actions</th>
                       {headers.map(h=><th key={h} style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}` }}>{h}</th>)}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredData.length > 0 ? filteredData.map((row, i) => (
-                      <tr key={i} style={{ borderBottom:`1px solid ${C.bdr}`, background:i%2===0?"transparent":"#fbfbfb" }}>
+                      <tr key={i} style={{ borderBottom:`1px solid ${C.bdr}`, background:i%2===0?C.sur:"#fbfbfb" }}>
+                        <td style={{ ...tdS, padding:"8px 12px", position:"sticky", left:0, background:i%2===0?C.sur:"#fbfbfb", zIndex:1, boxShadow:"2px 0 5px rgba(0,0,0,0.05)", borderRight:`1px solid ${C.bdr}` }}>
+                          <button 
+                             style={{ ...mkBtn("blue"), padding:"2px 8px", fontSize:10, fontWeight:700 }} 
+                             onClick={() => setEditingRow(row)}
+                          >
+                            Edit
+                          </button>
+                        </td>
                         {headers.map(h => (
                           <td key={h} style={{ ...tdS, padding:"8px 12px", whiteSpace:"nowrap", maxWidth:250, overflow:"hidden", textOverflow:"ellipsis" }}>
                             {row[h] === null ? <em style={{ color:C.txtS }}>null</em> : String(row[h])}
@@ -6433,7 +6490,7 @@ function DatabaseBrowser({ token }) {
                         ))}
                       </tr>
                     )) : !loading && (
-                      <tr><td colSpan={Math.max(headers.length, 1)} style={{ ...tdS, textAlign:"center", padding:40, color:C.txtS }}>{searchTerm ? "No matching records found." : "No records found in this table."}</td></tr>
+                      <tr><td colSpan={headers.length + 1} style={{ ...tdS, textAlign:"center", padding:40, color:C.txtS }}>{searchTerm ? "No matching records found." : "No records found in this table."}</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -6445,6 +6502,62 @@ function DatabaseBrowser({ token }) {
             </div>
           )}
       </div>
+      {editingRow && (
+        <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.6)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:24, backdropFilter:"blur(4px)" }}>
+          <Card style={{ maxWidth:540, width:"100%", maxHeight:"85vh", overflowY:"auto", padding:24, position:"relative", boxShadow:"0 10px 40px rgba(0,0,0,0.2)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+              <div>
+                <div style={{ fontSize:18, fontWeight:800, color:C.acc }}>Edit record in {selectedTable}</div>
+                <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>ID: {editingRow.id}</div>
+              </div>
+              <button onClick={() => setEditingRow(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:C.txtS }}>×</button>
+            </div>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const updated = {};
+              headers.forEach(h => {
+                if (h !== 'id' && h !== 'created_at' && h !== 'updated_at') {
+                  updated[h] = formData.get(h);
+                }
+              });
+              saveEdit(updated);
+            }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                {headers.filter(h => h !== 'id' && h !== 'created_at' && h !== 'updated_at').map(h => (
+                  <div key={h}>
+                    <Lbl c={h.replace(/_/g, ' ').toUpperCase()} />
+                    {String(editingRow[h] || "").length > 50 ? (
+                      <textarea 
+                        name={h} 
+                        defaultValue={editingRow[h]} 
+                        style={{ ...inp, minHeight:80, fontFamily:"inherit", fontSize:12, resize:"vertical" }}
+                      />
+                    ) : (
+                      <input 
+                        name={h} 
+                        type="text"
+                        defaultValue={editingRow[h]} 
+                        style={{ ...inp, fontSize:12 }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              <div style={{ display:"flex", gap:12, marginTop:28 }}>
+                <button type="submit" disabled={updating} style={{ ...mkBtn("primary"), flex:2, justifyContent:"center", padding:12, fontWeight:700 }}>
+                  {updating ? "Saving..." : "Update Record"}
+                </button>
+                <button type="button" onClick={() => setEditingRow(null)} style={{ ...mkBtn("ghost"), flex:1, justifyContent:"center", padding:12, border:`1px solid ${C.bdr}` }}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
@@ -6477,21 +6590,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
   
-  // Customer management state
-  const [customers, setCustomers] = useState([]);
-  const [newCustomer, setNewCustomer] = useState({ name: "", billing_address: "", website: "", industry: "", payment_terms: "", account_num: "", notes: "" });
-  const [editingCustomer, setEditingCustomer] = useState(null);
-  const [custFormErr, setCustFormErr] = useState("");
-  const [selectedCustId, setSelectedCustId] = useState(null);
-  const [custSearch, setCustSearch] = useState("");
   const USERNAME_RULE_TEXT = "Username must be lowercase letters only, one word, max 16 characters, and no numbers.";
   const normalizeUsername = (value) => String(value || "").toLowerCase().replace(/\s+/g, "");
   const isValidUsername = (value) => /^[a-z]{1,16}$/.test(normalizeUsername(value));
-  const selectedCust = customers.find(c => c.id === selectedCustId);
-  const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(custSearch.toLowerCase()) || (c.account_num && c.account_num.includes(custSearch)));
-  const customerDropdownOptions = selectedCust && !filteredCustomers.some(c => c.id === selectedCust.id)
-    ? [selectedCust, ...filteredCustomers]
-    : filteredCustomers;
+
 
   useEffect(() => {
     if (!token) return;
@@ -6507,11 +6609,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       .then(d => setUsers(Array.isArray(d) ? d : []))
       .catch(e => console.error("Load users err:", e));
     
-    // Load Customers
-    fetch("/api/admin/customers", { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => setCustomers(Array.isArray(d) ? d : []))
-      .catch(e => console.error("Load customers err:", e));
+
 
       // Load Company Info
       fetch("/api/admin/company-info", { headers: { 'Authorization': `Bearer ${token}` } })
@@ -6711,54 +6809,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
     }
   };
 
-  // Customer Management Functions
-  const handleAddCustomer = async (e) => {
-    e.preventDefault();
-    setCustFormErr("");
-    if (!newCustomer.name.trim()) { setCustFormErr("Customer name is required."); return; }
-    
-    try {
-      const res = await fetch("/api/admin/customers", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(newCustomer)
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Failed to create customer");
-      }
-      const created = await res.json();
-      setCustomers(prev => [...prev, created]);
-      setNewCustomer({ name: "", billing_address: "", website: "", industry: "", payment_terms: "", account_num: "", notes: "" });
-      setSelectedCustId(created.id);
-    } catch (err) {
-      setCustFormErr(err.message);
-    }
-  };
 
-  const handleEditCustomer = async (e) => {
-    e.preventDefault();
-    setCustFormErr("");
-    if (!editingCustomer.name.trim()) { setCustFormErr("Customer name is required."); return; }
-    
-    try {
-      const res = await fetch(`/api/admin/customers/${editingCustomer.id}`, {
-        method: "PUT",
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(editingCustomer)
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Failed to update customer");
-      }
-      const updated = await res.json();
-      setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
-      setEditingCustomer(null);
-      setSelectedCustId(updated.id);
-    } catch (err) {
-      setCustFormErr(err.message);
-    }
-  };
 
   const handleSaveCompanyInfo = async () => {
     try {
@@ -6786,23 +6837,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
     }
   };
 
-  const handleDeleteCustomer = async (id) => {
-    if (!window.confirm("Delete this customer? This action cannot be undone.")) return;
-    try {
-      const res = await fetch(`/api/admin/customers/${id}`, {
-        method: "DELETE",
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Failed to delete customer");
-      }
-      setCustomers(prev => prev.filter(c => c.id !== id));
-      if (selectedCustId === id) setSelectedCustId(null);
-    } catch (err) {
-      alert("Failed to delete customer: " + err.message);
-    }
-  };
+
 
   const handleBackup = async () => {
     try {
@@ -6905,29 +6940,18 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
             <div style={{ fontSize:22, fontWeight:800, color:C.acc, marginBottom:4 }}>Admin Portal</div>
             <div style={{ fontSize:14, color:C.txtM, marginBottom:20 }}>System oversight and user management</div>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              style={{ ...mkBtn(showVectorDB ? "primary" : "ghost"), padding: "10px 20px", fontWeight: 700,
-                background: showVectorDB ? "#7c3aed" : undefined,
-                border: showVectorDB ? "none" : `1px solid ${C.bdr}` }}
-              onClick={() => setShowVectorDB(v => !v)}
-            >
-              {showVectorDB ? "🧠 Hide Vector DB" : "🧠 Vector Database"}
-            </button>
             <button 
                style={{ ...mkBtn("primary"), padding: "10px 20px", fontWeight: 700, background: "#0d9488" }}
                onClick={() => window.dispatchEvent(new CustomEvent('change-view', { detail: 'investor' }))}
             >
                Open Investor Dashboard
             </button>
-          </div>
         </div>
 
 
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:20, marginBottom:30 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:30 }}>
           {/* USER LIST */}
-          <div style={{ flex:1 }}>
-            <Sec c="Accounts"/>
+          <AccordionCard title="Accounts Listing">
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 {users.map(u => (
                   <div key={u.id} style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-start", justifyContent:"space-between", gap:10, background:u.is_disabled ? "#fff1f2" : C.sur, border:`1px solid ${u.is_disabled ? C.redBdr : C.bdr}`, padding:"12px 16px", borderRadius:8 }}>
@@ -6969,173 +6993,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   </div>
                 ))}
             </div>
-          </div>
+          </AccordionCard>
 
-          {/* CUSTOMER LIST & MANAGEMENT */}
-          <div style={{ flex:1 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-              <Sec c="Customer Management"/>
-              <div style={{ display:"flex", gap:6 }}>
-                <button style={{ ...mkBtn("blue"), padding:"4px 8px", fontSize:10 }} onClick={() => { if (selectedCust) setEditingCustomer(selectedCust); }} disabled={!selectedCust}>Edit</button>
-                <button style={{ ...mkBtn("danger"), padding:"4px 8px", fontSize:10 }} onClick={() => { if (selectedCust) handleDeleteCustomer(selectedCust.id); }} disabled={!selectedCust}>Delete</button>
-              </div>
-            </div>
-            <div style={{ position:"relative", marginBottom:8 }}>
-              <input
-                type="text"
-                style={{ ...inp, width:"100%", paddingRight:30 }}
-                placeholder="Search by name or account #..."
-                value={custSearch}
-                onChange={(e) => setCustSearch(e.target.value)}
-              />
-              {custSearch && (
-                <button
-                  type="button"
-                  onClick={() => setCustSearch("")}
-                  aria-label="Clear search"
-                  style={{
-                    position:"absolute",
-                    right:8,
-                    top:"50%",
-                    transform:"translateY(-50%)",
-                    width:18,
-                    height:18,
-                    border:"none",
-                    borderRadius:"50%",
-                    cursor:"pointer",
-                    background:C.bdr,
-                    color:C.txt,
-                    fontSize:11,
-                    fontWeight:800,
-                    display:"flex",
-                    alignItems:"center",
-                    justifyContent:"center",
-                    lineHeight:1
-                  }}
-                >
-                  x
-                </button>
-              )}
-            </div>
-            <select style={{...sel, width:"100%", marginBottom:12}} value={selectedCustId || ""} onChange={(e) => setSelectedCustId(e.target.value ? parseInt(e.target.value) : null)}>
-              <option value="">-- Select a customer --</option>
-              {customerDropdownOptions.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            {selectedCust && (
-              <div style={{ background:C.surL, border:`1px solid ${C.bdr}`, borderRadius:8, padding:12 }}>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, fontSize:12, marginBottom:8 }}>
-                  {selectedCust.account_num && <div><strong>Account #:</strong> {selectedCust.account_num}</div>}
-                  {selectedCust.industry && <div><strong>Industry:</strong> {selectedCust.industry}</div>}
-                  {selectedCust.billing_address && <div><strong>Address:</strong> {selectedCust.billing_address}</div>}
-                  {selectedCust.website && <div><strong>Website:</strong> {selectedCust.website}</div>}
-                  {selectedCust.payment_terms && <div><strong>Terms:</strong> {selectedCust.payment_terms}</div>}
-                </div>
-                {selectedCust.notes && <div style={{ fontSize:11, color:C.txtM, fontStyle:"italic" }}>Notes: {selectedCust.notes}</div>}
-              </div>
-            )}
-          </div>
-
-          {/* CREATE FORM & SETTINGS */}
-          <div style={{ display: "flex", flexDirection:"column", gap:20 }}>
-            <div style={{ background:C.sur, border:`1.5px dashed ${C.bdr}`, borderRadius:10, padding:20 }}>
-              <Sec c={editingCustomer ? "Edit Customer" : "Add New Customer"}/>
-              <form onSubmit={editingCustomer ? handleEditCustomer : handleAddCustomer} style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                <div>
-                  <Lbl c="CUSTOMER NAME"/>
-                  <input 
-                    id="customer-name"
-                    name="name"
-                    type="text"
-                    style={inp} 
-                    value={editingCustomer ? editingCustomer.name : newCustomer.name} 
-                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, name: e.target.value}) : setNewCustomer(p=>({...p, name: e.target.value}))} 
-                    required 
-                    placeholder="Enter customer name"
-                  />
-                </div>
-                <div>
-                  <Lbl c="BILLING ADDRESS"/>
-                  <input 
-                    id="customer-address"
-                    name="billing_address"
-                    type="text"
-                    style={inp} 
-                    value={editingCustomer ? editingCustomer.billing_address : newCustomer.billing_address} 
-                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, billing_address: e.target.value}) : setNewCustomer(p=>({...p, billing_address: e.target.value}))} 
-                    placeholder="Enter billing address"
-                  />
-                </div>
-                <div>
-                  <Lbl c="WEBSITE"/>
-                  <input 
-                    id="customer-website"
-                    name="website"
-                    type="text"
-                    style={inp} 
-                    value={editingCustomer ? editingCustomer.website : newCustomer.website} 
-                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, website: e.target.value}) : setNewCustomer(p=>({...p, website: e.target.value}))} 
-                    placeholder="www.example.com"
-                  />
-                </div>
-                <div>
-                  <Lbl c="INDUSTRY"/>
-                  <input 
-                    id="customer-industry"
-                    name="industry"
-                    type="text"
-                    style={inp} 
-                    value={editingCustomer ? editingCustomer.industry : newCustomer.industry} 
-                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, industry: e.target.value}) : setNewCustomer(p=>({...p, industry: e.target.value}))} 
-                    placeholder="e.g., Manufacturing, Construction"
-                  />
-                </div>
-                <div>
-                  <Lbl c="PAYMENT TERMS"/>
-                  <input 
-                    id="customer-payment-terms"
-                    name="payment_terms"
-                    type="text"
-                    style={inp} 
-                    value={editingCustomer ? editingCustomer.payment_terms : newCustomer.payment_terms} 
-                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, payment_terms: e.target.value}) : setNewCustomer(p=>({...p, payment_terms: e.target.value}))} 
-                    placeholder="e.g., Net 30, Net 45"
-                  />
-                </div>
-                <div>
-                  <Lbl c="ACCOUNT NUMBER"/>
-                  <input 
-                    id="customer-account-num"
-                    name="account_num"
-                    type="text"
-                    style={inp} 
-                    value={editingCustomer ? editingCustomer.account_num : newCustomer.account_num} 
-                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, account_num: e.target.value}) : setNewCustomer(p=>({...p, account_num: e.target.value}))} 
-                    placeholder="Internal account number"
-                  />
-                </div>
-                <div>
-                  <Lbl c="NOTES"/>
-                  <textarea 
-                    id="customer-notes"
-                    name="notes"
-                    style={{...inp, minHeight: 60, fontFamily: "inherit", resize: "vertical"}} 
-                    value={editingCustomer ? editingCustomer.notes : newCustomer.notes} 
-                    onChange={e => editingCustomer ? setEditingCustomer({...editingCustomer, notes: e.target.value}) : setNewCustomer(p=>({...p, notes: e.target.value}))} 
-                    placeholder="Internal notes about this customer"
-                  />
-                </div>
-                {custFormErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {custFormErr}</div>}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button type="submit" style={{ ...mkBtn("primary"), flex:1, justifyContent:"center", padding:"10px", marginTop:6 }}>{editingCustomer ? "Update Customer" : "Add Customer"}</button>
-                  {editingCustomer && <button type="button" onClick={() => setEditingCustomer(null)} style={{ ...mkBtn("ghost"), flex:1, justifyContent:"center", padding:"10px", marginTop:6 }}>Cancel</button>}
-                </div>
-              </form>
-            </div>
-
-            <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20 }}>
-              <Sec c="Company Profile"/>
+          {/* OTHER SECTIONS */}
+          <AccordionCard title="Company Profile">
               <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div>
                   <Lbl c="COMPANY NAME"/>
@@ -7164,89 +7025,34 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   </div>
                 </div>
               </div>
-                <button onClick={handleSaveCompanyInfo} style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:16 }}>Save Company Profile</button>
-            </div>
+              <button onClick={handleSaveCompanyInfo} style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:16 }}>Save Company Profile</button>
+            </AccordionCard>
 
-            <div style={{ background:C.sur, border:`1.5px dashed ${C.bdr}`, borderRadius:10, padding:20 }}>
-              <Sec c="Add New Account"/>
+            <AccordionCard title="Add New Account">
               <form onSubmit={handleCreateUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div>
                   <Lbl c="FIRST NAME"/>
-                  <input 
-                    id="new-account-first-name"
-                    name="first_name"
-                    type="text"
-                    style={inp} 
-                    value={newUser.first_name} 
-                    onChange={e=>setNewUser(p=>({...p,first_name:e.target.value}))}
-                    placeholder="Enter first name"
-                  />
+                  <input id="new-account-first-name" name="first_name" type="text" style={inp} value={newUser.first_name} onChange={e=>setNewUser(p=>({...p,first_name:e.target.value}))} placeholder="Enter first name" />
                 </div>
                 <div>
                   <Lbl c="LAST NAME"/>
-                  <input 
-                    id="new-account-last-name"
-                    name="last_name"
-                    type="text"
-                    style={inp} 
-                    value={newUser.last_name} 
-                    onChange={e=>setNewUser(p=>({...p,last_name:e.target.value}))}
-                    placeholder="Enter last name"
-                  />
+                  <input id="new-account-last-name" name="last_name" type="text" style={inp} value={newUser.last_name} onChange={e=>setNewUser(p=>({...p,last_name:e.target.value}))} placeholder="Enter last name" />
                 </div>
                 <div>
                   <Lbl c="USERNAME"/>
-                  <input 
-                    id="new-account-username"
-                    name="username"
-                    type="text"
-                    autoComplete="username"
-                    style={inp} 
-                    value={newUser.username} 
-                    onChange={e=>setNewUser(p=>({...p,username:normalizeUsername(e.target.value)}))} 
-                    maxLength={16}
-                    required 
-                    placeholder="Enter unique username"
-                  />
+                  <input id="new-account-username" name="username" type="text" autoComplete="username" style={inp} value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:normalizeUsername(e.target.value)}))} maxLength={16} required placeholder="Enter unique username" />
                 </div>
                 <div>
                   <Lbl c="EMAIL ADDRESS"/>
-                  <input 
-                    id="new-account-email"
-                    name="email"
-                    autoComplete="email"
-                    style={inp} 
-                    type="email" 
-                    value={newUser.email} 
-                    onChange={e=>setNewUser(p=>({...p,email:e.target.value}))} 
-                    placeholder="user@shoemakerrigging.com"
-                  />
+                  <input id="new-account-email" name="email" autoComplete="email" style={inp} type="email" value={newUser.email} onChange={e=>setNewUser(p=>({...p,email:e.target.value}))} placeholder="user@shoemakerrigging.com" />
                 </div>
                 <div>
                   <Lbl c="CELL PHONE"/>
-                  <input 
-                    id="new-account-cell-phone"
-                    name="cell_phone"
-                    type="text"
-                    style={inp} 
-                    value={newUser.cell_phone} 
-                    onChange={e=>setNewUser(p=>({...p,cell_phone:e.target.value}))}
-                    placeholder="e.g., 330-555-0101"
-                  />
+                  <input id="new-account-cell-phone" name="cell_phone" type="text" style={inp} value={newUser.cell_phone} onChange={e=>setNewUser(p=>({...p,cell_phone:e.target.value}))} placeholder="e.g., 330-555-0101" />
                 </div>
                 <div>
                   <Lbl c="PASSWORD"/>
-                  <input 
-                    id="new-account-password"
-                    name="password"
-                    autoComplete="new-password"
-                    style={inp} 
-                    type="password" 
-                    value={newUser.password} 
-                    onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} 
-                    required 
-                    placeholder="Enter unique password"
-                  />
+                  <input id="new-account-password" name="password" autoComplete="new-password" style={inp} type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} required placeholder="Enter unique password" />
                 </div>
                 <div>
                   <Lbl c="ROLE"/>
@@ -7259,17 +7065,11 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                 {formErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {formErr}</div>}
                 <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:6 }}>Create User</button>
               </form>
-            </div>
+            </AccordionCard>
 
-            <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20, marginTop:10 }}>
-              <Sec c="Admin Tasks & Todos"/>
+            <AccordionCard title="Admin Tasks & Todos">
               <form onSubmit={addTask} style={{ display:"flex", gap:8, marginBottom:16 }}>
-                <input 
-                  style={{ ...inp, flex:1 }} 
-                  value={newTask} 
-                  onChange={e=>setNewTask(e.target.value)} 
-                  placeholder="Master task name..."
-                />
+                <input style={{ ...inp, flex:1 }} value={newTask} onChange={e=>setNewTask(e.target.value)} placeholder="Master task name..." />
                 <button type="submit" style={{ ...mkBtn("blue"), padding:"0 16px" }}>Add Task</button>
               </form>
               <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:400, overflowY:"auto" }}>
@@ -7277,17 +7077,9 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                 {tasks.map(t => (
                   <div key={t.id} style={{ background:t.done ? C.bg : "transparent", padding:12, borderRadius:8, border:`1px solid ${C.bdr}` }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: t.subnotes?.length ? 8 : 0 }}>
-                      <input 
-                        type="checkbox" 
-                        checked={t.done} 
-                        onChange={() => toggleTask(t.id, t.done)} 
-                        style={{ cursor:"pointer", width:16, height:16 }}
-                      />
+                      <input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id, t.done)} style={{ cursor:"pointer", width:16, height:16 }} />
                       <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
-                      <button 
-                        onClick={() => { const n = prompt("Enter subnote/detail:"); if(n) addSubnote(t.id, n); }}
-                        style={{ background:"none", border:"none", color:C.blue, fontSize:11, cursor:"pointer", fontWeight:700 }}
-                      >+ Detail</button>
+                      <button onClick={() => { const n = prompt("Enter subnote/detail:"); if(n) addSubnote(t.id, n); }} style={{ background:"none", border:"none", color:C.blue, fontSize:11, cursor:"pointer", fontWeight:700 }}>+ Detail</button>
                       <button onClick={() => delTask(t.id)} style={{ padding:0, border:"none", background:"transparent", color:C.red, cursor:"pointer", fontSize:12 }}>✕</button>
                     </div>
                     {t.subnotes && t.subnotes.length > 0 && (
@@ -7304,123 +7096,64 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   </div>
                 ))}
               </div>
-            </div>
+            </AccordionCard>
 
-            <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20, marginTop:10 }}>
-              <Sec c="Database Maintenance"/>
-              <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
-                <div style={{ fontSize:28 }}>📦</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Full System Backup</div>
-                  <div style={{ fontSize:12, color:C.txtM, marginBottom:4, lineHeight:1.4 }}>Generates a complete MySQL dump with a date-time stamp. Recommended before making large configuration changes.</div>
-                  <div style={{ fontSize:11, color:C.txtS, marginBottom:12 }}>Includes: Users, Quotes, Customers, and Equipment rates.</div>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <button 
-                      style={{ ...mkBtn("won"), padding:"10px 18px", fontSize:13, gap:8 }}
-                      onClick={handleBackup}
-                    >
-                      📥 Create Database Backup
-                    </button>
-                    <button 
-                      style={{ ...mkBtn("ghost"), padding:"10px 18px", fontSize:13, gap:8, border:`1px solid ${C.bdr}` }}
-                      onClick={async () => {
+            <AccordionCard title="Database Maintenance">
+              <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
+                  <div style={{ fontSize:28 }}>📦</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Full System Backup & Export</div>
+                    <div style={{ fontSize:12, color:C.txtM, marginBottom:4, lineHeight:1.4 }}>Generates a complete MySQL dump or Excel export. Recommended before legacy data changes.</div>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop:8 }}>
+                      <button style={{ ...mkBtn("won"), padding:"10px 18px", fontSize:13, gap:8 }} onClick={handleBackup}>📥 Create Database Backup</button>
+                      <button style={{ ...mkBtn("ghost"), padding:"10px 18px", fontSize:13, gap:8, border:`1px solid ${C.bdr}` }} onClick={async () => {
                         try {
                           const res = await fetch("/api/admin/export-excel", { headers: { 'Authorization': `Bearer ${token}` } });
-                          if (!res.ok) throw new Error("Export failed");
                           const blob = await res.blob();
                           const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          let filename = `rigpro_export_${new Date().toISOString().slice(0,10)}.xlsx`;
-                          a.download = filename;
-                          document.body.appendChild(a);
-                          a.click();
-                          a.remove();
-                          window.URL.revokeObjectURL(url);
-                        } catch (e) {
-                          console.error(e);
-                          alert("Failed to export Excel file.");
-                        }
-                      }}
-                    >
-                      📊 Export to Excel
-                    </button>
-                    <div style={{ position: "relative" }}>
-                      <input 
-                         type="file" 
-                         accept=".xlsx"
-                         title="Import from Excel"
-                         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0, cursor: "pointer" }}
-                         onChange={async (e) => {
-                           const file = e.target.files[0];
-                           if (!file) return;
-                           if (!window.confirm("DANGER: You are about to restore the system data directly from this Excel file. This will overwrite existing database records! Proceed?")) {
-                             e.target.value = "";
-                             return;
-                           }
-                           const formData = new FormData();
-                           formData.append("file", file);
-                           try {
-                             const res = await fetch("/api/admin/import-excel", {
-                               method: "POST",
-                               headers: { 'Authorization': `Bearer ${token}` },
-                               body: formData
-                             });
-                             if (!res.ok) {
-                               const data = await res.json();
-                               throw new Error(data.error || "Import failed");
-                             }
-                             alert("Excel data successfully imported. The system will now reload to apply changes.");
-                             window.location.reload();
-                           } catch (err) {
-                             console.error("Import error:", err);
-                             alert("Failed to import Excel file: " + err.message);
-                           } finally {
-                             e.target.value = "";
-                           }
-                         }}
-                      />
-                      <button 
-                        style={{ ...mkBtn("danger"), padding:"10px 18px", fontSize:13, gap:8, border:`1px solid ${C.redBdr}` }}
-                      >
-                        📤 Import from Excel
-                      </button>
+                          const a = document.createElement('a'); a.href = url; a.download = `rigpro_export_${new Date().toISOString().slice(0,10)}.xlsx`;
+                          document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+                        } catch (e) { alert("Export failed."); }
+                      }}>📊 Export to Excel</button>
+                      <div style={{ position: "relative" }}>
+                        <input type="file" accept=".xlsx" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: 0, cursor: "pointer" }} onChange={async (e) => {
+                          const file = e.target.files[0]; if (!file) return;
+                          if (!window.confirm("Restore system data from Excel? This will overwrite live data!")) return;
+                          const formData = new FormData(); formData.append("file", file);
+                          try {
+                            const res = await fetch("/api/admin/import-excel", { method: "POST", headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+                            if (!res.ok) throw new Error("Import failed");
+                            alert("Import successful. Reloading..."); window.location.reload();
+                          } catch (err) { alert(err.message); }
+                        }} />
+                        <button style={{ ...mkBtn("danger"), padding:"10px 18px", fontSize:13, gap:8, border:`1px solid ${C.redBdr}` }}>📤 Import from Excel</button>
+                      </div>
                     </div>
                   </div>
+                </div>
 
-
+                <div style={{ paddingTop:20, borderTop:`1px solid ${C.bdr}`, display:"flex", alignItems:"flex-start", gap:16 }}>
+                  <div style={{ fontSize:28 }}>🛠️</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Restore from Archive</div>
+                    <div style={{ fontSize:12, color:C.red, marginBottom:8, lineHeight:1.4, fontWeight:600 }}>CAUTION: Restoration will overwrite ALL live data. Choose a recovery point carefully.</div>
+                    <button style={{ ...mkBtn("danger"), padding:"12px 20px", fontSize:14, gap:8, fontWeight:800 }} onClick={() => { setShowBackupList(true); loadBackups(); }}>🕒 Browse Recovery Points</button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </AccordionCard>
 
-            <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:20, marginTop:10 }}>
-              <Sec c="System Recovery"/>
-              <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
-                <div style={{ fontSize:28 }}>🛠️</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>Restore from Archive</div>
-                  <div style={{ fontSize:12, color:C.red, marginBottom:8, lineHeight:1.4, fontWeight:600 }}>CAUTION: Restoration will overwrite ALL live data. Choose a recovery point carefully.</div>
-                  <button 
-                    style={{ ...mkBtn("danger"), padding:"12px 20px", fontSize:14, gap:8, fontWeight:800 }}
-                    onClick={() => { 
-                      setShowBackupList(true); 
-                      loadBackups(); 
-                    }}
-                  >
-                    🕒 Browse Recovery Points
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+            {/* VECTOR DB SECTION */}
+            <AccordionCard title="🧠 Vector Database">
+              <VectorBrowser token={token} />
+            </AccordionCard>
+
+            {/* DATA BROWSER SECTION */}
+            <AccordionCard title="🗂️ Global Data Browser">
+              <DatabaseBrowser token={token} />
+            </AccordionCard>
         </div>
-
-
-        {/* VECTOR DB SECTION */}
-        {showVectorDB && <VectorBrowser token={token} />}
-
-        {/* DATA BROWSER SECTION */}
-        <DatabaseBrowser token={token} />
 
         {/* EDIT USER MODAL */}
         {editingUser && (
