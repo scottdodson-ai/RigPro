@@ -1672,80 +1672,83 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
         ))}
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"280px 904px", gap:16, alignItems:"start" }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:16 }}>
         {/* Report list */}
-        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-          {filtered.map((r, i) => {
-            const isActive = activeReport?.id===r.id;
-            const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===r.id);
-            return (
-              <div key={listKey("report", r, i)} onClick={()=>setActiveReport(r)} style={{ background:isActive?C.accL:C.sur, border:`1px solid ${isActive?C.accB:C.bdr}`, borderRadius:8, padding:"10px 12px", cursor:"pointer", position:"relative" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                  <div>
-                    <div style={{ fontWeight:700, fontSize:13, color:isActive?C.acc:C.txt }}>{r.name}</div>
-                    <div style={{ fontSize:11, color:C.txtS, marginTop:2 }}>{r.desc}</div>
-                    <div style={{ display:"flex", gap:5, marginTop:5 }}>
-                      <span style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:4, padding:"1px 6px", fontSize:10, color:C.txtS }}>{r.category}</span>
-                      {isCustom && <span style={{ background:r.scope==="user"?C.bluB:C.grnB, color:r.scope==="user"?C.blue:C.grn, border:`1px solid ${r.scope==="user"?C.bluBdr:C.grnBdr}`, borderRadius:4, padding:"1px 6px", fontSize:10, fontWeight:600 }}>{r.scope==="user"?"My Report":"Org Report"}</span>}
-                    </div>
-                  </div>
-                  {isCustom && (
-                    <div style={{ display:"flex", gap:4, flexShrink:0 }}>
-                      <button style={{ background:"none", border:"none", cursor:"pointer", fontSize:13, color:C.txtS, padding:"0 3px" }} onClick={e=>{e.stopPropagation();setEditingReport(r);setShowBuilder(true);}}>✏</button>
-                      <button style={{ background:"none", border:"none", cursor:"pointer", fontSize:13, color:C.red, padding:"0 3px" }} onClick={e=>{e.stopPropagation();deleteCustom(r.id);}}>×</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Report output */}
-        <div>
-          {!activeReport ? (
-            <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, padding:48, textAlign:"center", color:C.txtS }}>
-              <div style={{ fontSize:32, marginBottom:10 }}>📊</div>
-              <div style={{ fontSize:15, fontWeight:600, marginBottom:4 }}>Select a report to view</div>
-              <div style={{ fontSize:13 }}>Choose from the list on the left or create a custom report.</div>
-            </div>
-          ) : (
-            <Card style={{ marginBottom:0 }}>
-              {/* Report header */}
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14, flexWrap:"wrap", gap:8 }}>
+        {filtered.map((r, i) => {
+          const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===r.id);
+          return (
+            <div key={listKey("report", r, i)} onClick={()=>setActiveReport(r)} style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:"14px 16px", cursor:"pointer", position:"relative", transition:"all 0.15s", boxShadow:"0 2px 5px rgba(0,0,0,0.02)" }}
+              onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.accB; e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.06)"; }}
+              onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.bdr; e.currentTarget.style.boxShadow="0 2px 5px rgba(0,0,0,0.02)"; }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
                 <div>
-                  <div style={{ fontSize:17, fontWeight:700 }}>{activeReport.name}</div>
-                  <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>{activeReport.desc}</div>
-                  {reportData?.summary && <div style={{ fontSize:12, color:C.acc, fontWeight:600, marginTop:4 }}>{reportData.summary}</div>}
+                  <div style={{ fontWeight:700, fontSize:15, color:C.txt }}>{r.name}</div>
+                  <div style={{ fontSize:12, color:C.txtS, marginTop:4, lineHeight:1.4 }}>{r.desc}</div>
+                  <div style={{ display:"flex", gap:6, marginTop:8 }}>
+                    <span style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:4, padding:"2px 8px", fontSize:10, color:C.txtS, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>{r.category}</span>
+                    {isCustom && <span style={{ background:r.scope==="user"?C.bluB:C.grnB, color:r.scope==="user"?C.blue:C.grn, border:`1px solid ${r.scope==="user"?C.bluBdr:C.grnBdr}`, borderRadius:4, padding:"2px 8px", fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:0.5 }}>{r.scope==="user"?"My Report":"Org Report"}</span>}
+                  </div>
                 </div>
-                <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"5px 12px" }} onClick={exportCSV}>↓ Export CSV</button>
+                {isCustom && (
+                  <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                    <button style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, color:C.txtS, padding:"0 4px" }} onClick={e=>{e.stopPropagation();setEditingReport(r);setShowBuilder(true);}}>✏</button>
+                    <button style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, color:C.red, padding:"0 4px" }} onClick={e=>{e.stopPropagation();deleteCustom(r.id);}}>×</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Report Modal */}
+      {activeReport && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:800, overflowY:"auto", padding:"20px 16px", display:"flex", justifyContent:"center", alignItems:"flex-start" }}>
+          <div style={{ background:C.sur, width:"100%", maxWidth:1200, borderRadius:12, boxShadow:"0 20px 50px rgba(0,0,0,0.3)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
+            {/* Modal Header */}
+            <div style={{ background:C.bg, padding:"14px 20px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10 }}>
+              <button onClick={()=>setActiveReport(null)} style={{ ...mkBtn("outline"), padding:"6px 14px", fontSize:12, borderColor:C.bdr, color:C.txtM, background:"#fff" }}>← Back to Reports</button>
+              <div style={{ fontWeight:800, fontSize:15, color:C.txt }}>{activeReport.name}</div>
+              <button onClick={()=>setActiveReport(null)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS, lineHeight:1, padding:"0 4px" }}>×</button>
+            </div>
+            
+            {/* Report Content */}
+            <div style={{ padding:"24px 24px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16, flexWrap:"wrap", gap:12 }}>
+                <div>
+                  <div style={{ fontSize:22, fontWeight:800, color:C.txt }}>{activeReport.name}</div>
+                  <div style={{ fontSize:13, color:C.txtM, marginTop:4 }}>{activeReport.desc}</div>
+                  {reportData?.summary && <div style={{ fontSize:13, color:C.acc, fontWeight:700, marginTop:6 }}>{reportData.summary}</div>}
+                </div>
+                <button style={{ ...mkBtn("ghost"), fontSize:12, padding:"6px 14px" }} onClick={exportCSV}>↓ Export CSV</button>
               </div>
 
               {/* Click hint */}
               {reportData?.clickHint && (
-                <div style={{ fontSize:11, color:C.txtS, marginBottom:8, display:"flex", alignItems:"center", gap:5 }}>
-                  <span style={{ fontSize:13 }}>👆</span> {reportData.clickHint}
+                <div style={{ fontSize:12, color:C.txtS, marginBottom:12, display:"flex", alignItems:"center", gap:6, background:C.bg, padding:"8px 12px", borderRadius:6, border:`1px solid ${C.bdr}` }}>
+                  <span style={{ fontSize:14 }}>👆</span> {reportData.clickHint}
                 </div>
               )}
+
               {/* Visualized Dashboard or Table */}
               {reportData && activeReport.id.endsWith("-dashboard") ? (
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap:16 }}>
                   {reportData.rows.map((row, i) => (
-                    <div key={i} style={{ background:C.sur, border:`1.5px solid ${C.bdr}`, borderRadius:12, padding:20, boxShadow:"0 4px 12px rgba(0,0,0,0.05)" }}>
-                      <div style={{ fontSize:11, color:C.txtS, fontWeight:700, textTransform:"uppercase", letterSpacing:0.5, marginBottom:8 }}>{row[0]}</div>
-                      <div style={{ fontSize:24, fontWeight:800, color:C.acc }}>{row[1]}</div>
+                    <div key={i} style={{ background:C.bg, border:`1.5px solid ${C.bdr}`, borderRadius:12, padding:24, boxShadow:"inset 0 2px 6px rgba(0,0,0,0.02)" }}>
+                      <div style={{ fontSize:12, color:C.txtS, fontWeight:800, textTransform:"uppercase", letterSpacing:0.5, marginBottom:10 }}>{row[0]}</div>
+                      <div style={{ fontSize:28, fontWeight:800, color:C.acc }}>{row[1]}</div>
                       {reportData.rawRefs?.[i] && (
-                        <button style={{ ...mkBtn("ghost"), fontSize:10, padding:"4px 8px", marginTop:12, width:"100%", justifyContent:"center" }} onClick={() => setDrillRef(reportData.rawRefs[i])}>View Detail →</button>
+                        <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"6px 12px", marginTop:16, width:"100%", justifyContent:"center" }} onClick={() => setDrillRef(reportData.rawRefs[i])}>View Detail →</button>
                       )}
                     </div>
                   ))}
                 </div>
               ) : reportData && reportData.rows.length > 0 ? (
-                <div style={{ overflowX:"auto" }}>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                <div style={{ overflowX:"auto", border:`1px solid ${C.bdr}`, borderRadius:8 }}>
+                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
                     <thead>
                       <tr style={{ background:C.bg }}>
-                        {reportData.cols.map(c=><th key={c} style={{ ...thS, padding:"9px 12px", borderBottom:`1px solid ${C.bdr}`, textAlign:"left" }}>{c}</th>)}
+                        {reportData.cols.map(c=><th key={c} style={{ ...thS, padding:"12px 14px", borderBottom:`2px solid ${C.bdr}`, textAlign:"left" }}>{c}</th>)}
                       </tr>
                     </thead>
                     <tbody>
@@ -1753,12 +1756,12 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                         const rawRef = reportData.rawRefs?.[i];
                         return (
                           <tr key={i}
-                            style={{ borderBottom:`1px solid ${C.bdr}`, cursor:rawRef?"pointer":"default" }}
+                            style={{ borderBottom:`1px solid ${C.bdr}`, cursor:rawRef?"pointer":"default", background:C.sur }}
                             onClick={()=>rawRef&&setDrillRef(rawRef)}
                             onMouseEnter={e=>{ if(rawRef) e.currentTarget.style.background=C.accL; }}
-                            onMouseLeave={e=>{ e.currentTarget.style.background=""; }}>
+                            onMouseLeave={e=>{ e.currentTarget.style.background=C.sur; }}>
                             {row.map((cell,j)=>(
-                              <td key={j} style={{ ...tdS, padding:"9px 12px", fontWeight:j===0?600:400 }}>{cell}</td>
+                              <td key={j} style={{ ...tdS, padding:"10px 14px", fontWeight:j===0?600:400 }}>{cell}</td>
                             ))}
                           </tr>
                         );
@@ -1767,15 +1770,15 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                   </table>
                 </div>
               ) : (
-                <div style={{ textAlign:"center", padding:"32px", color:C.txtS, fontSize:13 }}>
-                  <div style={{ fontSize:24, marginBottom:8 }}>📉</div>
-                  No data available for this report criteria.
+                <div style={{ textAlign:"center", padding:"48px", color:C.txtS, background:C.bg, borderRadius:8, border:`1px dashed ${C.bdr}` }}>
+                  <div style={{ fontSize:32, marginBottom:12 }}>📉</div>
+                  <div style={{ fontSize:15, fontWeight:600 }}>No data available for this report criteria.</div>
                 </div>
               )}
-            </Card>
-          )}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Drill-down modal */}
       {drillRef && (
