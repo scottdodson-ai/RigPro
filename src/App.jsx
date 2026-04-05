@@ -1053,7 +1053,7 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
     }
     case "finance-dashboard": {
       return {
-        isCategoryDashboard: true,
+        isFinanceDashboardUI: true,
         category: "Finance",
         summary: `Finance Overview`,
         rows: []
@@ -2761,6 +2761,8 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
               {/* Table or Dashboard */}
               {reportData?.isExecutiveDashboardUI ? (
                  <ExecutiveDashboard jobs={filteredJobs} reqs={filteredReqs} phiConfig={phiConfig} />
+              ) : reportData?.isFinanceDashboardUI ? (
+                 <FinanceDashboard jobs={filteredJobs} />
               ) : reportData?.isPhiExplainer ? (
                  <PhiExplainerReport jobs={filteredJobs} reqs={filteredReqs} phiConfig={phiConfig} />
               ) : reportData?.isEstimateCycleReport ? (
@@ -9082,6 +9084,136 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
           </div>
         </div>
       </Card>
+    </div>
+  );
+}
+
+function FinanceDashboard({ jobs }) {
+  const won = jobs.filter(q => q.status === "Won");
+  const fmt = n => typeof n==="number" ? (n >= 1000000 ? "$" + (n/1000000).toFixed(1) + "M" : n >= 1000 ? "$" + Math.round(n/1000) + "K" : "$" + Math.round(n)) : n;
+  
+  const totalQuoted = jobs.reduce((s,q) => s+(q.total||0), 0);
+  
+  let wonRev = 0; let tLabor=0, tEquip=0, tTravel=0, tMats=0, tSubs=0, tOther=0;
+  won.forEach(q => {
+    wonRev += (q.total||0);
+    tLabor += (q.labor||0)*0.6; tEquip += (q.equip||0)*0.7; tTravel += (q.travel||0);
+    tSubs += (q.subs||0)*0.85; tMats += (q.mats||0)*0.85 + (q.hauling||0)*0.85;
+  });
+  tOther = Math.max(0, wonRev - (tLabor + tEquip + tTravel + tMats + tSubs) - (wonRev * 0.3));
+  const tCost = tLabor + tEquip + tTravel + tMats + tSubs + tOther;
+  const marginPct = wonRev>0 ? ((wonRev - tCost)/wonRev*100) : 0;
+  
+  const discAmt = jobs.reduce((s,q)=>(q.discounts||[]).reduce((a,d)=>a+Number(d.discAmt),0)+s, 0);
+  const marginImpact = wonRev>0 ? (discAmt/wonRev*100) : 0;
+  
+  const now = new Date(); now.setDate(1);
+  const backlogVal = won.filter(q => {
+     const d = new Date(q.start_date || q.date);
+     return d >= now;
+  }).reduce((s,q) => s + (q.total||0), 0);
+
+  const pieData = [
+    { label: "Labor", value: tLabor, color: "#3b82f6" },
+    { label: "Equipment", value: tEquip, color: "#10b981" },
+    { label: "Travel", value: tTravel, color: "#f59e0b" },
+    { label: "Subs & Materials", value: tMats+tSubs, color: "#8b5cf6" },
+    { label: "Other", value: tOther, color: "#94a3b8" }
+  ];
+  const totalPie = pieData.reduce((s,d)=>s+d.value,0)||1;
+  let cx=120, cy=120, r=80, stroke=40, curAngle=-90;
+
+  const mDb = {};
+  for(let i=11; i>=0; i--) {
+     const d = new Date(); d.setMonth(d.getMonth()-i);
+     mDb[d.toISOString().slice(0,7)] = { rev:0, cost:0 };
+  }
+  won.forEach(q => {
+     const mo = (q.date||q.start_date||"").slice(0,7);
+     if(mDb[mo]) {
+       mDb[mo].rev += (q.total||0);
+       mDb[mo].cost += ((q.labor||0)*0.6 + (q.equip||0)*0.7 + (q.travel||0) + (q.mats||0)*0.85 + (q.hauling||0)*0.85 + (q.subs||0)*0.85);
+     }
+  });
+  const lineLabels = Object.keys(mDb).sort();
+  const lineData = lineLabels.map(k => mDb[k].rev>0 ? parseFloat(((mDb[k].rev-mDb[k].cost)/mDb[k].rev*100).toFixed(1)) : 0);
+  
+  const maxM = Math.max(...lineData, 40);
+  const minM = Math.min(...lineData, 10);
+  const getX = i => 50 + (i * ((700 - 100) / Math.max(lineData.length-1,1)));
+  const getY = v => 250 - 30 - ((v - minM) / (maxM - minM) * (250 - 60));
+  const pts = lineData.map((d,i)=>`${getX(i)},${getY(d)}`).join(" ");
+
+  const C = { sur: "#ffffff", bdr: "#e2e8f0", txt: "#1e293b", txtS: "#64748b" };
+
+  return (
+    <div style={{ padding: "0 0 32px 0", background: "#fbfbf9", color: "#333", fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>Finance<br/>dashboard</h1>
+      </div>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20, marginBottom: 32 }}>
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 20 }}>
+          <div style={{ color: C.txtS, fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Quoted Value</div>
+          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8 }}>{fmt(totalQuoted)}</div>
+        </div>
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 20 }}>
+          <div style={{ color: C.txtS, fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Blended Gross Margin</div>
+          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, color: marginPct >= 30 ? "#16a34a" : "#dc2626" }}>{marginPct.toFixed(1)}%</div>
+        </div>
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 20 }}>
+          <div style={{ color: C.txtS, fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Discounts Given</div>
+          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, color: "#dc2626", display: "flex", alignItems: "baseline", gap: 8 }}>
+             {fmt(discAmt)}
+             <span style={{ fontSize: 13, fontWeight: 600 }}>({marginImpact>0?"-":""}{marginImpact.toFixed(1)}pts)</span>
+          </div>
+        </div>
+        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 20 }}>
+          <div style={{ color: C.txtS, fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Won Backlog Value</div>
+          <div style={{ fontSize: 28, fontWeight: 700, marginTop: 8, color: "#0ea5e9" }}>{fmt(backlogVal)}</div>
+        </div>
+      </div>
+      
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "stretch" }}>
+        <div style={{ flex: "1 1 350px", background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 24 }}>
+          <h3 style={{ margin: "0 0 20px 0", fontSize: 16, color: C.txt }}>Cost Breakdown</h3>
+          <div style={{ display:"flex", alignItems:"center" }}>
+             <svg width={240} height={240} viewBox="0 0 240 240" style={{flexShrink:0}}>
+               {pieData.map((d,i) => {
+                 const sa = (d.value / totalPie) * 360;
+                 if(sa === 0) return null;
+                 const a1 = curAngle * Math.PI / 180;
+                 curAngle += sa;
+                 const a2 = curAngle * Math.PI / 180;
+                 const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+                 const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+                 const la = sa > 180 ? 1 : 0;
+                 return <path key={i} d={sa===360 ? `M ${cx} ${cy-r} a ${r} ${r} 0 1 1 0 ${r*2} a ${r} ${r} 0 1 1 0 -${r*2}` : `M ${x1} ${y1} A ${r} ${r} 0 ${la} 1 ${x2} ${y2}`} fill="none" stroke={d.color} strokeWidth={stroke} />;
+               })}
+             </svg>
+             <div style={{ marginLeft:20, flex:1 }}>
+               {pieData.map((d,i)=>(
+                 <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:12, fontSize:13 }}>
+                   <div style={{ display:"flex", alignItems:"center", color:C.txt }}><span style={{width:10,height:10,background:d.color,marginRight:8,borderRadius:2}}/>{d.label}</div>
+                   <div style={{ fontWeight:600 }}>${Math.round(d.value).toLocaleString()}</div>
+                 </div>
+               ))}
+             </div>
+          </div>
+        </div>
+        <div style={{ flex: "2 1 500px", background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 24 }}>
+          <h3 style={{ margin: "0 0 20px 0", fontSize: 16, color: C.txt }}>Margin Trend (Last 12 Months)</h3>
+           <div style={{ overflowX:"auto" }}>
+             <svg width={700} height={250}>
+               <line x1={50} y1={getY(30)} x2={650} y2={getY(30)} stroke="#cbd5e1" strokeDasharray="5,5" />
+               <text x={655} y={getY(30)+4} fill="#64748b" fontSize={11}>30% Target</text>
+               <polyline points={pts} fill="none" stroke="#0ea5e9" strokeWidth={3} />
+               {lineData.map((v,i)=>(<circle key={i} cx={getX(i)} cy={getY(v)} r={4} fill="#0ea5e9" />))}
+               {lineLabels.map((l,i)=>(<text key={i} x={getX(i)} y={240} fill="#94a3b8" fontSize={11} textAnchor="middle">{l.slice(5,7)}/{l.slice(2,4)}</text>))}
+             </svg>
+           </div>
+        </div>
+      </div>
     </div>
   );
 }
