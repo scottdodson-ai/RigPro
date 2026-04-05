@@ -906,8 +906,8 @@ const BUILT_IN_REPORTS = [
   { id:"neighborhood-report", name:"Neighborhood Report",   category:"Customers",  desc:"Find customers by zipcode or proximity",            scope:"org" },
   { id:"prospect-report",     name:"Prospect Report",       category:"Pipeline",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
 
-  // Promoted to Executive (Temporarily Excluded)
-  // { id:"executive-dashboard",   name:"Executive Dashboard",     category:"Executive", desc:"Global executive overview and KPIs", scope:"org"},
+  // Promoted to Executive 
+  { id:"executive-dashboard",   name:"Executive Dashboard",     category:"Executive", desc:"Global executive overview and KPIs", scope:"org"},
   { id:"exec-rev-by-month",     name:"Sales by Month",          category:"Executive", desc:"Rolled-up revenue trend line", scope:"org" },
   { id:"exec-pipeline-summary", name:"Pipeline Summary",        category:"Executive", desc:"Total open value by status only", scope:"org" },
   { id:"exec-win-loss",         name:"Win/Loss Analysis",       category:"Executive", desc:"Single blended win rate % with trend indicator", scope:"org" },
@@ -10308,7 +10308,6 @@ function ExecutiveDashboard({ jobs, reqs, phiConfig }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>Executive<br/>dashboard</h1>
         
-        {/* PHI Widget Temporarily Disabled for debugging
         {phi && (
           <div style={{ display: "flex", gap: "20px", alignItems: "center", background: "#fff", padding: "12px 20px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
              <div>
@@ -10328,7 +10327,6 @@ function ExecutiveDashboard({ jobs, reqs, phiConfig }) {
              </div>
           </div>
         )}
-        */}
 
         <select style={{ padding: "8px 12px", borderRadius: 4, border: "1px solid #ccc", fontSize: 16, background: "#fff", cursor:"pointer", minWidth: 150 }}>
           <option>YTD 2026</option>
