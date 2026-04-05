@@ -2,6 +2,8 @@ import { useState, useMemo, useRef, useEffect, Fragment } from "react";
 import CustomerCRMBoard from "./CustomerCRMBoard";
 import VectorSearchPanel from "./VectorSearchPanel";
 import PhiConfigPanel from "./PhiConfigPanel";
+import PhiExplainerReport from "./PhiExplainerReport";
+import { calculatePHI } from "./phiEngine";
 const InvestorDashboard = () => <div style={{padding:40,color:"#fff",textAlign:"center",fontSize:18}}>Investor Dashboard — coming soon.</div>;
 
 
@@ -913,6 +915,7 @@ const BUILT_IN_REPORTS = [
   
   // New Executive Reports
   { id:"exec-pipeline-health",  name:"Pipeline Health Index",    category:"Executive", desc:"Composite score of pipeline value, aging, and win rate", scope:"org" },
+  { id:"phi-explainer",         name:"PHI Explainer",            category:"Executive", desc:"Pipeline Health Index explainer and calculation rules", scope:"org" },
   { id:"exec-rev-vs-forecast",  name:"Revenue vs. Forecast",     category:"Executive", desc:"Actual won vs forecasted revenue", scope:"org" },
   { id:"exec-top-customers",    name:"Top 10 Customers by Revenue", category:"Executive", desc:"Current vs prior period revenue with delta", scope:"org" },
   { id:"exec-backlog",          name:"Backlog Report",           category:"Executive", desc:"Won jobs not completed grouped by month", scope:"org" },
@@ -930,6 +933,9 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
   switch(reportId) {
     case "executive-dashboard": {
       return { isExecutiveDashboardUI: true, summary: "Main Executive Dashboard" };
+    }
+    case "phi-explainer": {
+      return { isPhiExplainer: true, summary: "Pipeline Health Index Logic" };
     }
     case "pipeline-dashboard": {
       return {
@@ -968,8 +974,9 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
         rows:[[fmt2(rev),fmt2(cost),fmt2(margin),pct+"%"]], rawRefs:[],
         summary:`Blended gross margin % summary only` };
     }
-    case "exec-pipeline-health": {
-      return { isExecutiveReport: true, isHealthReport: true, cols:["Score","Status"], rows:[["82/100","🟢 Strong"]], rawRefs:[], summary:`Composite score of pipeline value, aging, and win rate` };
+    case "exec-pipeline-health":
+    case "phi-explainer": {
+      return { isPhiExplainer: true, summary: "Pipeline Health Index Logic" };
     }
     case "exec-rev-vs-forecast": {
       return { isExecutiveReport: true, isRevVsFrst: true, cols:["Actual Rev","Forecast","Gap"], rows:[["$1,250,000","$1,000,000","+$250,000"]], rawRefs:[], summary:`Actual won vs forecasted revenue` };
@@ -2709,7 +2716,9 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
               )}
               {/* Table or Dashboard */}
               {reportData?.isExecutiveDashboardUI ? (
-                 <ExecutiveDashboard jobs={filteredJobs} reqs={filteredReqs} />
+                 <ExecutiveDashboard jobs={filteredJobs} reqs={filteredReqs} phiConfig={phiConfig} />
+              ) : reportData?.isPhiExplainer ? (
+                 <PhiExplainerReport jobs={filteredJobs} reqs={filteredReqs} phiConfig={phiConfig} />
               ) : reportData?.isEstimateCycleReport ? (
                  <AverageEstimateCycleReport jobs={filteredJobs} reqs={filteredReqs} custData={custData} jobFolders={jobFolders} />
               ) : reportData?.isCustomerDashboard ? (
@@ -9075,6 +9084,16 @@ export default function App() {
     return s ? JSON.parse(s) : DEFAULT_COMPANY;
   });
   useEffect(() => { localStorage.setItem("rigpro_company", JSON.stringify(companyInfo)); }, [companyInfo]);
+  
+  const [phiConfig, setPhiConfig] = useState(null);
+  useEffect(() => {
+    if (token) {
+      fetch('/api/admin/phi-config', { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(res => res.json())
+        .then(data => setPhiConfig(data))
+        .catch(console.error);
+    }
+  }, [token]);
   const [liftTonThreshold, setLiftTonThreshold] = useState(10);
   const [jobFolders, setJobFolders] = useState({});
   const [showJFM,    setShowJFM]    = useState(null);
@@ -10206,7 +10225,7 @@ export default function App() {
   return null;
 }
 
-function ExecutiveDashboard({ jobs, reqs }) {
+function ExecutiveDashboard({ jobs, reqs, phiConfig }) {
   const won = jobs.filter(q => q.status === "Won");
   const fmt = n => typeof n==="number" ? (n >= 1000000 ? "$" + (n/1000000).toFixed(1) + "M" : n >= 1000 ? "$" + Math.round(n/1000) + "K" : "$" + Math.round(n)) : n;
   
@@ -10226,10 +10245,33 @@ function ExecutiveDashboard({ jobs, reqs }) {
   const openValue = jobs.filter(q => !["Won","Lost","Dead"].includes(q.status)).reduce((s,q)=>s+(q.total||0),0);
   const totalOpen = jobs.filter(q => !["Won","Lost","Dead"].includes(q.status)).length;
 
+  const phi = phiConfig ? calculatePHI(jobs, reqs, phiConfig) : null;
+
   return (
     <div style={{ padding: "0 0 32px 0", background: "#fbfbf9", color: "#333", fontFamily: "'Inter', sans-serif" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>Executive<br/>dashboard</h1>
+        
+        {phi && (
+          <div style={{ display: "flex", gap: "20px", alignItems: "center", background: "#fff", padding: "12px 20px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+             <div>
+               <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>Pipeline Health Index <a href="#" onClick={(e)=> {e.preventDefault(); window.dispatchEvent(new CustomEvent('change-report', {detail: 'phi-explainer'}))}} style={{ fontSize:"10px", color:"#3b82f6", marginLeft: 8, textTransform: "none", letterSpacing: "0" }}>What is this?</a></div>
+               <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginTop: "4px" }}>
+                 <span style={{ fontSize: "32px", fontWeight: 800, color: phi.color, lineHeight: 1 }}>{phi.score}</span>
+                 <span style={{ fontSize: "14px", fontWeight: 600, color: phi.color, background: `${phi.color}15`, padding: "2px 8px", borderRadius: "12px" }}>{phi.band}</span>
+               </div>
+               <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "4px" }}>{phi.ratios.company}% Company / {phi.ratios.industry}% Industry | <span style={{color:"#64748b"}}>vs Co: {phi.phiCompany} vs Ind: {phi.phiIndustry}</span></div>
+             </div>
+             
+             <div style={{ borderLeft: "1px solid #e2e8f0", paddingLeft: "20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px" }}>
+                <div><div style={{fontSize: "10px", color: "#94a3b8"}}>Open Value</div><div style={{fontSize: "14px", fontWeight: 600}}>{fmt(openValue)}</div></div>
+                <div><div style={{fontSize: "10px", color: "#94a3b8"}}>Win Rate</div><div style={{fontSize: "14px", fontWeight: 600}}>{phi.actuals.win_rate.toFixed(1)}%</div></div>
+                <div><div style={{fontSize: "10px", color: "#94a3b8"}}>Stale Estimates</div><div style={{fontSize: "14px", fontWeight: 600}}>{Math.round(phi.actuals.stale_pct * 100)}%</div></div>
+                <div><div style={{fontSize: "10px", color: "#94a3b8"}}>Avg Cycle</div><div style={{fontSize: "14px", fontWeight: 600}}>{phi.actuals.speed} days</div></div>
+             </div>
+          </div>
+        )}
+
         <select style={{ padding: "8px 12px", borderRadius: 4, border: "1px solid #ccc", fontSize: 16, background: "#fff", cursor:"pointer", minWidth: 150 }}>
           <option>YTD 2026</option>
         </select>
