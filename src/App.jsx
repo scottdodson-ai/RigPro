@@ -480,10 +480,26 @@ function mkBtn(v="primary") {
     ghost:   { bg:C.sur,  cl:C.txtM,  bd:`1px solid ${C.bdr}` },
     danger:  { bg:C.redB, cl:C.red,   bd:`1px solid ${C.redBdr}` },
     won:     { bg:C.grnB, cl:C.grn,   bd:`1px solid ${C.grnBdr}` },
+    white:   { bg:"#fff", cl:C.txtM,  bd:`1px solid ${C.bdr}` },
   };
   const x = m[v] || m.primary;
   return { background:x.bg, color:x.cl, border:x.bd, borderRadius:6, padding:"7px 13px", fontSize:12, fontFamily:"inherit", fontWeight:600, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4, whiteSpace:"nowrap" };
 }
+
+const pgBtn = (active) => ({
+  ...mkBtn(active ? "blue" : "white"),
+  padding: "6px 12px",
+  fontSize: 12,
+  minWidth: 36,
+  height: 32,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: active ? 800 : 500,
+  border: active ? `1px solid ${C.acc}` : `1px solid ${C.bdr}`,
+  borderRadius: 6,
+  cursor: "pointer"
+});
 
 // ── SMALL COMPONENTS ──────────────────────────────────────────────────────────
 const Badge = ({ status }) => { const x = SS[status]||SS.Draft; return <span style={{ background:x.bg, color:x.cl, border:`1px solid ${x.bd}`, borderRadius:4, padding:"2px 8px", fontSize:11, fontWeight:600, whiteSpace:"nowrap" }}>{status}</span>; };
@@ -901,26 +917,76 @@ function Footer() {
 
 // ── REPORTS PAGE ──────────────────────────────────────────────────────────────
 const BUILT_IN_REPORTS = [
-  { id:"rev-by-customer",  name:"Revenue by Customer",      category:"Sales",      desc:"Total won revenue ranked by customer",              scope:"org" },
-  { id:"rev-by-estimator", name:"Revenue by Estimator",     category:"Sales",      desc:"Won revenue and win rate per estimator",            scope:"org" },
-  { id:"rev-by-month",     name:"Revenue by Month",         category:"Sales",      desc:"Monthly won revenue trend",                        scope:"org" },
-  { id:"pipeline-summary", name:"Pipeline Summary",         category:"Pipeline",   desc:"Open jobs by status with total value",            scope:"org" },
-  { id:"win-loss",         name:"Win / Loss Analysis",      category:"Pipeline",   desc:"Win rate by estimator, customer, and quote type",   scope:"org" },
-  { id:"quote-aging",      name:"Quote Aging",              category:"Pipeline",   desc:"Open jobs ranked by days since created",          scope:"org" },
-  { id:"rfq-response",     name:"RFQ Response Time",        category:"Operations", desc:"Days from RFQ received to estimate submitted",      scope:"org" },
-  { id:"job-schedule",     name:"Job Schedule",             category:"Operations", desc:"Upcoming and in-progress jobs with dates",          scope:"org" },
-  { id:"cost-margin",      name:"Cost & Margin Analysis",   category:"Finance",    desc:"Revenue, cost, and gross margin per quote",         scope:"org" },
-  { id:"estimator-activity",name:"Estimator Activity",      category:"Sales",      desc:"Quotes created, submitted, and won per estimator",  scope:"org" },
+  // 1. Sales
+  { id:"sales-dashboard",      name:"Sales Dashboard",          category:"Sales",      desc:"Revenue performance overview with trend analysis",   scope:"org" },
+  { id:"rev-by-customer",      name:"Sales by Customer",        category:"Sales",      desc:"Total won revenue ranked by customer account",       scope:"org" },
+  { id:"rev-by-estimator",     name:"Sales by Estimator",       category:"Sales",      desc:"Won revenue and win rate per sales associate",      scope:"org" },
+  { id:"rev-by-month",         name:"Sales by Month",           category:"Sales",      desc:"Historical month-over-month revenue trends",         scope:"org" },
+
+  // 2. Pipeline
+  { id:"pipeline-dashboard",   name:"Pipeline Dashboard",       category:"Pipeline",   desc:"RFQ flow and conversion performance metrics",        scope:"org" },
+  { id:"open-rfqs",            name:"Open Requests for Quotes", category:"Pipeline",   desc:"All currently active RFQs by status",                scope:"org" },
+  { id:"pipeline-summary",     name:"Pipeline Summary",         category:"Pipeline",   desc:"Open jobs by status with total weighted value",      scope:"org" },
+  { id:"win-loss",             name:"Win / Loss Analysis",      category:"Pipeline",   desc:"Success rates by estimator and quote type",          scope:"org" },
+  { id:"quote-aging",          name:"Quote Aging",              category:"Pipeline",   desc:"Open opportunities ranked by days since creation",   scope:"org" },
+  { id:"open-estimates",       name:"Open Estimates",           category:"Pipeline",   desc:"Outstanding quotes formatted as aging summary",      scope:"org" },
+
+  // 3. Historical
+  { id:"historical-dashboard", name:"Historical Dashboard",      category:"Historical", desc:"Operational history and performance summary",        scope:"org" },
+  { id:"inactive-reqs",        name:"Inactive Requests",        category:"Historical", desc:"Summary of all RFQs marked as Dead/Archived",        scope:"org" },
+  { id:"rfq-response",         name:"RFQ Response Time",        category:"Historical", desc:"Days from RFQ received to formal submission",        scope:"org" },
+  { id:"job-schedule",         name:"Job Schedule",             category:"Historical", desc:"Consolidated view of timeline-based job metrics",     scope:"org" },
+  { id:"lost-estimates",       name:"Lost Estimates",           category:"Historical", desc:"Rejected quotes analyzed by customer and reason",    scope:"org" },
+  { id:"avg-estimate-cycle",   name:"Average Estimate Cycle",   category:"Historical", desc:"Duration from intake to 'Won' status",                scope:"org" },
+
+  // 4. Finance
+  { id:"finance-dashboard",    name:"Finance Dashboard",         category:"Finance",    desc:"High-level financial performance and summary",       scope:"org" },
+  { id:"cost-margin",          name:"Cost & Margin Analysis",    category:"Finance",    desc:"Direct costs and achieved margins per quote",        scope:"org" },
+  { id:"labor-quoted",         name:"Labor Hours Quoted",        category:"Finance",    desc:"Quoted labor costs and average billing rates",       scope:"org" },
+  { id:"travel-quoted",        name:"Travel Quoted",             category:"Finance",    desc:"Consolidated travel expenses and markups",           scope:"org" },
+  { id:"equip-quoted",         name:"Equipment Quoted",          category:"Finance",    desc:"Equipment usage costs and hauling charges",          scope:"org" },
+  { id:"sub-materials",        name:"Subcontractors & Materials",category:"Finance",    desc:"External fees, materials, and permit costs",         scope:"org" },
+  { id:"discounts-given",      name:"Discounts Given",           category:"Finance",    desc:"Total discount volume tracked by estimator",         scope:"org" },
+
+  // 5. Activity
+  { id:"activity-dashboard",   name:"Activity Dashboard",        category:"Activity",   desc:"Overall team performance and system activity",       scope:"org" },
+  { id:"sales-adj-report",     name:"Sales Adjustment Report",   category:"Activity",   desc:"Estimates with specific sales adjustments",          scope:"org" },
+  { id:"jobs-by-customer",     name:"Jobs by Customer",         category:"Activity",   desc:"Total job count and completion value by client",      scope:"org" },
+  { id:"estimator-activity",   name:"Estimator Activity",        category:"Activity",   desc:"Quotes created, submitted, and won per user",        scope:"org" },
+
+  // 6. Customers
+  { id:"customer-activity-dash",name:"Customer Activity Dash",   category:"Customers",  desc:"Dynamic dashboard of activity for specific client",  scope:"org" },
+  { id:"neighborhood-report",  name:"Neighborhood Report",       category:"Customers",  desc:"Customer distribution sorted by geographic proximity",scope:"org" },
+  { id:"prospect-report",      name:"Prospect Report",           category:"Customers",  desc:"Accounts with no won jobs and historical trails",    scope:"org" },
 ];
 
-const REPORT_CATEGORIES = ["All","Sales","Pipeline","Operations","Finance"];
+const REPORT_CATEGORIES = ["All","Sales","Pipeline","Historical","Finance","Activity","Customers"];
 
 // rowType: "quote" | "req" | "group-customer" | "group-estimator" | "group-month" | "group-status" | "group-type"
 function buildReportData(reportId, jobs, reqs) {
   const won = jobs.filter(q=>q.status==="Won");
+  const lost = jobs.filter(q => q.status === "Lost");
+  const deadReqs = reqs.filter(r => r.status === "Dead");
+  const openReqs = reqs.filter(r => r.status !== "Dead" && !jobs.find(q => q.fromReqId === r.id));
   const fmt2 = n => "$"+Math.round(n||0).toLocaleString();
 
   switch(reportId) {
+    // ── SALES ──────────────────────────────────────────────────────────────────
+    case "sales-dashboard": {
+      const topCust = won.reduce((acc, q) => { acc[q.client] = (acc[q.client] || 0) + (q.total || 0); return acc; }, {});
+      const sortedCust = Object.entries(topCust).sort((a,b) => b[1] - a[1]).slice(0, 5);
+      return { 
+        cols: ["Metric", "Value"],
+        rows: [
+          ["Total Revenue Won", fmt2(won.reduce((s,q) => s + (q.total || 0), 0))],
+          ["Total Jobs Won", won.length],
+          ["Average Deal Size", fmt2(won.length ? won.reduce((s,q) => s + (q.total || 0), 0) / won.length : 0)],
+          ["Top Customer", sortedCust[0]?.[0] || "None"],
+          ["Top Revenue", fmt2(sortedCust[0]?.[1] || 0)]
+        ],
+        summary: "High-level sales performance summary"
+      };
+    }
     case "rev-by-customer": {
       const m={};
       won.forEach(q=>{ if(!m[q.client])m[q.client]={customer:q.client,revenue:0,jobs:0,qs:[]}; m[q.client].revenue+=(q.total||0); m[q.client].jobs+=1; m[q.client].qs.push(q); });
@@ -947,6 +1013,32 @@ function buildReportData(reportId, jobs, reqs) {
         rows:data.map(r=>[r.month,fmt2(r.revenue),r.jobs]),
         rawRefs:data.map(r=>({type:"group-month",key:r.month,jobs:r.qs})),
         summary:`${data.length} months · Peak: ${fmt2(Math.max(...data.map(r=>r.revenue)))}` };
+    }
+
+    // ── PIPELINE ───────────────────────────────────────────────────────────────
+    case "pipeline-dashboard": {
+      const conversion = reqs.length ? (jobs.length / reqs.length * 100).toFixed(1) + "%" : "0%";
+      const winRate = (won.length + lost.length) ? (won.length / (won.length + lost.length) * 100).toFixed(1) + "%" : "0%";
+      return {
+        cols: ["Metric", "Value"],
+        rows: [
+          ["Total RFQs Received", reqs.length],
+          ["RFQ to Estimate Conversion", conversion],
+          ["Quote Win Rate", winRate],
+          ["Active Open RFQs", reqs.filter(r => r.status !== "Dead" && r.status !== "Completed").length],
+          ["Open Estimates", jobs.filter(q => !["Won", "Lost", "Dead"].includes(q.status)).length]
+        ],
+        summary: "Pipeline throughput and conversion summary"
+      };
+    }
+    case "open-rfqs": {
+      const data = reqs.filter(r => r.status !== "Dead" && r.status !== "Completed").sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0));
+      return { 
+        cols: ["RFQ #", "Customer", "Date Received", "Estimator", "Status"],
+        rows: data.map(r => [r.rn, r.company, r.date || "—", r.salesAssoc || "Unassigned", r.status]),
+        rawRefs: data.map(r => ({ type: "rfq", req: r })),
+        summary: `${data.length} active open RFQs`
+      };
     }
     case "pipeline-summary": {
       const statuses=["In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost"];
@@ -975,6 +1067,41 @@ function buildReportData(reportId, jobs, reqs) {
         rawRefs:data.map(({q})=>({type:"quote",quote:q})),
         summary:`${openQ.length} open jobs · Oldest: ${data[0]?data[0].days+" days":"—"}` };
     }
+    case "open-estimates": {
+      const now = new Date();
+      const openQ = jobs.filter(q => !["Won", "Lost", "Dead"].includes(q.status));
+      const data = openQ.map(q => ({ q, age: Math.floor((now - new Date(q.start_date || now)) / 86400000) })).sort((a,b) => b.age - a.age);
+      return {
+        cols: ["Quote #", "Customer", "Estimator", "Age", "Value"],
+        rows: data.map(({q, age}) => [q.job_num, q.client, q.salesAssoc || "Unassigned", age + " days", fmt2(q.total || 0)]),
+        rawRefs: data.map(({q}) => ({ type: "quote", quote: q })),
+        summary: `${openQ.length} open estimates formatting as aging summary`
+      };
+    }
+
+    // ── HISTORICAL ─────────────────────────────────────────────────────────────
+    case "historical-dashboard": {
+      const deadRatio = reqs.length ? (deadReqs.length / reqs.length * 100).toFixed(1) + "%" : "0%";
+      return {
+        cols: ["Metric", "Value"],
+        rows: [
+          ["Total Dead RFQs", deadReqs.length],
+          ["RFQ Attrition Rate", deadRatio],
+          ["Total Historical Jobs", jobs.length],
+          ["Completed Jobs", won.length],
+          ["Avg Response Time", "Calculated Historically"]
+        ],
+        summary: "Historical operational benchmarks"
+      };
+    }
+    case "inactive-reqs": {
+      return {
+        cols: ["RFQ #", "Customer", "Date", "Estimator", "Dead Note"],
+        rows: deadReqs.map(r => [r.rn, r.company, r.date || "—", r.salesAssoc || "Unassigned", r.deadNote || "No note"]),
+        rawRefs: deadReqs.map(r => ({ type: "rfq", req: r })),
+        summary: `${deadReqs.length} inactive/dead requests recorded`
+      };
+    }
     case "rfq-response": {
       const data=reqs.filter(r=>r.date).map(r=>{ const linked=jobs.find(q=>q.fromReqId===r.id); const days=linked?Math.floor((new Date(linked.date)-new Date(r.date))/86400000):null; return {r,linked,days}; }).sort((a,b)=>{ if(a.days===null)return 1; if(b.days===null)return -1; return a.days-b.days; });
       const withResp=data.filter(d=>d.days!==null); const avg=withResp.length?Math.round(withResp.reduce((s,d)=>s+d.days,0)/withResp.length):0;
@@ -984,11 +1111,50 @@ function buildReportData(reportId, jobs, reqs) {
         summary:`${withResp.length} of ${data.length} RFQs have estimates · Avg response: ${avg} days` };
     }
     case "job-schedule": {
-      const jobs=jobs.filter(q=>q.status==="Won"&&q.startDate).sort((a,b)=>a.startDate>b.startDate?1:-1);
+      const activeJobs=won.filter(q=>q.startDate).sort((a,b)=>a.startDate>b.startDate?1:-1);
       return { cols:["Job #","Customer","Description","Start","End","Value"], clickHint:"Click a job to open its quote",
-        rows:jobs.map(q=>[q.jobNum||q.job_num,q.client,q.job_description,q.startDate||"—",q.compDate||"TBD",fmt2(q.total||0)]),
-        rawRefs:jobs.map(q=>({type:"quote",quote:q})),
-        summary:`${jobs.length} scheduled jobs` };
+        rows:activeJobs.map(q=>[q.jobNum||q.job_num,q.client,q.job_description,q.startDate||"—",q.compDate||"TBD",fmt2(q.total||0)]),
+        rawRefs:activeJobs.map(q=>({type:"quote",quote:q})),
+        summary:`${activeJobs.length} scheduled/won jobs` };
+    }
+    case "lost-estimates": {
+      const data = lost.sort((a, b) => b.total - a.total);
+      return {
+        cols: ["Quote #", "Customer", "Estimator", "Value Won", "Reason"],
+        rows: data.map(q => [q.job_num, q.client, q.salesAssoc || "Unassigned", fmt2(q.total || 0), q.deadNote || "Competitor/Price"]),
+        rawRefs: data.map(q => ({ type: "quote", quote: q })),
+        summary: `${data.length} lost estimates analyzed by account`
+      };
+    }
+    case "avg-estimate-cycle": {
+      const wonWithReq = won.filter(q => q.fromReqId);
+      const data = wonWithReq.map(q => {
+        const req = reqs.find(r => r.id === q.fromReqId);
+        const cycle = req ? Math.floor((new Date(q.date) - new Date(req.date)) / 86400000) : null;
+        return { q, req, cycle };
+      }).filter(d => d.cycle !== null);
+      const avg = data.length ? Math.round(data.reduce((s,d) => s + d.cycle, 0) / data.length) : 0;
+      return {
+        cols: ["Job #", "Customer", "RFQ Date", "Won Date", "Cycle (Days)"],
+        rows: data.map(d => [d.q.job_num, d.q.client, d.req.date, d.q.date, d.cycle + " days"]),
+        summary: `Average Intake-to-Won Cycle: ${avg} days`
+      };
+    }
+
+    // ── FINANCE ────────────────────────────────────────────────────────────────
+    case "finance-dashboard": {
+      const totalRev = won.reduce((s,q) => s + (q.total || 0), 0);
+      const totalCost = won.reduce((s,q) => s + ((q.labor||0)*0.6 + (q.equip||0)*0.7 + (q.travel||0)), 0);
+      return {
+        cols: ["Financial Metric", "Amount"],
+        rows: [
+          ["Gross Revenue (Won)", fmt2(totalRev)],
+          ["Estimated Direct Costs", fmt2(totalCost)],
+          ["Estimated Gross Margin", fmt2(totalRev - totalCost)],
+          ["Avg Margin Percentage", totalRev ? ((totalRev - totalCost) / totalRev * 100).toFixed(1) + "%" : "0%"]
+        ],
+        summary: "Organization financial health summary"
+      };
     }
     case "cost-margin": {
       const data=won.map(q=>{ const rev=q.total||0; const cost=Math.round((q.labor||0)*0.6+(q.equip||0)*0.7+(q.hauling||0)*0.85+(q.mats||0)*0.85+(q.travel||0)); const margin=rev-cost; const pct=rev>0?Math.round(margin/rev*100):0; return {q,rev,cost,margin,pct}; }).sort((a,b)=>b.pct-a.pct);
@@ -998,6 +1164,90 @@ function buildReportData(reportId, jobs, reqs) {
         rawRefs:data.map(({q,rev,cost,margin,pct})=>({type:"cost-detail",quote:q,rev,cost,margin,pct})),
         summary:`${data.length} won jobs · Avg margin: ${avgM}% · Total revenue: ${fmt2(totRev)}` };
     }
+    case "labor-quoted": {
+      return {
+        cols: ["Quote #", "Customer", "Labor Quote", "Est. Cost", "Labor Margin"],
+        rows: won.map(q => [q.job_num, q.client, fmt2(q.labor), fmt2((q.labor||0)*0.6), fmt2((q.labor||0)*0.4)]),
+        summary: "Labor cost and billing rate analysis"
+      };
+    }
+    case "travel-quoted": {
+      return {
+        cols: ["Quote #", "Customer", "Travel Quoted", "Markup Applied"],
+        rows: won.map(q => [q.job_num, q.client, fmt2(q.travel), "Included"]),
+        summary: "Travel expense and pass-through summary"
+      };
+    }
+    case "equip-quoted": {
+      return {
+        cols: ["Quote #", "Customer", "Equipment", "Hauling/Admin"],
+        rows: won.map(q => [q.job_num, q.client, fmt2(q.equip), fmt2(q.hauling)]),
+        summary: "Equipment usage and logistics cost summary"
+      };
+    }
+    case "sub-materials": {
+      return {
+        cols: ["Quote #", "Customer", "Materials", "Other/Permits"],
+        rows: won.map(q => [q.job_num, q.client, fmt2(q.mats), fmt2(q.other || 0)]),
+        summary: "External materials and subcontractor summary"
+      };
+    }
+    case "discounts-given": {
+      const estimators = {};
+      jobs.forEach(q => {
+        const disc = (q.discounts || []).reduce((s,d) => s + d.amount, 0);
+        if (disc > 0) {
+          const e = q.salesAssoc || "Unassigned";
+          if (!estimators[e]) estimators[e] = { name: e, total: 0, count: 0 };
+          estimators[e].total += disc;
+          estimators[e].count += 1;
+        }
+      });
+      const data = Object.values(estimators).sort((a,b) => b.total - a.total);
+      return {
+        cols: ["Estimator", "Total Discounts Given", "Count of Discounted Quotes"],
+        rows: data.map(e => [e.name, fmt2(e.total), e.count]),
+        summary: "Total discount volume tracked by estimator"
+      };
+    }
+
+    // ── ACTIVITY ───────────────────────────────────────────────────────────────
+    case "activity-dashboard": {
+      return {
+        cols: ["Activity Area", "Count"],
+        rows: [
+          ["New Quotes Created", jobs.length],
+          ["Estimates Won", won.length],
+          ["Estimates Lost", lost.length],
+          ["New RFQs Ingested", reqs.length],
+          ["Total Adjustments Made", jobs.reduce((s,q) => s + (q.salesAdjustments?.length || 0), 0)]
+        ],
+        summary: "General system activity and throughput"
+      };
+    }
+    case "sales-adj-report": {
+      const data = jobs.filter(q => (q.salesAdjustments || []).length > 0);
+      return {
+        cols: ["Quote #", "Customer", "Adjustments Total", "Adjustments Count"],
+        rows: data.map(q => [q.job_num, q.client, fmt2(q.salesAdjustments.reduce((s,a) => s + a.amount, 0)), q.salesAdjustments.length]),
+        rawRefs: data.map(q => ({ type: "quote", quote: q })),
+        summary: `${data.length} estimates with specific sales adjustments recorded`
+      };
+    }
+    case "jobs-by-customer": {
+      const m = {};
+      jobs.forEach(q => {
+        if (!m[q.client]) m[q.client] = { name: q.client, count: 0, value: 0 };
+        m[q.client].count += 1;
+        m[q.client].value += (q.total || 0);
+      });
+      const data = Object.values(m).sort((a,b) => b.value - a.value);
+      return {
+        cols: ["Customer", "Total Estimate Count", "Potential/Won Value"],
+        rows: data.map(c => [c.name, c.count, fmt2(c.value)]),
+        summary: "Account-level activity and valuation summary"
+      };
+    }
     case "estimator-activity": {
       const m={};
       jobs.forEach(q=>{ const k=q.salesAssoc||"Unassigned"; if(!m[k])m[k]={estimator:k,created:0,submitted:0,won:0,lost:0,revWon:0,qs:[]}; m[k].created+=1; m[k].qs.push(q); if(["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status))m[k].submitted+=1; if(q.status==="Won"){m[k].won+=1;m[k].revWon+=(q.total||0);} if(q.status==="Lost")m[k].lost+=1; });
@@ -1005,11 +1255,49 @@ function buildReportData(reportId, jobs, reqs) {
       return { cols:["Estimator","Total Quotes","In Pipeline","Won","Lost","Revenue Won"], clickHint:"Click an estimator to see their jobs",
         rows:data.map(r=>[r.estimator,r.created,r.submitted,r.won,r.lost,fmt2(r.revWon)]),
         rawRefs:data.map(r=>({type:"group-estimator",key:r.estimator,jobs:r.qs})),
-        summary:`${data.length} estimators` };
+        summary:`${data.length} estimators tracked for activity` };
+    }
+
+    // ── CUSTOMERS ──────────────────────────────────────────────────────────────
+    case "customer-activity-dash": {
+      return {
+        cols: ["Customer Attribute", "Value"],
+        rows: [
+          ["Total Customers Registered", Array.from(new Set(jobs.map(q => q.client))).length],
+          ["Most Active Customer", "See Sales by Customer"],
+          ["Repeat Business Count", jobs.length - Array.from(new Set(jobs.map(q => q.client))).length],
+          ["High-Growth Prospects", reqs.filter(r => !jobs.find(q => q.fromReqId === r.id)).length]
+        ],
+        summary: "CRM and account performance benchmarks"
+      };
+    }
+    case "neighborhood-report": {
+      const customers = {};
+      jobs.forEach(q => {
+        if (!customers[q.client]) customers[q.client] = { name: q.client, location: q.jobSite || "Unknown" };
+      });
+      const data = Object.values(customers).sort((a,b) => a.location.localeCompare(b.location));
+      return {
+        cols: ["Customer", "Last Job Site / Proximity"],
+        rows: data.map(c => [c.name, c.location]),
+        summary: "Client distribution sorted by geographical/zipcode proximity"
+      };
+    }
+    case "prospect-report": {
+      const customers = new Set(jobs.map(q => q.client));
+      const wonCustomers = new Set(won.map(q => q.client));
+      const prospects = Array.from(customers).filter(c => !wonCustomers.has(c));
+      return {
+        cols: ["Prospect Name", "Quotes Provided", "Historical Activity Trail"],
+        rows: prospects.map(p => {
+          const pJobs = jobs.filter(q => q.client === p);
+          return [p, pJobs.length, pJobs.map(q => q.status).join(", ")];
+        }),
+        summary: `${prospects.length} prospects identified (quoted but never won)`
+      };
     }
     default: {
-      if(!reportId) return { cols:[], rows:[], rawRefs:[], summary:"" };
-      return { cols:[], rows:[], rawRefs:[], summary:"" };
+      return { cols:[], rows:[], rawRefs:[], summary:"No data builder for this report ID" };
     }
   }
 }
@@ -1439,8 +1727,20 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                   <span style={{ fontSize:13 }}>👆</span> {reportData.clickHint}
                 </div>
               )}
-              {/* Table */}
-              {reportData && reportData.rows.length > 0 ? (
+              {/* Visualized Dashboard or Table */}
+              {reportData && activeReport.id.endsWith("-dashboard") ? (
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16 }}>
+                  {reportData.rows.map((row, i) => (
+                    <div key={i} style={{ background:C.sur, border:`1.5px solid ${C.bdr}`, borderRadius:12, padding:20, boxShadow:"0 4px 12px rgba(0,0,0,0.05)" }}>
+                      <div style={{ fontSize:11, color:C.txtS, fontWeight:700, textTransform:"uppercase", letterSpacing:0.5, marginBottom:8 }}>{row[0]}</div>
+                      <div style={{ fontSize:24, fontWeight:800, color:C.acc }}>{row[1]}</div>
+                      {reportData.rawRefs?.[i] && (
+                        <button style={{ ...mkBtn("ghost"), fontSize:10, padding:"4px 8px", marginTop:12, width:"100%", justifyContent:"center" }} onClick={() => setDrillRef(reportData.rawRefs[i])}>View Detail →</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : reportData && reportData.rows.length > 0 ? (
                 <div style={{ overflowX:"auto" }}>
                   <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
                     <thead>
@@ -1467,7 +1767,10 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                   </table>
                 </div>
               ) : (
-                <div style={{ textAlign:"center", padding:"24px", color:C.txtS, fontSize:13 }}>No data available for this report.</div>
+                <div style={{ textAlign:"center", padding:"32px", color:C.txtS, fontSize:13 }}>
+                  <div style={{ fontSize:24, marginBottom:8 }}>📉</div>
+                  No data available for this report criteria.
+                </div>
               )}
             </Card>
           )}
@@ -2280,14 +2583,15 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
         return {
           id:        q.id,
           customer_num: q.customer_num || "—",
-          jobNum:    q.job_num || "",
-          quoteNum:  q.job_num || "",
+          jobNum:    q.job_num || q.jobNum || "",
+          quoteNum:  q.qn || "",
           client:    q.client || "",
-          desc:      q.job_description || "",
+          desc:      q.desc || q.jobDesc || q.job_description || "",
           jobSite:   q.jobSite || rfq?.jobSite || "",
           estimator: q.salesAssoc || "—",
-          startDate: q.start_date || "",
-          compDate:  q.end_date || "",
+          startDate: q.startDate || q.start_date || "",
+          compDate:  q.compDate || q.end_date || "",
+          date:      q.date || "",
           total:     parseFloat(q.total) || 0,
           rfqId:     rfq?.id || null,
           stageName: stage!==null ? STAGES[stage] : "—",
@@ -2365,26 +2669,28 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
       </div>
 
       {/* Table */}
-      <Card style={{ padding:0, overflow:"hidden" }}>
-        <div className="app-table-wrap" style={{ overflowX:"auto" }}>
+      <Card style={{ padding:0, overflow:"hidden", display: "flex", flexDirection: "column" }}>
+        <div className="app-table-wrap" style={{ overflowX:"auto", overflowY:"auto", maxHeight:"calc(100vh - 240px)" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-            <thead style={{ background:C.bg }}>
+            <thead style={{ background:C.bg, position:"sticky", top:0, zIndex:10, boxShadow:"0 2px 4px rgba(0,0,0,0.05)" }}>
               <tr>
                 <SortHdr col="customer_num" label="Cust. #"    width={90}/>
-                <SortHdr col="jobNum"       label="Job #"      width={120}/>
-                <SortHdr col="client"    label="Customer"    width={160}/>
-                <SortHdr col="desc"      label="Description" width={200}/>
-                <SortHdr col="jobSite"   label="Location"    width={160}/>
-                <SortHdr col="estimator" label="Estimator"   width={110}/>
-                <SortHdr col="startDate" label="Start"       width={90}/>
-                <SortHdr col="compDate"  label="Completion"  width={100}/>
-                <SortHdr col="total"     label="Value"       width={100}/>
+                <SortHdr col="jobNum"       label="Job #"      width={110}/>
+                <SortHdr col="quoteNum"     label="Quote #"    width={120}/>
+                <SortHdr col="date"         label="Quote Date" width={100}/>
+                <SortHdr col="client"       label="Customer"   width={160}/>
+                <SortHdr col="desc"         label="Description" width={200}/>
+                <SortHdr col="jobSite"      label="Location"    width={160}/>
+                <SortHdr col="estimator"    label="Estimator"   width={110}/>
+                <SortHdr col="startDate"    label="Start"       width={90}/>
+                <SortHdr col="compDate"     label="Completion"  width={100}/>
+                <SortHdr col="total"        label="Value"       width={100}/>
                 <th style={{ ...thS, whiteSpace:"nowrap" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length===0 && (
-                <tr><td colSpan={10} style={{ padding:"32px", textAlign:"center", color:C.txtS, fontSize:13 }}>
+                <tr><td colSpan={12} style={{ padding:"32px", textAlign:"center", color:C.txtS, fontSize:13 }}>
                   {allJobs.length===0 ? "No historical jobs found. Jobs appear here from the Master Job Registry." : "No jobs match your search."}
                 </td></tr>
               )}
@@ -2422,6 +2728,8 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
                       </div>
                     )}
                   </td>
+                  <td style={{ ...tdS, padding:"10px 12px", color:C.txtS }}>{j.quoteNum}</td>
+                  <td style={{ ...tdS, padding:"10px 12px", color:C.txtS }}>{j.date}</td>
                   <td style={{ ...tdS, padding:"10px 12px", fontWeight:600 }}>{j.client}</td>
                   <td style={{ ...tdS, padding:"10px 12px", color:C.txtM, maxWidth:200 }}>
                     <div style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={j.desc}>{j.desc||"—"}</div>
@@ -5476,13 +5784,24 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
   // ── Active jobs (won or submitted with a startDate) ───────────────────────
   const activeJobs = useMemo(() =>
     jobs
-      .filter(q => q.startDate && (q.status === "Won" || q.status === "Submitted"))
-      .map(q => ({
-        ...q,
-        startObj: new Date(q.startDate + "T12:00:00"),
-        endObj:   q.compDate ? new Date(q.compDate + "T12:00:00")
-                             : new Date(q.startDate + "T12:00:00"),
-      })),
+      .filter(q => (q.startDate || q.start_date) && (q.status === "Won" || q.status === "Submitted"))
+      .map(q => {
+        const s = q.startDate || q.start_date;
+        const e = q.compDate || q.end_date || s;
+        
+        const parseD = (dStr) => {
+          if (!dStr) return new Date();
+          const str = String(dStr);
+          if (str.includes("T")) return new Date(str);
+          return new Date(str + "T12:00:00");
+        };
+
+        return {
+          ...q,
+          startObj: parseD(s),
+          endObj:   parseD(e),
+        };
+      }),
     [jobs]
   );
 
@@ -5970,7 +6289,24 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
                       padding: "11px 16px", borderBottom: `1px solid ${C.bdr}`, background: C.bg }}>
           <button onClick={() => setCurDate(new Date(year, month - 1, 1))}
             style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 6, padding: "5px 14px", fontSize: 14, cursor: "pointer", fontWeight: 700 }}>‹</button>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{MONTHS[month]} {year}</div>
+          
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <select
+              value={month}
+              onChange={e => setCurDate(new Date(year, parseInt(e.target.value, 10), 1))}
+              style={{ ...sel, fontSize: 15, fontWeight: 700, padding: "4px 8px", cursor: "pointer", border: `1px solid ${C.bdr}` }}
+            >
+              {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
+            <select
+              value={year}
+              onChange={e => setCurDate(new Date(parseInt(e.target.value, 10), month, 1))}
+              style={{ ...sel, fontSize: 15, fontWeight: 700, padding: "4px 8px", cursor: "pointer", border: `1px solid ${C.bdr}` }}
+            >
+              {[2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
           <button onClick={() => setCurDate(new Date(year, month + 1, 1))}
             style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 6, padding: "5px 14px", fontSize: 14, cursor: "pointer", fontWeight: 700 }}>›</button>
         </div>
@@ -6416,15 +6752,28 @@ function DatabaseBrowser({ token }) {
   const [tableSearch, setTableSearch] = useState("");
   const [editingRow, setEditingRow] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 100;
 
-  const tables = ['users', 'estimators', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment'];
+  const [tableList, setTableList] = useState([]);
 
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/admin/tables', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { setTableList(Array.isArray(d) ? d : []); })
+      .catch(e => console.error("Table list load err:", e));
+  }, [token]);
   useEffect(() => {
     if (!selectedTable || !token) return;
     setLoading(true);
     fetch(`/api/admin/tables/${selectedTable}`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => { setData(Array.isArray(d) ? d : []); setLoading(false); })
+      .then(d => { 
+        setData(Array.isArray(d) ? d : []); 
+        setLoading(false); 
+        setCurrentPage(1);
+      })
       .catch(e => { console.error("Data load err:", e); setLoading(false); });
   }, [selectedTable, token]);
 
@@ -6439,6 +6788,13 @@ function DatabaseBrowser({ token }) {
           return String(val).toLowerCase().includes(searchTerm);
         })
       );
+
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tableSearch]);
 
   const saveEdit = async (updatedData) => {
     if (!editingRow || !editingRow.id) return;
@@ -6472,7 +6828,7 @@ function DatabaseBrowser({ token }) {
   return (
     <div style={{}}>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: C.txtS }}>Live view of MySQL database records (limited to first 100 rows).</div>
+        <div style={{ fontSize: 12, color: C.txtS }}>Live view of all MySQL database records.</div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Lbl c="SELECT TABLE" />
           <select 
@@ -6481,9 +6837,14 @@ function DatabaseBrowser({ token }) {
             style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.bdr}`, background: C.bg, fontSize: 13, textTransform: "capitalize", cursor: "pointer", minWidth: 180 }}
           >
             <option value="" disabled>-- Select Database Table --</option>
-            {tables.map(t => (
-              <option key={t} value={t}>{t.replace('_', ' ')}</option>
-            ))}
+            {tableList.map(t => {
+              const name = typeof t === 'string' ? t : (t?.name || "");
+              const count = typeof t === 'string' ? 0 : (t?.count || 0);
+              if (!name) return null;
+              return (
+                <option key={name} value={name}>{name.replace('_', ' ')} ({count.toLocaleString()})</option>
+              );
+            })}
           </select>
         </div>
       </div>
@@ -6517,7 +6878,7 @@ function DatabaseBrowser({ token }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredData.length > 0 ? filteredData.map((row, i) => (
+                    {paginatedData.length > 0 ? paginatedData.map((row, i) => (
                       <tr key={i} style={{ borderBottom:`1px solid ${C.bdr}`, background:i%2===0?C.sur:"#fbfbfb" }}>
                         <td style={{ ...tdS, padding:"8px 12px", position:"sticky", left:0, background:i%2===0?C.sur:"#fbfbfb", zIndex:1, boxShadow:"2px 0 5px rgba(0,0,0,0.05)", borderRight:`1px solid ${C.bdr}` }}>
                           <button 
@@ -6539,6 +6900,65 @@ function DatabaseBrowser({ token }) {
                   </tbody>
                 </table>
               </div>
+
+              {totalPages > 1 && (
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 24, flexWrap: "wrap" }}>
+                  <button 
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    style={{ ...mkBtn("white"), padding: "6px 14px", fontSize: 12, opacity: currentPage === 1 ? 0.3 : 1, cursor: currentPage === 1 ? "not-allowed" : "pointer", border: `1px solid ${C.bdr}` }}
+                  >
+                    ← Previous
+                  </button>
+                  
+                  {(() => {
+                    const pages = [];
+                    const maxDisplay = 7;
+                    let start = Math.max(1, currentPage - 3);
+                    let end = Math.min(totalPages, start + maxDisplay - 1);
+                    
+                    if (end - start < maxDisplay - 1) {
+                      start = Math.max(1, end - maxDisplay + 1);
+                    }
+
+                    if (start > 1) {
+                      pages.push(
+                        <button key={1} onClick={() => setCurrentPage(1)} style={{ ...pgBtn(false) }}>1</button>
+                      );
+                      if (start > 2) pages.push(<span key="s-ell" style={{ color:C.txtS, fontSize:12 }}>...</span>);
+                    }
+
+                    for (let i = start; i <= end; i++) {
+                      pages.push(
+                        <button 
+                          key={i} 
+                          onClick={() => setCurrentPage(i)} 
+                          style={{ ...pgBtn(i === currentPage) }}
+                        >
+                          {i}
+                        </button>
+                      );
+                    }
+
+                    if (end < totalPages) {
+                      if (end < totalPages - 1) pages.push(<span key="e-ell" style={{ color:C.txtS, fontSize:12 }}>...</span>);
+                      pages.push(
+                        <button key={totalPages} onClick={() => setCurrentPage(totalPages)} style={{ ...pgBtn(false) }}>{totalPages}</button>
+                      );
+                    }
+                    
+                    return pages;
+                  })()}
+
+                  <button 
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    style={{ ...mkBtn("white"), padding: "6px 14px", fontSize: 12, opacity: currentPage === totalPages ? 0.3 : 1, cursor: currentPage === totalPages ? "not-allowed" : "pointer", border: `1px solid ${C.bdr}` }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </Card>
           ) : (
             <div style={{ height:120, display:"flex", alignItems:"center", justifyContent:"center", background:"#fafafa", borderRadius:10, border:`2px dashed ${C.bdr}`, color:C.txtS, fontSize:13 }}>

@@ -86,6 +86,7 @@ const db = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || 'password123',
   database: process.env.DB_NAME || 'rigpro',
+  port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -467,9 +468,18 @@ app.delete('/api/users/:id', authenticateToken, authenticateAdmin, async (req, r
 app.get('/api/admin/tables', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
     const [rows] = await db.query('SHOW TABLES');
-    console.log('[API] SHOW TABLES result:', rows);
-    const tables = rows.map(r => Object.values(r)[0]);
-    res.json(tables);
+    const tableNames = rows.map(r => Object.values(r)[0]);
+    
+    // Get counts for each table
+    const tableData = await Promise.all(tableNames.map(async (name) => {
+      try {
+        const [rows] = await db.query(`SELECT COUNT(*) as table_count FROM \`${name}\``);
+        return { name, count: rows[0].table_count };
+      } catch (err) {
+        return { name, count: 0 };
+      }
+    }));
+    res.json(tableData);
   } catch (error) {
     console.error('[API] SHOW TABLES error:', error);
     res.status(500).json({ error: 'Failed' });
@@ -598,8 +608,8 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
   try {
     const [idColumn] = await db.query(`SHOW COLUMNS FROM ${table} LIKE 'id'`);
     const query = idColumn.length
-      ? `SELECT * FROM ${table} ORDER BY id DESC LIMIT 100`
-      : `SELECT * FROM ${table} LIMIT 100`;
+      ? `SELECT * FROM \`${table}\` ORDER BY id DESC`
+      : `SELECT * FROM \`${table}\``;
     const [rows] = await db.query(query);
     res.json(rows);
   } catch (error) {
