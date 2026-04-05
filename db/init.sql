@@ -241,7 +241,7 @@ INSERT INTO quotes (id, quote_number, customer_name, job_site, description, date
 CREATE TABLE IF NOT EXISTS rfqs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     rfq_number VARCHAR(20) NOT NULL,
-    company VARCHAR(100) NOT NULL,
+    customer_id INT,
     requester VARCHAR(100),
     email VARCHAR(100),
     phone VARCHAR(50),
@@ -252,7 +252,8 @@ CREATE TABLE IF NOT EXISTS rfqs (
     status VARCHAR(50),
     sales_assoc VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
 );
 
 INSERT INTO rfqs (rfq_number, company, requester, email, phone, job_site, description, notes, date, status, sales_assoc) VALUES

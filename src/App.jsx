@@ -2084,6 +2084,10 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
   }
 
   function handleSave() {
+    if (f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) {
+      alert("Please enter a valid email address.");
+      return;
+    }
     if(!name.trim()) { setError("Report name is required."); return; }
     if(columns.length===0) { setError("Select at least one column."); return; }
     const report = {
@@ -3143,6 +3147,10 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
 
   // Save — also add new company to custData if needed
   function handleSave() {
+    if (f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) {
+      alert("Please enter a valid email address.");
+      return;
+    }
     if(isNewCompany && setCustData) {
       // Add as new prospect
       const newEntry = {
@@ -3171,7 +3179,10 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
           {/* Company with autocomplete */}
           <div style={{ gridColumn:"1/-1" }}>
             <Lbl c="COMPANY *"/>
-            <AutoInput val={f.company} on={v=>u("company",v)} list={allCompanies} ph="Company name"/>
+            <AutoInput val={f.company} on={v => {
+              let val = v.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
+              u("company",val);
+            }} list={allCompanies} ph="Company name"/>
             {/* New company notice */}
             {isNewCompany && (
               <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5, background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:5, padding:"5px 10px", fontSize:11, color:C.blue }}>
@@ -3211,30 +3222,119 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
           )}
 
           {/* Requester / Phone */}
-          <div><Lbl c="REQUESTER *"/><input style={inp} value={f.requester} placeholder="Full name" onChange={e=>u("requester",e.target.value)}/></div>
-          <div><Lbl c="PHONE"/><input style={inp} value={f.phone} placeholder="XXX-XXX-XXXX" onChange={e=>u("phone",e.target.value)}/></div>
-          <div style={{ gridColumn:"1/-1" }}><Lbl c="EMAIL"/><input style={inp} value={f.email} placeholder="email@company.com" onChange={e=>u("email",e.target.value)}/></div>
+          <div>
+            <Lbl c="REQUESTER *"/>
+            <input 
+              style={inp} 
+              value={f.requester} 
+              placeholder="Full name" 
+              onChange={e => {
+                let val = e.target.value;
+                val = val.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
+                u("requester", val);
+              }}
+            />
+          </div>
+          <div>
+            <Lbl c="PHONE"/>
+            <input 
+              style={inp} 
+              value={f.phone} 
+              placeholder="XXX-XXX-XXXX" 
+              onChange={e => {
+                const d = e.target.value.replace(/\D/g, "");
+                let fmt = d;
+                if (d.length > 6) fmt = d.slice(0,3) + "-" + d.slice(3,6) + "-" + d.slice(6,10);
+                else if (d.length > 3) fmt = d.slice(0,3) + "-" + d.slice(3);
+                u("phone", fmt);
+              }}
+            />
+          </div>
+          <div style={{ gridColumn:"1/-1" }}><div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Lbl c="EMAIL"/>
+              {f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email) && (
+                <span style={{ fontSize: 10, color: '#e74c3c', fontWeight: 600 }}>Invalid email format</span>
+              )}
+            </div>
+            <input 
+              type="email" 
+              style={{ ...inp, border: f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email) ? '1px solid #e74c3c' : inp.border }} 
+              value={f.email} 
+              placeholder="email@company.com" 
+              onChange={e => u("email", e.target.value.replace(/[^a-zA-Z0-9@.\-_+]/g, "").toLowerCase())}/></div>
           <div style={{ gridColumn:"1/-1" }}>
             <Lbl c="JOB SITE ADDRESS"/>
-            {/* Suggest locations from custData */}
-            {custData[f.company]?.locations?.length>0 ? (
-              <>
-                <select style={{ ...sel, width:"100%", marginBottom:4 }}
-                  value={f.jobSite}
-                  onChange={e=>u("jobSite",e.target.value)}>
-                  <option value="">— Select a known location or type below —</option>
-                  {custData[f.company].locations.map(l=>(
-                    <option key={l.id} value={l.address||l.name}>{l.name}{l.address?" — "+l.address:""}</option>
-                  ))}
-                  <option value="__custom__">Enter custom address…</option>
-                </select>
-                {(f.jobSite==="" || f.jobSite==="__custom__") && (
-                  <input style={inp} value={f.jobSite==="__custom__"?"":f.jobSite} placeholder="123 Main St, City, State ZIP" onChange={e=>u("jobSite",e.target.value)}/>
-                )}
-              </>
-            ) : (
-              <input style={inp} value={f.jobSite} placeholder="123 Main St, City, State ZIP" onChange={e=>u("jobSite",e.target.value)}/>
-            )}
+            {(() => {
+              const hasLocations = custData[f.company]?.locations?.length > 0;
+              const isKnown = hasLocations && custData[f.company].locations.some(l => (l.address || l.name) === f.jobSite);
+              const isCustom = !isKnown && f.jobSite !== "";
+
+              // Helper to parse existing string into parts safely
+              const parseAddr = (str) => {
+                if(!str || str==="__custom__") return { st:"", cty:"", state:"", zip:"" };
+                const parts = str.split(", ");
+                if(parts.length >= 3) {
+                   const sz = parts[2].trim().split(" ");
+                   return { st:parts[0], cty:parts[1], state:sz[0]||"", zip:sz[1]||"" };
+                }
+                return { st:str, cty:"", state:"", zip:"" };
+              };
+              
+              const updatePart = (field, val) => {
+                let p = parseAddr(f.jobSite);
+                p[field] = val;
+                
+                // State validity filtering (only letters, max 2)
+                if(field === "state") p.state = val.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
+                // Zip validity filtering (only numbers, max 5)
+                if(field === "zip") p.zip = val.replace(/[^0-9]/g, "").slice(0, 5);
+
+                let full = p.st;
+                if(p.cty || p.state || p.zip) full += ", " + p.cty;
+                if(p.state || p.zip) full += ", " + p.state + (p.zip ? " " + p.zip : "");
+                u("jobSite", full);
+              };
+
+              const p = parseAddr(f.jobSite);
+
+              const stateValid = !p.state || p.state.length === 2;
+              const zipValid = !p.zip || p.zip.length === 5;
+
+              return (
+                <>
+                  {hasLocations && (
+                    <select style={{ ...sel, width:"100%", marginBottom:8 }}
+                      value={isKnown ? f.jobSite : (f.jobSite ? "__custom__" : "")}
+                      onChange={e => u("jobSite", e.target.value === "__custom__" ? " , ,  " : e.target.value)}>
+                      <option value="">— Select a known location or type below —</option>
+                      {custData[f.company].locations.map(l=>(
+                        <option key={l.id} value={l.address||l.name}>{l.name}{l.address?" — "+l.address:""}</option>
+                      ))}
+                      <option value="__custom__">Enter custom address…</option>
+                    </select>
+                  )}
+                  
+                  {(!hasLocations || isCustom || f.jobSite === "") && (
+                    <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:8 }}>
+                      <div style={{ gridColumn:"1/-1" }}>
+                        <input style={inp} value={p.st} placeholder="Street Address" onChange={e=>updatePart("st", e.target.value)}/>
+                      </div>
+                      <div>
+                        <input style={inp} value={p.cty} placeholder="City" onChange={e=>updatePart("cty", e.target.value)}/>
+                      </div>
+                      <div>
+                        <input style={{...inp, border: !stateValid ? "1px solid red" : inp.border}} value={p.state} placeholder="State (OH)" onChange={e=>updatePart("state", e.target.value)}/>
+                        {!stateValid && <div style={{fontSize:9, color:'red', marginTop:2}}>Requires 2 letters</div>}
+                      </div>
+                      <div>
+                        <input style={{...inp, border: !zipValid ? "1px solid red" : inp.border}} value={p.zip} placeholder="Zip (44312)" onChange={e=>updatePart("zip", e.target.value)}/>
+                        {!zipValid && <div style={{fontSize:9, color:'red', marginTop:2}}>Requires 5 digits</div>}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           <div style={{ gridColumn:"1/-1" }}><Lbl c="JOB DESCRIPTION *"/><textarea style={{ ...inp, height:80, resize:"vertical" }} value={f.desc} onChange={e=>u("desc",e.target.value)}/></div>
@@ -3253,9 +3353,24 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
 
         <div style={{ display:"flex", gap:8, marginTop:18, justifyContent:"flex-end" }}>
           <button style={mkBtn("ghost")} onClick={onClose}>Cancel</button>
-          <button style={mkBtn("primary")} onClick={handleSave}>
-            {isNewCompany ? "Save RFQ & Add Customer" : "Save RFQ"}
-          </button>
+          {(() => {
+            const companyOk = !!(f.company && f.company.trim());
+            const requesterOk = !!(f.requester && f.requester.trim());
+            const phoneOk = !!(f.phone && f.phone.replace(/\D/g, "").length >= 10);
+            const addressOk = !!(f.jobSite && f.jobSite.trim().length >= 10);
+            const estimatorOk = !!f.salesAssoc;
+            const emailOk = !f.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email);
+            const canSave = companyOk && requesterOk && phoneOk && addressOk && estimatorOk && emailOk;
+            
+            return (
+              <button 
+                style={{ ...mkBtn("primary"), opacity: canSave ? 1 : 0.5, cursor: canSave ? 'pointer' : 'not-allowed' }} 
+                onClick={handleSave} 
+                disabled={!canSave}>
+                {isNewCompany ? "Save RFQ & Add Customer" : "Save RFQ"}
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -6992,6 +7107,15 @@ function DatabaseBrowser({ token }) {
   const pageSize = 100;
 
   const [tableList, setTableList] = useState([]);
+  const [customersList, setCustomersList] = useState([]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/admin/tables/customers', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setCustomersList(Array.isArray(d) ? d : []))
+      .catch(e => console.error("Customers fallback load err:", e));
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -7228,7 +7352,14 @@ function DatabaseBrowser({ token }) {
                 {headers.filter(h => h !== 'id' && h !== 'created_at' && h !== 'updated_at').map(h => (
                   <div key={h}>
                     <Lbl c={h.replace(/_/g, ' ').toUpperCase()} />
-                    {String(editingRow[h] || "").length > 50 ? (
+                    {selectedTable === 'rfqs' && h === 'customer_id' ? (
+                      <select name={h} defaultValue={editingRow[h]} style={{ ...inp, fontSize:12, padding:"6px 12px" }}>
+                        <option value="">-- Select Company --</option>
+                        {customersList.map(c => (
+                          <option key={c.id} value={c.id}>{c.name} (ID: {c.id})</option>
+                        ))}
+                      </select>
+                    ) : String(editingRow[h] || "").length > 50 ? (
                       <textarea 
                         name={h} 
                         defaultValue={editingRow[h]} 
@@ -7943,11 +8074,17 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   </div>
                   <div>
                     <Lbl c="FIRST NAME"/>
-                    <input id="new-account-first-name" name="first_name" type="text" style={inp} value={newUser.first_name} onChange={e=>setNewUser(p=>({...p,first_name:e.target.value}))} placeholder="First name" />
+                    <input id="new-account-first-name" name="first_name" type="text" style={inp} value={newUser.first_name} placeholder="First name" onChange={e => {
+                      let val = e.target.value.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
+                      setNewUser(p => ({...p, first_name: val}));
+                    }} />
                   </div>
                   <div>
                     <Lbl c="LAST NAME"/>
-                    <input id="new-account-last-name" name="last_name" type="text" style={inp} value={newUser.last_name} onChange={e=>setNewUser(p=>({...p,last_name:e.target.value}))} placeholder="Last name" />
+                    <input id="new-account-last-name" name="last_name" type="text" style={inp} value={newUser.last_name} placeholder="Last name" onChange={e => {
+                      let val = e.target.value.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
+                      setNewUser(p => ({...p, last_name: val}));
+                    }} />
                   </div>
                 </div>
                 <div>
@@ -8014,11 +8151,17 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   </div>
                   <div>
                     <Lbl c="FIRST NAME"/>
-                    <input id="edit-account-first-name" name="first_name" type="text" style={inp} value={editingUser.first_name || ""} onChange={e=>setEditingUser({...editingUser, first_name:e.target.value})} />
+                    <input id="edit-account-first-name" name="first_name" type="text" style={inp} value={editingUser.first_name || ""} onChange={e => {
+                      let val = e.target.value.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
+                      setEditingUser({...editingUser, first_name: val});
+                    }} />
                   </div>
                   <div>
                     <Lbl c="LAST NAME"/>
-                    <input id="edit-account-last-name" name="last_name" type="text" style={inp} value={editingUser.last_name || ""} onChange={e=>setEditingUser({...editingUser, last_name:e.target.value})} />
+                    <input id="edit-account-last-name" name="last_name" type="text" style={inp} value={editingUser.last_name || ""} onChange={e => {
+                      let val = e.target.value.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
+                      setEditingUser({...editingUser, last_name: val});
+                    }} />
                   </div>
                 </div>
                 <div>
@@ -8424,6 +8567,23 @@ export default function App() {
     setActive(prev => (prev && prev.id === localId ? { ...prev, id: n } : prev));
   }
 
+  function persistReq(req) {
+    fetch(`/api/rfqs/${req.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(req)
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          console.error("Failed to save RFQ", await res.text());
+        }
+      })
+      .catch(err => console.error("Error saving RFQ:", err));
+  }
+
   function persistQuote(quote) {
     fetch(`/api/quotes/${quote.id}`, {
       method: 'POST',
@@ -8496,6 +8656,7 @@ export default function App() {
 
   function saveReq(req) {
     setReqs(prev => { const ix=prev.findIndex(r=>r.id===req.id); return ix>=0?prev.map((r,i)=>i===ix?req:r):[req,...prev]; });
+    persistReq(req);
     setShowRM(false); setEditR(null);
   }
 

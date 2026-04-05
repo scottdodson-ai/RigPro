@@ -305,7 +305,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         ...mappedMaster.filter(m => !existingKeys.has(m.qn || `master:${m.id}`)),
       ];
     }
-    const rfqs = await safeQuery('SELECT *, rfq_number as rn FROM rfqs');
+    const rfqs = await safeQuery('SELECT r.*, c.name AS company, r.rfq_number as rn FROM rfqs r LEFT JOIN customers c ON r.customer_id = c.id');
     const users = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, created_at FROM users');
     const estimators = await safeQuery('SELECT * FROM estimators');
 
@@ -1066,6 +1066,39 @@ app.delete('/api/admin/tasks/:id', authenticateToken, authenticateAdmin, async (
 
 // CUSTOMER MANAGEMENT ENDPOINTS
 // Get all customers
+app.post('/api/customers/quick', authenticateToken, async (req, res) => {
+  const { name, contact_name, contact_phone, contact_email } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Customer name is required' });
+
+  const connection = await db.getConnection();
+  try {
+    const [existing] = await connection.query('SELECT id FROM customers WHERE name = ?', [name.trim()]);
+    let custId = existing.length > 0 ? existing[0].id : null;
+
+    if (!custId) {
+      const [insRes] = await connection.query(
+        'INSERT INTO customers (name, notes) VALUES (?, ?)',
+        [name.trim(), 'Added via RFQ Modal']
+      );
+      custId = insRes.insertId;
+    }
+
+    if (contact_name) {
+      await connection.query(
+        'INSERT INTO customer_contacts (customer_id, name, title, email, phone, is_primary) VALUES (?, ?, ?, ?, ?, ?)',
+        [custId, contact_name, '', contact_email || '', contact_phone || '', existing.length === 0]
+      );
+    }
+
+    res.json({ success: true, customer_id: custId });
+  } catch (error) {
+    console.error('[API] /api/customers/quick error:', error);
+    res.status(500).json({ error: 'Database error' });
+  } finally {
+    connection.release();
+  }
+});
+
 app.get('/api/admin/customers', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
     const [customers] = await db.query('SELECT * FROM customers');
@@ -1422,6 +1455,65 @@ app.post('/api/admin/restore-local', authenticateToken, authenticateAdmin, async
 });
 
 // SAVE QUOTE ENDPOINT
+app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const rfq = req.body;
+
+  if (!rfq || !rfq.rn) {
+    return res.status(400).json({ error: 'Invalid RFQ data' });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    const safeId = Number(id);
+    let targetId = null;
+
+    if (Number.isInteger(safeId) && safeId > 0 && safeId <= 2147483647) {
+      const [existingById] = await connection.query('SELECT id FROM rfqs WHERE id = ?', [safeId]);
+      if (existingById.length > 0) targetId = existingById[0].id;
+    }
+
+    if (!targetId && rfq.rn) {
+      const [existingByRn] = await connection.query(
+        'SELECT id FROM rfqs WHERE rfq_number = ? ORDER BY id DESC LIMIT 1',
+        [rfq.rn]
+      );
+      if (existingByRn.length > 0) targetId = existingByRn[0].id;
+    }
+
+    const { rn, company, requester, email, phone, jobSite, desc, notes, date, status, salesAssoc } = rfq;
+    
+    let custId = null;
+    if (company) {
+      const [exCust] = await connection.query('SELECT id FROM customers WHERE name = ?', [company]);
+      if (exCust.length > 0) custId = exCust[0].id;
+    }
+
+    if (targetId) {
+      await connection.query(
+        `UPDATE rfqs SET 
+          rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, description=?, notes=?, date=?, status=?, sales_assoc=?
+         WHERE id=?`,
+        [rn, custId, requester||'', email||'', phone||'', jobSite||'', desc||'', notes||'', date||null, status||'', salesAssoc||'', targetId]
+      );
+    } else {
+      await connection.query(
+        `INSERT INTO rfqs 
+          (rfq_number, customer_id, requester, email, phone, job_site, description, notes, date, status, sales_assoc) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [rn, custId, requester||'', email||'', phone||'', jobSite||'', desc||'', notes||'', date||null, status||'', salesAssoc||'']
+      );
+    }
+
+    res.json({ success: true, message: 'RFQ saved successfully' });
+  } catch (error) {
+    console.error('[API] /api/rfqs error:', error);
+    res.status(500).json({ error: 'Database error' });
+  } finally {
+    connection.release();
+  }
+});
+
 app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const quote = req.body;
