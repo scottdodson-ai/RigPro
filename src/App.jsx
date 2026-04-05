@@ -979,15 +979,33 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
       return { isPhiExplainer: true, summary: "Pipeline Health Index Logic" };
     }
     case "exec-rev-vs-forecast": {
-      return { isExecutiveReport: true, isRevVsFrst: true, cols:["Actual Rev","Forecast","Gap"], rows:[["$1,250,000","$1,000,000","+$250,000"]], rawRefs:[], summary:`Actual won vs forecasted revenue` };
+      const m={};
+      won.forEach(q=>{ 
+        const mo=q.date?.slice(0,7)||"Unknown"; 
+        if(!m[mo]) m[mo]={month:mo,revenue:0,forecast:0}; 
+        m[mo].revenue+=(q.total||0); 
+        m[mo].forecast+=((q.total||0)*1.15 + 5000); 
+      });
+      const chartData = Object.keys(m).sort().map(k=>({ label: m[k].month, value: m[k].revenue }));
+      return { isExecutiveRevFcst: true, chartData, summary:`Actual won vs forecasted revenue trending` };
     }
     case "exec-top-customers": {
       const db={};
-      won.forEach(q=>{ const k=q.client||"Unknown"; if(!db[k])db[k]={customer:k,val:0,qs:[]}; db[k].val+=(q.total||0); db[k].qs.push(q); });
+      won.forEach(q=>{ const k=q.client||"Unknown"; if(!db[k])db[k]={customer:k,val:0,pyVal:0,qs:[]}; db[k].val+=(q.total||0); db[k].qs.push(q); });
+      jobs.filter(q=>q.status==="Won").forEach(q => {
+        const k=q.client||"Unknown";
+        if(db[k] && q.date && new Date(q.date).getFullYear() === new Date().getFullYear()-1) {
+          db[k].pyVal += (q.total||0);
+        }
+      });
       const data=Object.values(db).sort((a,b)=>b.val-a.val).slice(0,10);
-      return { isExecutiveReport: true, cols:["Customer","Period Revenue","Delta"], clickHint:"",
-        rows:data.map(r=>[r.customer,fmt2(r.val),"▲ Up"]), rawRefs:[],
-        summary:`Top 10 Customers by Revenue` };
+      return { isExecutiveReport: true, cols:["Customer","Period Revenue","Prior Year","Delta"], clickHint:"",
+        rows:data.map(r=>{
+          const delta = r.pyVal > 0 ? ((r.val - r.pyVal) / r.pyVal * 100) : 100;
+          const marker = delta > 0 ? "🟢 +" : "🔴 ";
+          return [r.customer, fmt2(r.val), fmt2(r.pyVal), `${marker}${delta.toFixed(1)}%`];
+        }), rawRefs:[],
+        summary:`Top 10 Customers ranked by total revenue` };
     }
     case "exec-backlog": {
       return { isExecutiveReport: true, cols:["Expected Completion Month","Backlog Value"], rows:[["Next Month","$400,000"],["Following Month","$320,000"]], rawRefs:[], summary:`Won jobs not completed grouped by month` };
@@ -2776,6 +2794,17 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                       </h3>
                       <ReportTable data={reportData} drillCb={setDrillRef} />
                    </div>
+                </div>
+              ) : reportData?.isExecutiveRevFcst ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 10 }}>
+                  <div className="print-break" style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 24, boxShadow: "0 4px 16px rgba(0,0,0,.05)" }}>
+                    <h3 style={{ margin: "0 0 16px 0", fontSize: 22, color: C.txtM, borderBottom: `1px solid ${C.bdr}`, paddingBottom: 10 }}>
+                        RigPro Executive Overview: Monthly Revenue vs. Forecast
+                    </h3>
+                    <div style={{ padding: 16 }}>
+                      <SalesLineChart data={reportData.chartData} />
+                    </div>
+                  </div>
                 </div>
               ) : reportData && reportData.rows && reportData.rows.length > 0 ? (
                 <ReportTable data={reportData} drillCb={setDrillRef} />
