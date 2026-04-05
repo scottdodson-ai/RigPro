@@ -17,6 +17,7 @@ DROP TABLE IF EXISTS users;
 -- 1. Users table for login
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    user_number VARCHAR(50) UNIQUE,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -25,7 +26,8 @@ CREATE TABLE IF NOT EXISTS users (
     is_disabled BOOLEAN NOT NULL DEFAULT FALSE,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) DEFAULT 'user',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- 1.5. Company Info
@@ -35,6 +37,7 @@ CREATE TABLE IF NOT EXISTS company_info (
     address TEXT,
     services TEXT,
     logo_src LONGTEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
@@ -49,6 +52,7 @@ CREATE TABLE IF NOT EXISTS user_auth_audit (
     ip_address VARCHAR(64),
     user_agent VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
     INDEX idx_event_type (event_type),
     INDEX idx_created_at (created_at)
@@ -60,17 +64,18 @@ CREATE TABLE IF NOT EXISTS admin_tasks (
     text VARCHAR(255) NOT NULL,
     done BOOLEAN DEFAULT FALSE,
     subnotes JSON, -- Array of strings or objects
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Note: The hashes below are for the password: 'pass'
 -- Note: The hashes below are for the password: 'pass'
-INSERT INTO users (first_name, last_name, username, email, cell_phone, is_disabled, password_hash, role) VALUES 
-('Scott', 'Admin', 'scott', 'scott@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
-('System', 'Admin', 'admin', 'admin@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
-('Dan', 'M', 'Dan M', 'dan.m@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
-('Sarah', 'K', 'Sarah K', 'sarah.k@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
-('Mike', 'R', 'Mike R', 'mike.r@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator');
+INSERT INTO users (user_number, first_name, last_name, username, email, cell_phone, is_disabled, password_hash, role) VALUES 
+('101', 'Scott', 'Admin', 'scott', 'scott@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
+('102', 'System', 'Admin', 'admin', 'admin@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'admin'),
+('103', 'Dan', 'M', 'Dan M', 'dan.m@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
+('104', 'Sarah', 'K', 'Sarah K', 'sarah.k@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator'),
+('105', 'Mike', 'R', 'Mike R', 'mike.r@shoemakerrigging.com', '', FALSE, '$2b$10$ry7Q3enWpGx5CqBrXkkZ9.1UlYTFyshgeBCRuO/KJDOx1AusM8gpC', 'estimator');
 
 -- Estimators table
 CREATE TABLE IF NOT EXISTS estimators (
@@ -78,7 +83,9 @@ CREATE TABLE IF NOT EXISTS estimators (
     name VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(100),
     phone VARCHAR(50),
-    status VARCHAR(20) DEFAULT 'Active'
+    status VARCHAR(20) DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 INSERT INTO estimators (name, email, phone) VALUES 
@@ -93,7 +100,9 @@ CREATE TABLE IF NOT EXISTS base_labor (
     reg_rate DECIMAL(10, 2) NOT NULL,
     ot_rate DECIMAL(10, 2) NOT NULL,
     cost_reg DECIMAL(10, 2) NOT NULL,
-    cost_ot DECIMAL(10, 2) NOT NULL
+    cost_ot DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 INSERT INTO base_labor (role, reg_rate, ot_rate, cost_reg, cost_ot) VALUES
@@ -110,7 +119,9 @@ CREATE TABLE IF NOT EXISTS equipment (
     name VARCHAR(100) NOT NULL,
     capacity VARCHAR(50),
     daily_rate DECIMAL(10, 2) NOT NULL,
-    daily_cost DECIMAL(10, 2) NOT NULL DEFAULT 0.00
+    daily_cost DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 INSERT INTO equipment (code, category, name, capacity, daily_rate, daily_cost) VALUES
@@ -151,7 +162,9 @@ CREATE TABLE IF NOT EXISTS customers (
     website VARCHAR(100),
     industry VARCHAR(100),
     payment_terms VARCHAR(50),
-    account_num VARCHAR(50)
+    account_num VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 INSERT INTO customers (name, notes, billing_address, website, industry, payment_terms, account_num) VALUES
@@ -171,6 +184,8 @@ CREATE TABLE IF NOT EXISTS customer_contacts (
     email VARCHAR(100),
     phone VARCHAR(50),
     is_primary BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 );
 
@@ -209,7 +224,9 @@ CREATE TABLE IF NOT EXISTS quotes (
     comp_date DATE,
     is_locked BOOLEAN DEFAULT false,
     quote_data LONGTEXT,
-    notes TEXT
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 INSERT INTO quotes (id, quote_number, customer_name, job_site, description, date, status, quote_type, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked) VALUES
@@ -233,7 +250,9 @@ CREATE TABLE IF NOT EXISTS rfqs (
     notes TEXT,
     date DATE,
     status VARCHAR(50),
-    sales_assoc VARCHAR(50)
+    sales_assoc VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 INSERT INTO rfqs (rfq_number, company, requester, email, phone, job_site, description, notes, date, status, sales_assoc) VALUES
@@ -245,6 +264,8 @@ INSERT INTO rfqs (rfq_number, company, requester, email, phone, job_site, descri
 CREATE TABLE IF NOT EXISTS job_folders (
     rfq_id INT PRIMARY KEY,
     folder_data JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (rfq_id) REFERENCES rfqs(id) ON DELETE CASCADE
 );
 
@@ -275,6 +296,7 @@ CREATE TABLE IF NOT EXISTS phi_config (
     band_excellent INT DEFAULT 90,
     stale_days INT DEFAULT 14,
     response_flag_hrs INT DEFAULT 48,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_by INT
 );

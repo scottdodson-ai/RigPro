@@ -1384,7 +1384,7 @@ const initAdmin = async () => {
     await db.query(
       `INSERT INTO users (first_name, last_name, username, email, cell_phone, password_hash, role)
        VALUES (?, ?, ?, ?, ?, ?, 'admin')
-       ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), role = 'admin'`,
+       ON DUPLICATE KEY UPDATE role = 'admin'`,
       ['Scott', 'Admin', 'scott', 'scott@shoemakerrigging.com', '', hash]
     );
     console.log('Admin account (scott) ensured.');

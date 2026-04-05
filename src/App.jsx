@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, Fragment } from "react";
 import CustomerCRMBoard from "./CustomerCRMBoard";
 import VectorSearchPanel from "./VectorSearchPanel";
 import RigPro3ExecutiveDashboard from "./RigPro3ExecutiveDashboard";
+import RigPro3FinanceDashboard from "./RigPro3FinanceDashboard";
 const InvestorDashboard = () => <div style={{padding:40,color:"#fff",textAlign:"center",fontSize:18}}>Investor Dashboard — coming soon.</div>;
 
 
@@ -961,6 +962,7 @@ const BUILT_IN_REPORTS = [
   // 4. Finance
   { id:"finance-dashboard",    name:"Finance Dashboard",         category:"Finance",    desc:"High-level financial performance and summary",       scope:"org" },
   { id:"backlog-report",       name:"Backlog Report",            category:"Finance",    desc:"Won jobs not yet complete, grouped by expected completion month",       scope:"org" },
+  { id:"margin-trend",         name:"Margin Trend Over Time",    category:"Finance",    desc:"Gross margin % by month/quarter as a trend line",       scope:"org" },
   { id:"cost-margin",          name:"Cost & Margin Analysis",    category:"Finance",    desc:"Direct costs and achieved margins per quote",        scope:"org" },
   { id:"labor-quoted",         name:"Labor Hours Quoted",        category:"Finance",    desc:"Quoted labor costs and average billing rates",       scope:"org" },
   { id:"travel-quoted",        name:"Travel Quoted",             category:"Finance",    desc:"Consolidated travel expenses and markups",           scope:"org" },
@@ -1287,6 +1289,26 @@ function buildReportData(reportId, jobs, reqs) {
           return [r.month, fmt2(r.revenue), r.jobs.length, topClient];
         }),
         summary: `Total Active Backlog: ${fmt2(backlog.reduce((s,q) => s + (q.total||0), 0))} across ${backlog.length} active jobs`
+      };
+    }
+    case "margin-trend": {
+      const agg = {};
+      won.forEach(q => {
+        if(!q.date) return;
+        const m = q.date.substring(0,7);
+        if(!agg[m]) agg[m] = { rev:0, cost:0 };
+        agg[m].rev += (q.total||0);
+        agg[m].cost += Math.round((q.labor||0)*0.6 + (q.equip||0)*0.7 + (q.hauling||0)*0.85 + (q.mats||0)*0.85 + (q.travel||0));
+      });
+      const data = Object.entries(agg).sort((a,b)=>a[0].localeCompare(b[0]));
+      return {
+        cols: ["Month", "Revenue", "Dir. Costs", "Margin $", "Margin %"],
+        rows: data.map(([m,v]) => {
+            const margin = v.rev - v.cost;
+            const pct = v.rev > 0 ? ((margin/v.rev)*100).toFixed(1)+"%" : "0%";
+            return [m, fmt2(v.rev), fmt2(v.cost), fmt2(margin), pct];
+        }),
+        summary: "Historical margin performance aggregated by month"
       };
     }
     case "finance-dashboard": {
@@ -1917,6 +1939,8 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
             <div style={{ padding:"24px 24px" }}>
               {activeReport.id === "executive-dashboard" ? (
                 <RigPro3ExecutiveDashboard jobs={jobs} reqs={reqs} token={username} />
+              ) : activeReport.id === "finance-dashboard" ? (
+                <RigPro3FinanceDashboard jobs={jobs} />
               ) : (
                 <>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16, flexWrap:"wrap", gap:12 }}>
@@ -7261,7 +7285,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       rd.readAsDataURL(file);
     }
   };
-  const [newUser, setNewUser] = useState({ first_name: "", last_name: "", username: "", password: "", role: "estimator", email: "", cell_phone: "", avatar: null });
+  const [newUser, setNewUser] = useState({ user_number: "", first_name: "", last_name: "", username: "", password: "", role: "estimator", email: "", cell_phone: "", avatar: null });
   const [editingUser, setEditingUser] = useState(null);
   const [formErr, setFormErr] = useState("");
   const [tasks, setTasks] = useState([]);
@@ -7422,7 +7446,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       }
       const created = await res.json();
       setUsers(prev => [...prev, created]);
-      setNewUser({ first_name:"", last_name:"", username:"", password:"", role:"estimator", email:"", cell_phone:"" });
+      setNewUser({ user_number:"", first_name:"", last_name:"", username:"", password:"", role:"estimator", email:"", cell_phone:"" });
     } catch (err) {
       setFormErr(err.message);
     }
@@ -7679,6 +7703,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                       </div>
                       <div style={{ minWidth:0 }}>
                                         <div style={{ fontWeight:700, fontSize:13 }}>{`${u.first_name || ""} ${u.last_name || ""}`.trim() || u.username}</div>
+                                        {u.user_number && <div style={{ fontSize:11, color:C.txtM, fontWeight:600 }}>ID: {u.user_number}</div>}
                                         <div style={{ fontSize:11, color:C.txtS }}>@{u.username}</div>
                                         {u.email && <a href={`mailto:${u.email}`} style={{ fontSize:11, color:C.blue, textDecoration:"none", display:"block" }} onClick={e=>e.stopPropagation()}>{u.email}</a>}
                                         {u.cell_phone && <div style={{ fontSize:11, color:C.txtM }}>{u.cell_phone}</div>}
@@ -7913,6 +7938,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               }} style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                   <div>
+                    <Lbl c="USER NUMBER (ID)"/>
+                    <input name="user_number" type="text" style={inp} value={newUser.user_number} onChange={e=>setNewUser(p=>({...p,user_number:e.target.value}))} placeholder="e.g. 106" />
+                  </div>
+                  <div>
                     <Lbl c="FIRST NAME"/>
                     <input id="new-account-first-name" name="first_name" type="text" style={inp} value={newUser.first_name} onChange={e=>setNewUser(p=>({...p,first_name:e.target.value}))} placeholder="First name" />
                   </div>
@@ -7979,6 +8008,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               <div className="app-modal-title" style={{ fontSize:18, fontWeight:800, color:C.acc, marginBottom:14 }}>Edit Account</div>
               <form onSubmit={handleEditUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <div>
+                    <Lbl c="USER NUMBER (ID)"/>
+                    <input name="user_number" type="text" style={inp} value={editingUser.user_number || ""} onChange={e=>setEditingUser({...editingUser, user_number:e.target.value})} />
+                  </div>
                   <div>
                     <Lbl c="FIRST NAME"/>
                     <input id="edit-account-first-name" name="first_name" type="text" style={inp} value={editingUser.first_name || ""} onChange={e=>setEditingUser({...editingUser, first_name:e.target.value})} />
@@ -9047,12 +9080,15 @@ export default function App() {
           </div>
         }/>
         <div className="app-page-container" style={{ maxWidth:1160 }}>
-          <button style={{ ...mkBtn("outline"), marginBottom:16, padding:"6px 12px", fontSize:12, borderColor:C.bdr, color:C.txtM, background:"#fff" }} onClick={goBack}>← Back</button>
-
-          {active.fromReqId    && <div style={{ background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.blue }}>Pre-filled from a Quote Request.</div>}
-          {active.isChangeOrder && <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:"#6d28d9" }}>Change Order — linked to original won quote.</div>}
-          {active.isHistorical && <div style={{ background:C.accL, border:`1px solid ${C.accB}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.acc, fontWeight:700 }}>HISTORICAL ESTIMATE — Metrics manually established.</div>}
-          {active.locked       && <div style={{ background:C.yelB, border:`1px solid ${C.yelBdr}`, borderRadius:6, padding:"8px 12px", marginBottom:10, fontSize:12, color:C.yel }}>This quote is locked. View only.</div>}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", marginBottom:16, gap:12 }}>
+            <button style={{ ...mkBtn("outline"), padding:"6px 12px", fontSize:12, borderColor:C.bdr, color:C.txtM, background:"#fff" }} onClick={goBack}>← Back</button>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {active.fromReqId    && <div style={{ background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.blue }}>Pre-filled from a Quote Request.</div>}
+              {active.isChangeOrder && <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"6px 12px", fontSize:12, color:"#6d28d9" }}>Change Order — linked to original won quote.</div>}
+              {active.isHistorical && <div style={{ background:C.accL, border:`1px solid ${C.accB}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.acc, fontWeight:700 }}>HISTORICAL ESTIMATE — Metrics manually established.</div>}
+              {active.locked       && <div style={{ background:C.yelB, border:`1px solid ${C.yelBdr}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.yel }}>This quote is locked. View only.</div>}
+            </div>
+          </div>
 
           <Card>
             <Sec c="Quote Information"/>
