@@ -563,7 +563,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
   const comp = compStr ? JSON.parse(compStr) : { name: "Shoemaker Rigging & Transport LLC", logoSrc: null };
 
   const TABS = token ? [
-    ["dash","Dashboard"], ["customers","Customers"], ["rfqs","Request For Quote"],
+    ["dash","Dashboard"], ["customers","Customers"], ["rfqs","RFQ List"],
     ["jobs","Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
@@ -744,7 +744,11 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
 
         {/* Top row: logo + nav */}
         <div className="app-header-top-row" style={{ display:"flex", alignItems:"center", minHeight:54 }}>
-          <div className="app-brand" style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginRight:16 }}>
+          <div 
+            className="app-brand" 
+            onClick={() => setView(token ? "dash" : "landing")}
+            style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginRight:16, cursor:"pointer" }}
+          >
             <div className="app-brand-main" style={{ display:"flex", alignItems:"center", gap:8 }}>
               {comp.logoSrc ? (
                 <img className="app-brand-logo" src={comp.logoSrc} alt="Logo" style={{ width:36, height:36, objectFit:"contain", borderRadius:4, background:"#fff", border:`2px solid ${C.accB}` }}/>
@@ -1895,7 +1899,7 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, rfqStageFilter, setRfqStag
 const inp2 = { background:C.sur, border:`1px solid ${C.bdrM}`, borderRadius:5, color:C.txt, fontFamily:"inherit", fontSize:13, padding:"6px 9px", width:"100%", boxSizing:"border-box", outline:"none" };
 
 // ── RECENT QUOTES CARD ────────────────────────────────────────────────────────
-function RecentQuotesCard({ jobs, openEdit, setView }) {
+function RecentQuotesCard({ jobs, openEdit, setView, onBack }) {
   const customers = useMemo(() => [...new Set(jobs.map(q=>q.client))].sort(), [jobs]);
   const [custFilter, setCustFilter] = useState("all");
   const [expandedCustFilter, setExpandedCustFilter] = useState(false);
@@ -1904,7 +1908,12 @@ function RecentQuotesCard({ jobs, openEdit, setView }) {
 
   return (
     <>
-      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+        {onBack && (
+          <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", color:C.acc }} onClick={onBack}>
+            ← Back to Performance Metrics
+          </button>
+        )}
         <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px" }} onClick={()=>setView("customers")}>View All Customers</button>
       </div>
       <div style={{ position:"relative", marginBottom:15 }}>
@@ -1965,7 +1974,7 @@ function RecentQuotesCard({ jobs, openEdit, setView }) {
 }
 
 // ── RFQ DASHBOARD CARD ────────────────────────────────────────────────────────
-function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, rfqStageFilter }) {
+function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, rfqStageFilter, onBack }) {
   const STAGES_DASH = ["RFQ Received","Client Contact","Viewed Job / Docs","Priced Materials / Rentals","Final Consult"];
   const stageColors = ["#b86b0a","#2563eb","#0d9488","#7c3aed","#16a34a"];
   const [expandedRfq,    setExpandedRfq]    = useState(null);
@@ -2006,7 +2015,12 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
 
   return (
     <>
-      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+        {onBack && (
+          <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", color:C.acc }} onClick={onBack}>
+            ← Back to Performance Metrics
+          </button>
+        )}
         <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px" }} onClick={()=>setView("rfqs")}>View All RFQs</button>
       </div>
       <div style={{ position:"relative", marginBottom:15 }}>
@@ -2174,7 +2188,10 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
       {/* Header + toggle */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14, flexWrap:"wrap", gap:10 }}>
         <div>
-          <div style={{ fontSize:20, fontWeight:700 }}>Request For Quote</div>
+          <div style={{ fontSize:20, fontWeight:700, display:"flex", alignItems:"center", gap:10 }}>
+            Request For Quotes
+            <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px", borderRadius:6, fontWeight:700 }} onClick={() => { setEditR(null); setShowRM(true); }}>+ New RFQ</button>
+          </div>
           <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>
             {activeCount} active · {quotedCount} quoted · {deadCount} dead
           </div>
@@ -2532,7 +2549,7 @@ function ActionBtns({ onReq, onFromReq, onNew }) {
   const s = compact ? { fontSize:10, padding:"5px 8px", gap:3 } : {};
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
-      <button style={{ ...mkBtn("blue"), ...s }} onClick={onReq}>Request For Quote</button>
+      <button style={{ ...mkBtn("blue"), ...s }} onClick={onReq}>New RFQ</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onFromReq}>Pending Requests</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Estimate</button>
     </div>
@@ -5366,7 +5383,7 @@ function ChartDetailModal({ chart, onClose }) {
 
 const PIE_COLORS = ["#b86b0a","#2563eb","#16a34a","#dc2626","#7c3aed","#0d9488","#ea580c","#b45309","#6d28d9","#0e7490"];
 
-function SalesmanCharts({ jobs, reqs }) {
+function SalesmanCharts({ jobs, reqs, onBack }) {
   const [detail, setDetail] = useState(null);
 
   const getSA = (item) => item.salesAssoc || item.estimator || "Unassigned";
@@ -5402,6 +5419,13 @@ function SalesmanCharts({ jobs, reqs }) {
 
   return (
     <>
+      {onBack && (
+        <div style={{ display:"flex", justifyContent:"flex-start", marginBottom:12 }}>
+          <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", color:C.acc }} onClick={onBack}>
+            ← Back to Performance Metrics
+          </button>
+        </div>
+      )}
       {detail && <ChartDetailModal chart={detail} onClose={()=>setDetail(null)}/>}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:10, marginBottom:12 }}>
         <ChartCard
@@ -7456,6 +7480,11 @@ export default function App() {
       setSearch("");
     }
   }, [view, selC]);
+
+  // Reset dashboard to performance metrics when navigating to it
+  useEffect(() => {
+    if (view === "dash") setDashAcc("metrics");
+  }, [view]);
   const [notifs,     setNotifs]     = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const fileRef = useRef();
@@ -7864,15 +7893,27 @@ export default function App() {
           isOpen={dashAcc==="sales"} 
           onToggle={open => setDashAcc(open ? "sales" : null)}
         >
-          <SalesmanCharts jobs={jobs} reqs={reqs}/>
+          <SalesmanCharts jobs={jobs} reqs={reqs} onBack={() => setDashAcc("metrics")}/>
         </AccordionCard>
 
         <AccordionCard 
-          title="📝 Requests for Quote" 
+          title="📝 Requests for Quotes" 
           isOpen={dashAcc==="rfqs"} 
           onToggle={open => setDashAcc(open ? "rfqs" : null)}
         >
-          <RFQDashCard reqs={reqs} jobs={jobs} jobFolders={jobFolders} setJobFolders={setJobFolders} setShowJFM={setShowJFM} openNew={openNew} openEdit={openEdit} setView={setView} setDeadModal={setDeadModal} rfqStageFilter={rfqStageFilter}/>
+          <RFQDashCard 
+            reqs={reqs} 
+            jobs={jobs} 
+            jobFolders={jobFolders} 
+            setJobFolders={setJobFolders} 
+            setShowJFM={setShowJFM} 
+            openNew={openNew} 
+            openEdit={openEdit} 
+            setView={setView} 
+            setDeadModal={setDeadModal} 
+            rfqStageFilter={rfqStageFilter}
+            onBack={() => setDashAcc("metrics")}
+          />
         </AccordionCard>
 
         <AccordionCard 
@@ -7880,7 +7921,7 @@ export default function App() {
           isOpen={dashAcc==="recent"} 
           onToggle={open => setDashAcc(open ? "recent" : null)}
         >
-          <RecentQuotesCard jobs={jobs} openEdit={openEdit} setView={setView}/>
+          <RecentQuotesCard jobs={jobs} openEdit={openEdit} setView={setView} onBack={() => setDashAcc("metrics")}/>
         </AccordionCard>
       </div>
       <Footer />
