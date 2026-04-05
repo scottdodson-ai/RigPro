@@ -552,10 +552,9 @@ function AutoInput({ val, on, list, ph }) {
 }
 
 // ── HEADER ────────────────────────────────────────────────────────────────────
-function Header({ view, setView, extra, crumb, role, token, setToken, setRole }) {
+function Header({ view, setView, extra, crumb, role, token, setToken, setRole, profileUser, setProfileUser }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [profileUser, setProfileUser] = useState(null);
   const [profileForm, setProfileForm] = useState({ first_name:"", last_name:"", username:"", email:"", cell_phone:"", role:"user", password:"" });
   const [profileErr, setProfileErr] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
@@ -589,28 +588,19 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole })
   }, []);
 
   useEffect(() => {
-    if (!token) {
-      setProfileUser(null);
-      return;
+    if (profileUser) {
+      setProfileForm({
+        first_name: profileUser.first_name || "",
+        last_name: profileUser.last_name || "",
+        username: profileUser.username || "",
+        email: profileUser.email || "",
+        cell_phone: profileUser.cell_phone || "",
+        role: profileUser.role || "user",
+        avatar: profileUser.avatar || null,
+        password: ""
+      });
     }
-    fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (!d) return;
-        setProfileUser(d);
-        setProfileForm({
-          first_name: d.first_name || "",
-          last_name: d.last_name || "",
-          username: d.username || "",
-          email: d.email || "",
-          cell_phone: d.cell_phone || "",
-          role: d.role || "user",
-          avatar: d.avatar || null,
-          password: ""
-        });
-      })
-      .catch(() => {});
-  }, [token]);
+  }, [profileUser]);
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -2557,8 +2547,14 @@ function ActionBtns({ onReq, onFromReq, onNew }) {
 }
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
-function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData, jobs=[] }) {
-  const blank = { id:uid(), rn:nextRN(), company:"", requester:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:"" };
+function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData, jobs=[], profileUser, role }) {
+  const blank = useMemo(() => {
+    let estimator = "";
+    if (profileUser && role !== "admin") {
+      estimator = profileUser.username;
+    }
+    return { id:uid(), rn:nextRN(), company:"", requester:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:estimator };
+  }, [profileUser, role]);
   const [f, setF] = useState(init || blank);
   const u = (k,v) => setF(x => ({ ...x, [k]:v }));
 
@@ -6623,6 +6619,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
   })();
   const [confirm, setConfirm] = useState(null); // { title, msg, onOk, btn:"Restore"|"Delete" }
   const [showVectorDB, setShowVectorDB] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -7000,7 +6997,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 
         <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:30 }}>
           {/* USER LIST */}
-          <AccordionCard title="Accounts Listing">
+          <AccordionCard title="User Management">
+            <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:14 }}>
+              <button style={{ ...mkBtn("primary"), fontSize:12, padding:"8px 16px", fontWeight:800, borderRadius:8 }} onClick={() => setShowAddUser(true)}>+ Add New User Account</button>
+            </div>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 {users.map(u => (
                   <div key={u.id} style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-start", justifyContent:"space-between", gap:10, background:u.is_disabled ? "#fff1f2" : C.sur, border:`1px solid ${u.is_disabled ? C.redBdr : C.bdr}`, padding:"12px 16px", borderRadius:8 }}>
@@ -7048,6 +7048,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                   </div>
                 ))}
             </div>
+            
           </AccordionCard>
 
           {/* OTHER SECTIONS */}
@@ -7083,61 +7084,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               <button onClick={handleSaveCompanyInfo} style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:16 }}>Save Company Profile</button>
             </AccordionCard>
 
-            <AccordionCard title="Add New Account">
-              <form onSubmit={handleCreateUser} style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                <div>
-                  <Lbl c="FIRST NAME"/>
-                  <input id="new-account-first-name" name="first_name" type="text" style={inp} value={newUser.first_name} onChange={e=>setNewUser(p=>({...p,first_name:e.target.value}))} placeholder="Enter first name" />
-                </div>
-                <div>
-                  <Lbl c="LAST NAME"/>
-                  <input id="new-account-last-name" name="last_name" type="text" style={inp} value={newUser.last_name} onChange={e=>setNewUser(p=>({...p,last_name:e.target.value}))} placeholder="Enter last name" />
-                </div>
-                <div>
-                  <Lbl c="USERNAME"/>
-                  <input id="new-account-username" name="username" type="text" autoComplete="username" style={inp} value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:normalizeUsername(e.target.value)}))} maxLength={16} required placeholder="Enter unique username" />
-                </div>
-                <div>
-                  <Lbl c="EMAIL ADDRESS"/>
-                  <input id="new-account-email" name="email" autoComplete="email" style={inp} type="email" value={newUser.email} onChange={e=>setNewUser(p=>({...p,email:e.target.value}))} placeholder="user@shoemakerrigging.com" />
-                </div>
-                <div>
-                  <Lbl c="CELL PHONE"/>
-                  <input id="new-account-cell-phone" name="cell_phone" type="text" style={inp} value={newUser.cell_phone} onChange={e=>setNewUser(p=>({...p,cell_phone:e.target.value}))} placeholder="e.g., 330-555-0101" />
-                </div>
-                <div>
-                  <Lbl c="PASSWORD"/>
-                  <input id="new-account-password" name="password" autoComplete="new-password" style={inp} type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} required placeholder="Enter unique password" />
-                </div>
-                <div>
-                  <Lbl c="ROLE"/>
-                  <select style={{ ...sel, width:"100%" }} value={newUser.role} onChange={e=>setNewUser(p=>({...p,role:e.target.value}))}>
-                    <option value="estimator">Estimator</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Administrator</option>
-                  </select>
-                </div>
-                <div>
-                  <Lbl c="PROFILE PICTURE (OPTIONAL)"/>
-                  <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4 }}>
-                    {newUser.avatar ? (
-                      <div style={{ position:"relative" }}>
-                        <img src={newUser.avatar} alt="Avatar" style={{ height:40, width:40, borderRadius:"50%", border:`1px solid ${C.bdr}`, objectFit:"cover" }}/>
-                        <button type="button" onClick={()=>setNewUser({...newUser, avatar:null})} style={{ position:"absolute", top:-6, right:-6, background:C.red, color:"#fff", border:"none", borderRadius:"50%", width:16, height:16, fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", paddingBottom:2 }}>×</button>
-                      </div>
-                    ) : (
-                      <div style={{ width:40, height:40, background:C.bg, border:`1px dashed ${C.bdr}`, display:"flex", alignItems:"center", justifyContent:"center", color:C.txtS, fontSize:10, borderRadius:"50%" }}>Img</div>
-                    )}
-                    <input type="file" accept="image/*" onChange={(e)=>{
-                      const f = e.target.files[0];
-                      if(f){ const rd=new FileReader(); rd.onload=ev=>setNewUser({...newUser, avatar:ev.target.result}); rd.readAsDataURL(f); }
-                    }} style={{ fontSize:12, maxWidth:180 }}/>
-                  </div>
-                </div>
-                {formErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {formErr}</div>}
-                <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"10px", marginTop:6 }}>Create User</button>
-              </form>
-            </AccordionCard>
+
 
             <AccordionCard title="Admin Tasks & Todos">
               <form onSubmit={addTask} style={{ display:"flex", gap:8, marginBottom:16 }}>
@@ -7227,6 +7174,78 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
             </AccordionCard>
         </div>
 
+        {/* ADD USER MODAL */}
+        {showAddUser && (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.65)", zIndex:10001, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+            <div style={{ background:C.sur, width:"100%", maxWidth:520, borderRadius:12, padding:24, boxShadow:"0 20px 60px rgba(0,0,0,0.35)", border:`1.5px solid ${C.bdr}` }}>
+              <div style={{ fontSize:18, fontWeight:800, color:C.acc, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:18 }}>👤+</span> Create New Account
+              </div>
+              <form onSubmit={async (e) => {
+                await handleCreateUser(e);
+                if (!formErr) setShowAddUser(false);
+              }} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <div>
+                    <Lbl c="FIRST NAME"/>
+                    <input id="new-account-first-name" name="first_name" type="text" style={inp} value={newUser.first_name} onChange={e=>setNewUser(p=>({...p,first_name:e.target.value}))} placeholder="First name" />
+                  </div>
+                  <div>
+                    <Lbl c="LAST NAME"/>
+                    <input id="new-account-last-name" name="last_name" type="text" style={inp} value={newUser.last_name} onChange={e=>setNewUser(p=>({...p,last_name:e.target.value}))} placeholder="Last name" />
+                  </div>
+                </div>
+                <div>
+                  <Lbl c="USERNAME"/>
+                  <input id="new-account-username" name="username" type="text" autoComplete="username" style={inp} value={newUser.username} onChange={e=>setNewUser(p=>({...p,username:normalizeUsername(e.target.value)}))} maxLength={16} required placeholder="Unique username" />
+                </div>
+                <div>
+                  <Lbl c="EMAIL ADDRESS"/>
+                  <input id="new-account-email" name="email" autoComplete="email" style={inp} type="email" value={newUser.email} onChange={e=>setNewUser(p=>({...p,email:e.target.value}))} placeholder="Email" />
+                </div>
+                <div>
+                  <Lbl c="CELL PHONE"/>
+                  <input id="new-account-cell-phone" name="cell_phone" type="text" style={inp} value={newUser.cell_phone} onChange={e=>setNewUser(p=>({...p,cell_phone:e.target.value}))} placeholder="Phone" />
+                </div>
+                <div>
+                  <Lbl c="PASSWORD"/>
+                  <input id="new-account-password" name="password" autoComplete="new-password" style={inp} type="password" value={newUser.password} onChange={e=>setNewUser(p=>({...p,password:e.target.value}))} required placeholder="Secure password" />
+                </div>
+                <div>
+                  <Lbl c="ROLE"/>
+                  <select style={{ ...sel, width:"100%" }} value={newUser.role} onChange={e=>setNewUser(p=>({...p,role:e.target.value}))}>
+                    <option value="estimator">Estimator</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div>
+                  <Lbl c="PROFILE PICTURE (OPTIONAL)"/>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:4 }}>
+                    {newUser.avatar ? (
+                      <div style={{ position:"relative" }}>
+                        <img src={newUser.avatar} alt="Avatar" style={{ height:40, width:40, borderRadius:"50%", border:`1px solid ${C.bdr}`, objectFit:"cover" }}/>
+                        <button type="button" onClick={()=>setNewUser({...newUser, avatar:null})} style={{ position:"absolute", top:-6, right:-6, background:C.red, color:"#fff", border:"none", borderRadius:"50%", width:16, height:16, fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", paddingBottom:2 }}>×</button>
+                      </div>
+                    ) : (
+                      <div style={{ width:40, height:40, background:C.bg, border:`1px dashed ${C.bdr}`, display:"flex", alignItems:"center", justifyContent:"center", color:C.txtS, fontSize:10, borderRadius:"50%" }}>Img</div>
+                    )}
+                    <input type="file" accept="image/*" onChange={(e)=>{
+                      const f = e.target.files[0];
+                      if(f){ const rd=new FileReader(); rd.onload=ev=>setNewUser({...newUser, avatar:ev.target.result}); rd.readAsDataURL(f); }
+                    }} style={{ fontSize:12, maxWidth:180 }}/>
+                  </div>
+                </div>
+                {formErr && <div style={{ fontSize:12, color:C.red, fontWeight:600 }}>⚠ {formErr}</div>}
+                <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:6 }}>
+                  <button type="button" style={mkBtn("ghost")} onClick={() => { setShowAddUser(false); setFormErr(""); }}>Cancel</button>
+                  <button type="submit" style={mkBtn("primary")}>Create User Account</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        
         {/* EDIT USER MODAL */}
         {editingUser && (
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.65)", zIndex:10001, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
@@ -7412,6 +7431,7 @@ export default function App() {
   const [token,      setToken]      = useState(localStorage.getItem("token") || "");
   const [role,       setRole]       = useState(localStorage.getItem("role") || "user");
   const [view,       setView]       = useState(localStorage.getItem("token") ? "dash" : "landing");
+  const [profileUser, setProfileUser] = useState(null);
   const [rfqStageFilter, setRfqStageFilter] = useState("all");
   const [appUsers,   setAppUsers]   = useState([]);
   const [jobs,       setJobs]       = useState([]);
@@ -7472,6 +7492,15 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [dbStatus]);
+
+  // Fetch current profile for defaulting fields and global context
+  useEffect(() => {
+    if (!token) { setProfileUser(null); return; }
+    fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setProfileUser(d); })
+      .catch(() => {});
+  }, [token]);
 
   // Reset filters when navigating to the main customers list (from another tab or detail view)
   useEffect(() => {
@@ -7765,7 +7794,7 @@ export default function App() {
   // ── LANDING PAGE ───────────────────────────────────────────────────────────
   if (view==="landing") return (
     <div style={{ minHeight:"100vh", background:C.sur, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", display:"flex", flexDirection:"column" }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} />
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:"6rem", fontWeight:800, color:C.acc, letterSpacing:"-2px", lineHeight:1, marginBottom:10 }}>RigPro</div>
@@ -7787,7 +7816,7 @@ export default function App() {
     }
     return (
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
-        <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} />
+        <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} />
         </div>
@@ -7800,7 +7829,7 @@ export default function App() {
   if (view==="admin" && role!=="admin") return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
   if (view==="admin") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} />
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <AdminPage token={token} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo}/>
       <Footer />
     </div>
@@ -7828,7 +7857,7 @@ export default function App() {
           <span style={{ fontSize: 18 }}>💡</span> {SYSTEM_PROMPT}
         </div>
       )}
-      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
+      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} profileUser={profileUser} role={role} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
         itemType={deadModal.type==="rfq"?"RFQ":"Job"}
@@ -7841,7 +7870,7 @@ export default function App() {
         onClose={()=>setDeadModal(null)}
       />}
       {showNotifs && <NotifPanel/>}
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
           <button style={{ ...mkBtn("ghost"), padding:"5px 9px", position:"relative" }} onClick={()=>setShowNotifs(true)}>
             🔔
@@ -7965,7 +7994,7 @@ export default function App() {
         }}
         onClose={()=>setDeadModal(null)}
       />}
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <div className="app-page-container" style={{ maxWidth:1160 }}>
         <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal}/>
       </div>
@@ -7976,7 +8005,7 @@ export default function App() {
   // ── EQUIPMENT RATES ────────────────────────────────────────────────────────
   if (view==="equipment") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv} role={role}/>
       <Footer />
     </div>
@@ -7985,7 +8014,7 @@ export default function App() {
   // ── LABOR RATES ────────────────────────────────────────────────────────────
   if (view==="labor") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates} role={role} baseLabor={baseLabor} setBaseLabor={setBaseLabor}/>
       <Footer />
     </div>
@@ -7995,7 +8024,7 @@ export default function App() {
   // ── MASTER JOB LIST ──────────────────────────────────────────────────────────
   if (view==="jobs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Job"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
       <MasterJobList
@@ -8058,7 +8087,7 @@ export default function App() {
 
   if (view==="calendar") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <CalendarPage jobs={jobs} setJobs={setJobs} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
       <Footer />
     </div>
@@ -8067,7 +8096,7 @@ export default function App() {
   // ── REPORTS ───────────────────────────────────────────────────────────────
   if (view==="reports") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14, overflowX:"auto" }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <ReportsPage
         jobs={jobs}
         reqs={reqs}
@@ -8264,7 +8293,7 @@ export default function App() {
         {deadModal && <MarkDeadModal itemType="Quote" itemLabel={deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d=>{ u("discounts",[...(active.discounts||[]),d]); setShowDiscModal(false); }} onClose={()=>setShowDiscModal(false)}/>}
         {showCustDoc && <CustomerDocModal quote={{...active, total:cv.total}} onClose={()=>setShowCustDoc(false)}/>}
-        <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
+        <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
           <div style={{ display:"flex", gap:5 }}>
             <button style={mkBtn("ghost")} onClick={()=>setView("dash")}>Cancel</button>
             {!active.locked && <button style={mkBtn("primary")} onClick={()=>saveQuote()}>Save Quote</button>}
