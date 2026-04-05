@@ -912,6 +912,10 @@ const BUILT_IN_REPORTS = [
   { id:"exec-pipeline-summary", name:"Pipeline Summary",        category:"Executive", desc:"Total open value by status only", scope:"org" },
   { id:"exec-win-loss",         name:"Win/Loss Analysis",       category:"Executive", desc:"Single blended win rate % with trend indicator", scope:"org" },
   { id:"exec-cost-margin",      name:"Cost & Margin Analysis",  category:"Executive", desc:"Blended gross margin % summary only", scope:"org" },
+  { id:"quote-to-award-type",   name:"Quote-to-Award by Job Type",category:"Pipeline", desc:"Win rate and avg cycle by job type", scope:"org" },
+  { id:"customer-yoy",          name:"Customer YOY Comparison", category:"Customers", desc:"Year-over-Year revenue comparison per customer", scope:"org" },
+  { id:"customer-health",       name:"Customer Health Score",   category:"Customers", desc:"Engagement, win rate and score by client", scope:"org" },
+  { id:"margin-trend-time",     name:"Margin Trend Over Time",  category:"Finance",   desc:"Average margin performance organized by month", scope:"org" },
   
   // New Executive Reports 
   { id:"exec-pipeline-health",  name:"Pipeline Health Index",    category:"Executive", desc:"Composite score of pipeline value, aging, and win rate", scope:"org" },
@@ -1042,6 +1046,95 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
        const np = t>0 ? (newRev/t*100).toFixed(1)+"%" : "0%";
        const rp = t>0 ? (retRev/t*100).toFixed(1)+"%" : "0%";
        return { isExecutiveReport: true, cols:["Segment","Revenue","% of Total"], rows:[["New Accounts",fmt2(newRev),np],["Returning Accounts",fmt2(retRev),rp]], rawRefs:[], summary:`% of revenue from new vs returning accounts` };
+    }
+    case "quote-to-award-type": {
+       const tb = {};
+       jobs.forEach(q => {
+          const type = q.jobType || "Uncategorized";
+          if(!tb[type]) tb[type] = { won:0, lost:0, open:0, cycleDays:0, wonCount:0 };
+          if(q.status==="Won") {
+             tb[type].won++;
+             tb[type].wonCount++;
+             if(q.fromReqId) {
+                const req = reqs.find(r=>r.id === q.fromReqId);
+                if(req?.date && q.date) {
+                   const d = Math.floor((new Date(q.date)-new Date(req.date))/86400000);
+                   if(d>=0 && d<365) tb[type].cycleDays += d;
+                }
+             }
+          }
+          else if(q.status==="Lost") tb[type].lost++;
+          else if(q.status!=="Dead") tb[type].open++;
+       });
+       const rows = Object.keys(tb).sort().map(k => {
+          const {won,lost,open,cycleDays,wonCount} = tb[k];
+          const wr = won+lost>0 ? (won/(won+lost)*100).toFixed(1)+"%" : "N/A";
+          const avgC = wonCount>0 ? Math.round(cycleDays/wonCount) : "N/A";
+          return [k, open, won, lost, wr, avgC];
+       });
+       return { isExecutiveReport:false, cols:["Job Type","Open Quotes","Won","Lost","Win Rate","Avg Days to Award"], rows, summary:"Win rate and cycle times sliced by Job Type categorization" };
+    }
+    case "customer-yoy": {
+       const now = new Date();
+       const thisYear = now.getFullYear();
+       const lastYear = thisYear - 1;
+       const tb = {};
+       jobs.filter(q=>q.status==="Won" && q.client).forEach(q => {
+          const d = q.start_date || q.date;
+          if(!d) return;
+          const y = new Date(d).getFullYear();
+          if(y===thisYear || y===lastYear) {
+             if(!tb[q.client]) tb[q.client] = { curr:0, prev:0 };
+             if(y===thisYear) tb[q.client].curr += (q.total||0);
+             if(y===lastYear) tb[q.client].prev += (q.total||0);
+          }
+       });
+       const rows = Object.keys(tb).sort().map(c => {
+          const curr = tb[c].curr; const prev = tb[c].prev;
+          const delta = prev>0 ? ((curr-prev)/prev*100) : (curr>0 ? 100 : 0);
+          const mk = delta>0 ? "🟢 +" : "🔴 ";
+          return [c, fmt2(curr), fmt2(prev), `${mk}${delta.toFixed(1)}%`];
+       }).sort((a,b)=> parseFloat(b[3].replace(/[^\d.-]/g,'')) - parseFloat(a[3].replace(/[^\d.-]/g,'')));
+       return { isExecutiveReport:false, cols:["Customer", `YTD ${thisYear}`, `YTD ${lastYear}`, "YOY Growth"], rows, summary:"Year over year revenue comparison by customer" };
+    }
+    case "customer-health": {
+       const tb = {};
+       const nowT = Date.now();
+       jobs.filter(q=>q.client).forEach(q => {
+          if(!tb[q.client]) tb[q.client] = { won:0, lost:0, open:0, lastInt:0 };
+          if(q.status==="Won") tb[q.client].won++;
+          if(q.status==="Lost") tb[q.client].lost++;
+          if(q.status==="In Review" || q.status==="In Progress" || q.status==="Submitted") tb[q.client].open++;
+          const d = new Date(q.date).getTime();
+          if(d > tb[q.client].lastInt) tb[q.client].lastInt = d;
+       });
+       const rows = Object.keys(tb).sort().map(c => {
+          const {won, lost, open, lastInt} = tb[c];
+          let score = 70 + (won*5) - (lost*2) + (open*2);
+          const daysIdle = lastInt > 0 ? Math.floor((nowT - lastInt)/86400000) : 100;
+          if(daysIdle > 60) score -= Math.floor((daysIdle-60)/10);
+          score = Math.max(0, Math.min(100, score));
+          const trnd = score >= 80 ? "🟢 Excellent" : score >= 50 ? "🟡 Healthy" : "🔴 At Risk";
+          return [c, score, trnd, won, lost, daysIdle + " days"];
+       }).sort((a,b)=>b[1]-a[1]);
+       return { isExecutiveReport:false, cols:["Customer","Health Score","Status","Jobs Won","Jobs Lost","Days Idle"], rows, summary:"Synthetic health score based on win history and recent engagement" };
+    }
+    case "margin-trend-time": {
+       const m={};
+       jobs.filter(q=>q.status==="Won").forEach(q => {
+          const mo = (q.start_date||q.date||"").slice(0,7);
+          if(mo) {
+             if(!m[mo]) m[mo] = { rev:0, cost:0 };
+             m[mo].rev += (q.total||0);
+             m[mo].cost+= ((q.labor||0)*0.6 + (q.equip||0)*0.7 + (q.travel||0) + (q.mats||0)*0.85 + (q.hauling||0)*0.85 + (q.subs||0)*0.85);
+          }
+       });
+       const rows = Object.keys(m).sort((a,b)=>b.localeCompare(a)).map(mo=>{
+          const rev = m[mo].rev; const cost = m[mo].cost;
+          const pct = rev>0 ? ((rev-cost)/rev*100).toFixed(1)+"%" : "0%";
+          return [mo, fmt2(rev), fmt2(cost), fmt2(rev-cost), pct];
+       });
+       return { isExecutiveReport:false, cols:["Month","Total Revenue","Total Cost","Gross Margin $","Margin %"], rows, summary:"Monthly aggregate margin progression" };
     }
     case "historical-dashboard": {
       return {
