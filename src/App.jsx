@@ -906,14 +906,14 @@ const BUILT_IN_REPORTS = [
   { id:"neighborhood-report", name:"Neighborhood Report",   category:"Customers",  desc:"Find customers by zipcode or proximity",            scope:"org" },
   { id:"prospect-report",     name:"Prospect Report",       category:"Pipeline",  desc:"Prospects with no Won jobs and their activity",     scope:"org" },
 
-  // Promoted to Executive
-  { id:"executive-dashboard",   name:"Executive Dashboard",     category:"Executive", desc:"Global executive overview and KPIs", scope:"org"},
+  // Promoted to Executive (Temporarily Excluded)
+  // { id:"executive-dashboard",   name:"Executive Dashboard",     category:"Executive", desc:"Global executive overview and KPIs", scope:"org"},
   { id:"exec-rev-by-month",     name:"Sales by Month",          category:"Executive", desc:"Rolled-up revenue trend line", scope:"org" },
   { id:"exec-pipeline-summary", name:"Pipeline Summary",        category:"Executive", desc:"Total open value by status only", scope:"org" },
   { id:"exec-win-loss",         name:"Win/Loss Analysis",       category:"Executive", desc:"Single blended win rate % with trend indicator", scope:"org" },
   { id:"exec-cost-margin",      name:"Cost & Margin Analysis",  category:"Executive", desc:"Blended gross margin % summary only", scope:"org" },
   
-  // New Executive Reports
+  // New Executive Reports 
   { id:"exec-pipeline-health",  name:"Pipeline Health Index",    category:"Executive", desc:"Composite score of pipeline value, aging, and win rate", scope:"org" },
   { id:"phi-explainer",         name:"PHI Explainer",            category:"Executive", desc:"Pipeline Health Index explainer and calculation rules", scope:"org" },
   { id:"exec-rev-vs-forecast",  name:"Revenue vs. Forecast",     category:"Executive", desc:"Actual won vs forecasted revenue", scope:"org" },
@@ -1008,14 +1008,40 @@ function buildReportData(reportId, jobs, reqs, custData = {}) {
         summary:`Top 10 Customers ranked by total revenue` };
     }
     case "exec-backlog": {
-      return { isExecutiveReport: true, cols:["Expected Completion Month","Backlog Value"], rows:[["Next Month","$400,000"],["Following Month","$320,000"]], rawRefs:[], summary:`Won jobs not completed grouped by month` };
+      const m={};
+      const now = new Date(); 
+      now.setDate(1); // Set to start of month to compare months
+      jobs.filter(q => q.status === "Won").forEach(q => {
+         const dateToCheck = q.start_date || q.date;
+         if(!dateToCheck) return;
+         const d = new Date(dateToCheck);
+         if (d >= now) {
+            const mo = dateToCheck.slice(0,7);
+            m[mo] = (m[mo]||0) + (q.total||0);
+         }
+      });
+      const rows = Object.keys(m).sort().map(k => [k, fmt2(m[k])]);
+      if(rows.length===0) rows.push(["No future backlog", "$0"]);
+      return { isExecutiveReport: true, cols:["Expected Completion Month","Backlog Value"], rows, rawRefs:[], summary:`Won jobs scheduled future-dated` };
     }
     case "exec-discount-impact": {
        const discAmt = jobs.reduce((s,q)=>(q.discounts||[]).reduce((a,d)=>a+Number(d.discAmt),0)+s, 0);
        return { isExecutiveReport: true, cols:["Total Discounts","Margin Impact"], rows:[[fmt2(discAmt),"-"+fmt2(discAmt)]], rawRefs:[], summary:`Total dollars discounted and margin impact` };
     }
     case "exec-new-vs-returning": {
-       return { isExecutiveReport: true, isNewReturning: true, cols:["Segment","Revenue","% of Total"], rows:[["New Accounts","$250,000","25%"],["Returning Accounts","$750,000","75%"]], rawRefs:[], summary:`% of revenue from new vs returning accounts` };
+       const wonQ = [...jobs].filter(q => q.status === "Won").sort((a,b)=>new Date(a.date||0) - new Date(b.date||0));
+       let newRev = 0; let retRev = 0;
+       const clientSeen = new Set();
+       wonQ.forEach(q => {
+         const c = q.client || "Unknown";
+         const total = q.total || 0;
+         if(!clientSeen.has(c)) { clientSeen.add(c); newRev += total; }
+         else { retRev += total; }
+       });
+       const t = newRev + retRev;
+       const np = t>0 ? (newRev/t*100).toFixed(1)+"%" : "0%";
+       const rp = t>0 ? (retRev/t*100).toFixed(1)+"%" : "0%";
+       return { isExecutiveReport: true, cols:["Segment","Revenue","% of Total"], rows:[["New Accounts",fmt2(newRev),np],["Returning Accounts",fmt2(retRev),rp]], rawRefs:[], summary:`% of revenue from new vs returning accounts` };
     }
     case "historical-dashboard": {
       return {
@@ -2460,7 +2486,7 @@ function CustomerDashboardReport({ jobs, reqs, custData }) {
   );
 }
 
-function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack, custData }) {
+function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId=null, onClearInitialReport, onBack, custData, phiConfig }) {
   const [catFilter,    setCatFilter]    = useState("Sales");
   const [periodFilter, setPeriodFilter] = useState("YTD");
   const [customStart,   setCustomStart] = useState("");
@@ -9695,6 +9721,7 @@ export default function App() {
         onClearInitialReport={()=>setTimeout(()=>setDashReportId(null),100)}
         onBack={()=>{ setDashReportId(null); setView("dash"); }}
         custData={custData}
+        phiConfig={phiConfig}
       />
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
@@ -10281,6 +10308,7 @@ function ExecutiveDashboard({ jobs, reqs, phiConfig }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>Executive<br/>dashboard</h1>
         
+        {/* PHI Widget Temporarily Disabled for debugging
         {phi && (
           <div style={{ display: "flex", gap: "20px", alignItems: "center", background: "#fff", padding: "12px 20px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
              <div>
@@ -10300,6 +10328,7 @@ function ExecutiveDashboard({ jobs, reqs, phiConfig }) {
              </div>
           </div>
         )}
+        */}
 
         <select style={{ padding: "8px 12px", borderRadius: 4, border: "1px solid #ccc", fontSize: 16, background: "#fff", cursor:"pointer", minWidth: 150 }}>
           <option>YTD 2026</option>

@@ -1116,9 +1116,43 @@ async function ensureCompanyInfoTable() {
     }
   });
 
+async function ensurePhiConfigTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS phi_config (
+      company_id INT PRIMARY KEY,
+      blend_company INT DEFAULT 50,
+      blend_industry INT DEFAULT 50,
+      w_aging INT DEFAULT 30,
+      w_winrate INT DEFAULT 25,
+      w_volume INT DEFAULT 20,
+      w_margin INT DEFAULT 15,
+      w_speed INT DEFAULT 10,
+      band_atrisk INT DEFAULT 40,
+      band_fair INT DEFAULT 60,
+      band_good INT DEFAULT 75,
+      band_excellent INT DEFAULT 90,
+      stale_days INT DEFAULT 30,
+      response_flag_hrs INT DEFAULT 48,
+      win_base FLOAT DEFAULT 0,
+      vol_base FLOAT DEFAULT 0,
+      margin_base FLOAT DEFAULT 0,
+      stale_pct_base FLOAT DEFAULT 0,
+      response_days_base FLOAT DEFAULT 0,
+      win_ind FLOAT DEFAULT 0,
+      vol_ind FLOAT DEFAULT 0,
+      margin_ind FLOAT DEFAULT 0,
+      stale_pct_ind FLOAT DEFAULT 0,
+      response_days_ind FLOAT DEFAULT 0,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      updated_by INT
+    )
+  `);
+}
+
 // GET PHI CONFIG
 app.get('/api/admin/phi-config', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
+    await ensurePhiConfigTable();
     const [rows] = await db.query('SELECT * FROM phi_config LIMIT 1');
     if (rows.length === 0) return res.json({});
     res.json(rows[0]);
@@ -1132,6 +1166,7 @@ app.get('/api/admin/phi-config', authenticateToken, authenticateAdmin, async (re
 app.put('/api/admin/phi-config', authenticateToken, authenticateAdmin, async (req, res) => {
   const data = req.body;
   try {
+    await ensurePhiConfigTable();
     const [existing] = await db.query('SELECT company_id FROM phi_config LIMIT 1');
     if (existing.length === 0) await db.query('INSERT INTO phi_config (company_id) VALUES (1)');
     
