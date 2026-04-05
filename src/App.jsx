@@ -6310,16 +6310,18 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
           <button onClick={() => setCurDate(new Date(year, month + 1, 1))}
             style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 6, padding: "5px 14px", fontSize: 14, cursor: "pointer", fontWeight: 700 }}>›</button>
         </div>
-        {/* Day headers */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: `1px solid ${C.bdr}` }}>
-          {DAYS.map(d => (
-            <div key={d} style={{ padding: "7px 0", textAlign: "center", fontSize: 11, fontWeight: 600, color: C.txtS, textTransform: "uppercase" }}>{d}</div>
-          ))}
-        </div>
-        {/* Cells */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
-          {cells.map((d, i) => <Fragment key={i}>{renderCell(d)}</Fragment>)}
-        </div>
+
+        {/* Scrolling Grid Body */}
+          {/* Day headers */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: `1px solid ${C.bdr}` }}>
+              {DAYS.map(d => (
+                <div key={d} style={{ padding: "7px 0", textAlign: "center", fontSize: 11, fontWeight: 600, color: C.txtS, textTransform: "uppercase" }}>{d}</div>
+              ))}
+            </div>
+            {/* Cells */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
+              {cells.map((d, i) => <Fragment key={i}>{renderCell(d)}</Fragment>)}
+            </div>
       </div>
 
       {/* ── Selected Day Detail ───────────────────────────────────────────── */}
