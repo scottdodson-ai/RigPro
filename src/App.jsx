@@ -2893,7 +2893,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
 // ── MASTER JOB LIST ───────────────────────────────────────────────────────────
 // ── QUOTES PAGE VIEW ─────────────────────────────────────────────────────────
 
-function QuotesPageView({ jobs, setView, openEdit }) {
+function QuotesPageView({ jobs, custData, setView, openEdit }) {
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [filter, setFilter] = useState('');
   
@@ -2941,7 +2941,10 @@ function QuotesPageView({ jobs, setView, openEdit }) {
                 }}
               >
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <span style={{ fontWeight:700, color:C.txt }}>{q.client || 'Unknown Client'}</span>
+                  <span style={{ fontWeight:700, color:C.txt }}>
+                    {q.client || 'Unknown Client'} 
+                    {custData && custData[q.client] && custData[q.client].customer_num ? ` · #${custData[q.client].customer_num}` : ''}
+                  </span>
                   <span style={{ fontSize:11, color:C.txtM, fontWeight:600 }}>{q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleDateString() : ''}</span>
                 </div>
                 <div style={{ fontSize:13, color:C.txtM, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", marginBottom:10 }}>
@@ -2961,7 +2964,7 @@ function QuotesPageView({ jobs, setView, openEdit }) {
       {/* Right Preview */}
       <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.bg, overflowY:"auto" }}>
         {selectedQuote ? (
-          <QuotePreviewPanel quote={selectedQuote} onEdit={() => openEdit(selectedQuote)} />
+          <QuotePreviewPanel quote={selectedQuote} custData={custData} onEdit={() => openEdit(selectedQuote)} />
         ) : (
           <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", color:C.txtM }}>
             <div style={{ fontSize:48, marginBottom:16, opacity:0.2 }}>📄</div>
@@ -2973,7 +2976,7 @@ function QuotesPageView({ jobs, setView, openEdit }) {
   );
 }
 
-function QuotePreviewPanel({ quote, onEdit }) {
+function QuotePreviewPanel({ quote, custData, onEdit }) {
   let qd = {};
   if (typeof quote.quote_data === 'string') {
     try { qd = JSON.parse(quote.quote_data); } catch(e){}
@@ -2985,7 +2988,10 @@ function QuotePreviewPanel({ quote, onEdit }) {
     <div style={{ padding:"32px", maxWidth:880, margin:"0 auto", width:"100%" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:32 }}>
         <div>
-          <h1 style={{ fontSize:28, fontWeight:800, margin:"0 0 10px 0", color:C.txt }}>{quote.client || qd.recipient?.company || 'Quote Preview'}</h1>
+          <h1 style={{ fontSize:28, fontWeight:800, margin:"0 0 10px 0", color:C.txt }}>
+            {quote.client || qd.recipient?.company || 'Quote Preview'}
+            {custData && quote.client && custData[quote.client] && custData[quote.client].customer_num ? ` · #${custData[quote.client].customer_num}` : ''}
+          </h1>
           <div style={{ color:C.txtM, fontSize:15, display:"flex", alignItems:"center", gap:8 }}>
             <span style={{ fontSize:16 }}>📍</span> {quote.jobSite || qd.recipient?.address || 'No address specified'}
           </div>
@@ -3324,7 +3330,7 @@ function ActionBtns({ onReq, onFromReq, onNew }) {
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onReq}>New RFQ</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onFromReq}>Pending Requests</button>
-      <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Estimate</button>
+      <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Quote</button>
     </div>
   );
 }
@@ -9197,7 +9203,7 @@ export default function App() {
   if (view==="quotes") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
-      <QuotesPageView jobs={jobs} setView={setView} openEdit={openEdit} />
+      <QuotesPageView jobs={jobs} custData={custData} setView={setView} openEdit={openEdit} />
     </div>
   );
 
