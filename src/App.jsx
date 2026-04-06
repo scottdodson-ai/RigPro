@@ -580,7 +580,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
   const comp = compStr ? JSON.parse(compStr) : { name: "Shoemaker Rigging & Transport LLC", logoSrc: null };
 
   const TABS = token ? [
-    ["dash","Dashboard"], ["customers","Customers"], ["rfqs","RFQ List"],
+    ["dash","Dashboard"], ["customers","Customers"], ["rfqs","RFQ List"], ["quotes", "Quotes"],
     ["jobs","Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
@@ -2803,6 +2803,155 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
 }
 
 // ── MASTER JOB LIST ───────────────────────────────────────────────────────────
+// ── QUOTES PAGE VIEW ─────────────────────────────────────────────────────────
+
+function QuotesPageView({ jobs, setView, openEdit }) {
+  const [selectedQuote, setSelectedQuote] = useState(null);
+  const [filter, setFilter] = useState('');
+  
+  const quotes = useMemo(() => {
+    return jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).sort((a, b) => {
+      return new Date(b.date || b.start_date || 0) - new Date(a.date || a.start_date || 0);
+    });
+  }, [jobs]);
+
+  const filtered = useMemo(() => {
+    if (!filter) return quotes;
+    const l = filter.toLowerCase();
+    return quotes.filter(q => (q.client?.toLowerCase().includes(l)) || (q.job_description?.toLowerCase().includes(l)) || (q.description?.toLowerCase().includes(l)) || (q.quote_number?.toLowerCase().includes(l)));
+  }, [quotes, filter]);
+
+  return (
+    <div style={{ display:"flex", height:"max(calc(100vh - 54px), 600px)" }}>
+      {/* Left List */}
+      <div style={{ width:400, flexShrink:0, borderRight:`1px solid ${C.bdr}`, background:C.sur, display:"flex", flexDirection:"column" }}>
+        <div style={{ padding:"20px 20px 16px", borderBottom:`1px solid ${C.bdr}` }}>
+          <h2 style={{ fontSize:20, fontWeight:800, margin:"0 0 12px 0", color:C.txt }}>Project Quotes</h2>
+          <input 
+            type="text" 
+            placeholder="Search quotes..." 
+            value={filter} 
+            onChange={e=>setFilter(e.target.value)}
+            style={{ ...inp, width:"100%", padding:"10px 14px", borderRadius:8 }}
+          />
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px" }}>
+          {filtered.map(q => {
+            const isSel = selectedQuote?.id === q.id;
+            return (
+              <div 
+                key={q.id} 
+                onClick={() => setSelectedQuote(q)}
+                style={{ 
+                  padding:"14px", 
+                  background:isSel ? C.accL : "transparent",
+                  border:`1px solid ${isSel ? C.acc : "transparent"}`,
+                  borderRadius:8,
+                  marginBottom:6,
+                  cursor:"pointer",
+                  transition:"all 0.2s ease"
+                }}
+              >
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                  <span style={{ fontWeight:700, color:C.txt }}>{q.client || 'Unknown Client'}</span>
+                  <span style={{ fontSize:11, color:C.txtM, fontWeight:600 }}>{q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleDateString() : ''}</span>
+                </div>
+                <div style={{ fontSize:13, color:C.txtM, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", marginBottom:10 }}>
+                  {q.jobSite || q.description || q.job_description}
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontSize:15, fontWeight:800, color:C.acc }}>{fmt(parseFloat(q.total||0))}</span>
+                  {(q.quote_number || q.job_num) && <span style={{ fontSize:10, background:C.bdr, padding:"3px 8px", borderRadius:12, fontWeight:600, color:C.txtM }}>{q.quote_number || q.job_num}</span>}
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && <div style={{ padding:20, textAlign:"center", color:C.txtM }}>No quotes found.</div>}
+        </div>
+      </div>
+      
+      {/* Right Preview */}
+      <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.bg, overflowY:"auto" }}>
+        {selectedQuote ? (
+          <QuotePreviewPanel quote={selectedQuote} onEdit={() => openEdit(selectedQuote)} />
+        ) : (
+          <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", color:C.txtM }}>
+            <div style={{ fontSize:48, marginBottom:16, opacity:0.2 }}>📄</div>
+            <div style={{ fontSize:16, fontWeight:600 }}>Select a quote to view details</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QuotePreviewPanel({ quote, onEdit }) {
+  let qd = {};
+  if (typeof quote.quote_data === 'string') {
+    try { qd = JSON.parse(quote.quote_data); } catch(e){}
+  } else if (quote.quote_data) {
+    qd = quote.quote_data;
+  }
+
+  return (
+    <div style={{ padding:"32px", maxWidth:880, margin:"0 auto", width:"100%" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:32 }}>
+        <div>
+          <h1 style={{ fontSize:28, fontWeight:800, margin:"0 0 10px 0", color:C.txt }}>{quote.client || qd.recipient?.company || 'Quote Preview'}</h1>
+          <div style={{ color:C.txtM, fontSize:15, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:16 }}>📍</span> {quote.jobSite || qd.recipient?.address || 'No address specified'}
+          </div>
+        </div>
+        <button style={{ ...mkBtn("primary"), fontSize:14, padding:"10px 18px", borderRadius:8, boxShadow:"0 4px 12px rgba(10,37,64,0.15)" }} onClick={onEdit}>Edit Quote</button>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32 }}>
+        <Card style={{ padding:"20px", display:"flex", flexDirection:"column", gap:6 }}>
+          <Lbl style={{ margin:0, fontSize:12 }}>Quote Number</Lbl>
+          <div style={{ fontSize:16, fontWeight:700 }}>{quote.quote_number || quote.job_num || 'N/A'}</div>
+        </Card>
+        <Card style={{ padding:"20px", display:"flex", flexDirection:"column", gap:6 }}>
+          <Lbl style={{ margin:0, fontSize:12 }}>Date Created</Lbl>
+          <div style={{ fontSize:16, fontWeight:700 }}>{quote.date ? new Date(quote.date).toLocaleDateString() : (qd.quote_date_iso ? new Date(qd.quote_date_iso).toLocaleDateString() : qd.quote_date_raw || 'N/A')}</div>
+        </Card>
+        <Card style={{ padding:"20px", display:"flex", flexDirection:"column", gap:6 }}>
+          <Lbl style={{ margin:0, fontSize:12 }}>Sales Representative</Lbl>
+          <div style={{ fontSize:16, fontWeight:700, color:C.txt }}>{quote.salesAssoc || qd.sender?.name || 'N/A'}</div>
+        </Card>
+        <Card style={{ padding:"20px", display:"flex", flexDirection:"column", gap:6, background:C.accL, border:`1px solid ${C.acc}33` }}>
+          <Lbl style={{ margin:0, fontSize:12, color:C.acc }}>Total Estimate</Lbl>
+          <div style={{ fontSize:22, fontWeight:800, color:C.acc }}>{fmt(parseFloat(quote.total||0))}</div>
+        </Card>
+      </div>
+
+      <div style={{ background:C.sur, borderRadius:12, border:`1px solid ${C.bdr}`, padding:"24px", marginBottom:24, boxShadow:"0 2px 8px rgba(0,0,0,0.02)" }}>
+        <h3 style={{ fontSize:18, fontWeight:800, margin:"0 0 16px 0", color:C.txt, display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontSize:20 }}>📋</span> Scope of Work
+        </h3>
+        {qd.work_scope && <p style={{ fontSize:15, lineHeight:1.6, marginBottom:20, color:C.txt }}>{qd.work_scope}</p>}
+        {qd.scope_items && qd.scope_items.length > 0 ? (
+          <ul style={{ paddingLeft:24, fontSize:15, lineHeight:1.6, margin:0, color:C.txtM, display:"flex", flexDirection:"column", gap:8 }}>
+            {qd.scope_items.map((item, i) => <li key={i}>{item}</li>)}
+          </ul>
+        ) : (
+          <p style={{ fontSize:15, lineHeight:1.6, color:C.txtM, margin:0, whiteSpace:"pre-wrap" }}>{quote.description || qd.raw_text_excerpt || 'No specific scope items outlined.'}</p>
+        )}
+      </div>
+
+      {(qd.project_conditions || quote.notes) && (
+        <div style={{ background:C.bg, borderRadius:12, border:`1px dashed ${C.bdr}`, padding:"20px" }}>
+          <h3 style={{ fontSize:15, fontWeight:700, margin:"0 0 12px 0", color:C.txtM, display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ fontSize:16 }}>⚖️</span> Conditions & Notes
+          </h3>
+          <p style={{ fontSize:13, lineHeight:1.6, color:C.txtS, margin:0, whiteSpace:"pre-wrap" }}>
+            {qd.project_conditions || quote.notes}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJobNum, onViewAttachments, jobListFilter, setJobListFilter, setView }) {
   const [search,      setSearch]      = useState("");
   const [sortBy,      setSortBy]      = useState("jobNum");
@@ -7578,6 +7727,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       const created = await res.json();
       setUsers(prev => [...prev, created]);
       setNewUser({ user_number:"", first_name:"", last_name:"", username:"", password:"", role:"estimator", email:"", cell_phone:"" });
+      setShowAddUser(false);
     } catch (err) {
       setFormErr(err.message);
     }
@@ -8065,12 +8215,11 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               </div>
               <form onSubmit={async (e) => {
                 await handleCreateUser(e);
-                if (!formErr) setShowAddUser(false);
               }} style={{ display:"flex", flexDirection:"column", gap:12 }}>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                   <div>
                     <Lbl c="USER NUMBER (ID)"/>
-                    <input name="user_number" type="text" style={inp} value={newUser.user_number} onChange={e=>setNewUser(p=>({...p,user_number:e.target.value}))} placeholder="e.g. 106" />
+                    <input name="user_number" type="text" style={{...inp, background:C.bg, color:C.txtS}} value="Auto-incremented" disabled />
                   </div>
                   <div>
                     <Lbl c="FIRST NAME"/>
@@ -8147,7 +8296,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                   <div>
                     <Lbl c="USER NUMBER (ID)"/>
-                    <input name="user_number" type="text" style={inp} value={editingUser.user_number || ""} onChange={e=>setEditingUser({...editingUser, user_number:e.target.value})} />
+                    <input name="user_number" type="text" style={{...inp, background:C.bg, color:C.txtS}} value={editingUser.user_number || ""} disabled />
                   </div>
                   <div>
                     <Lbl c="FIRST NAME"/>
@@ -8940,6 +9089,14 @@ export default function App() {
         <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal}/>
       </div>
       <Footer />
+    </div>
+  );
+
+  // ── QUOTES ─────────────────────────────────────────────────────────────
+  if (view==="quotes") return (
+    <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
+      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <QuotesPageView jobs={jobs} setView={setView} openEdit={openEdit} />
     </div>
   );
 

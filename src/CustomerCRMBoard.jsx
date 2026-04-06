@@ -32,16 +32,19 @@ const CustomerCRMBoard = (props) => {
 
   // RESTORE SCROLL POSITION WITH ROBUST TIMING
   useEffect(() => {
-    if (custView === "card" && gridRef.current) {
+    if (gridRef.current) {
       const timer = setTimeout(() => {
         if (gridRef.current) {
           gridRef.current.scrollTop = gridScroll;
-          console.log("Restored scroll position to:", gridScroll);
         }
       }, 100);
       return () => clearTimeout(timer);
     }
   }, [custView]);
+
+  const toggleView = (v) => {
+    setCustView(v);
+  };
 
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
@@ -58,39 +61,100 @@ const CustomerCRMBoard = (props) => {
         
         {/* CRM CONTROLS PANEL (STICKY) */}
         <div style={{ position:"sticky", top:0, zIndex:10, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
-          <div style={{ display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", maxWidth:1280, margin:"0 auto" }}>
+          <div style={{ display:"flex", alignItems:"flex-end", gap:16, flexWrap:"wrap", maxWidth:1280, margin:"0 auto" }}>
             <div style={{ flex:1 }}>
                <Lbl c="CUSTOMER DIRECT SEARCH"/><input style={{ ...inp, width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px", boxSizing:"border-box" }} placeholder="Search for a customer name..." value={search} onChange={e=>setSearch(e.target.value)}/>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column" }}>
+              <Lbl c="VIEW MODE" />
+              <div style={{ display:"flex", background:C.bg, borderRadius:10, padding:4, border:`1px solid ${C.bdr}` }}>
+                <button 
+                  onClick={() => toggleView("card")} 
+                  style={{ background: custView === "card" ? "#fff" : "transparent", color: custView === "card" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: custView === "card" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
+                >
+                  <span style={{ marginRight:6 }}>🗂️</span> Grid
+                </button>
+                <button 
+                  onClick={() => toggleView("list")} 
+                  style={{ background: custView === "list" ? "#fff" : "transparent", color: custView === "list" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: custView === "list" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
+                >
+                  <span style={{ marginRight:6 }}>📋</span> List
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* CUSTOMER CARD GRID */}
-        <div ref={gridRef} style={{ 
-            display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))", gap:25, 
-            marginTop: 20,
-            overflowY:"auto", padding:"10px 10px 30px 10px", 
-          }}>
-            {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).map(c => {
-              const custJobs = c.quotes || []; 
-              const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
-              return (
-                <Card key={c.name} style={{ cursor:"pointer", padding:25, borderRadius:20, transition:"0.2s", border: selC === c.name ? `2.5px solid ${C.acc}` : `1px solid ${C.bdrL}` }} onClick={()=>{ 
-                  if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
-                  setSelC(c.name); 
-                }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                    <div style={{ fontWeight:900, fontSize:17 }}>{c.name}</div>
-                    {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>CUSTOMER</span>}
-                  </div>
-                  <div style={{ fontSize:22, fontWeight:900, color:C.acc, marginBottom:15 }}>{fmt(tot)}</div>
-                  <div style={{ display:"flex", gap:20, borderTop:`1px solid ${C.bdrL}`, paddingTop:15 }}>
-                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>MASTER JOBS</div><div style={{fontSize:15, fontWeight:800}}>{custJobs.length}</div></div>
-                    <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>TOTAL BILLINGS</div><div style={{fontSize:15, fontWeight:800, color:C.grn}}>{fmt(tot)}</div></div>
-                  </div>
-                </Card>
-              );
-            })}
+        {/* VIEW MODE RENDERER */}
+        <div ref={gridRef} style={{ marginTop: 20, overflowY:"auto", padding:"10px 10px 30px 10px" }}>
+          {custView === "list" ? (
+            <div className="app-table-wrap">
+              <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={thS}>Customer Name</th>
+                    <th style={thS}>Status</th>
+                    <th style={{ ...thS, textAlign:"center" }}>Master Jobs</th>
+                    <th style={{ ...thS, textAlign:"right" }}>Total Billings</th>
+                    <th style={{ ...thS, textAlign:"center" }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).map(c => {
+                    const custJobs = c.quotes || []; 
+                    const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
+                    const isSel = selC === c.name;
+                    return (
+                      <tr key={c.name} style={{ background: isSel ? C.accL : "transparent", cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ 
+                        if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
+                        setSelC(c.name); 
+                      }}>
+                        <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt }}>{c.name}</td>
+                        <td style={tdS}>
+                          {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:800 }}>CUSTOMER</span>}
+                        </td>
+                        <td style={{ ...tdS, textAlign:"center", fontWeight:700, fontSize:14 }}>{custJobs.length}</td>
+                        <td style={{ ...tdS, textAlign:"right", fontWeight:800, fontSize:15, color:C.acc }}>{fmt(tot)}</td>
+                        <td style={{ ...tdS, textAlign:"center" }}>
+                          <button style={{ ...mkBtn("outline"), padding:"6px 12px", fontSize:12 }}>View Profile</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).length === 0 && (
+                    <tr>
+                      <td colSpan={5} style={{ padding:40, textAlign:"center", color:C.txtM, fontSize:14 }}>
+                        No customers found matching your criteria.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))", gap:25 }}>
+              {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).map(c => {
+                const custJobs = c.quotes || []; 
+                const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
+                return (
+                  <Card key={c.name} style={{ cursor:"pointer", padding:25, borderRadius:20, transition:"0.2s", border: selC === c.name ? `2.5px solid ${C.acc}` : `1px solid ${C.bdrL}` }} onClick={()=>{ 
+                    if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
+                    setSelC(c.name); 
+                  }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                      <div style={{ fontWeight:900, fontSize:17 }}>{c.name}</div>
+                      {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>CUSTOMER</span>}
+                    </div>
+                    <div style={{ fontSize:22, fontWeight:900, color:C.acc, marginBottom:15 }}>{fmt(tot)}</div>
+                    <div style={{ display:"flex", gap:20, borderTop:`1px solid ${C.bdrL}`, paddingTop:15 }}>
+                      <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>MASTER JOBS</div><div style={{fontSize:15, fontWeight:800}}>{custJobs.length}</div></div>
+                      <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>TOTAL BILLINGS</div><div style={{fontSize:15, fontWeight:800, color:C.grn}}>{fmt(tot)}</div></div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* PROFILE MODAL OVERLAY */}
