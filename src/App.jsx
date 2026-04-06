@@ -50,6 +50,43 @@ const EQ_MAP = {};
 EQUIPMENT.forEach(e => { EQ_MAP[e.code] = e; });
 const EQ_CATS = [...new Set(EQUIPMENT.map(e => e.cat))];
 
+export function useTableSort(items) {
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState(1);
+  const requestSort = (key) => {
+    if (sortKey === key) setSortDir(-sortDir);
+    else { setSortKey(key); setSortDir(1); }
+  };
+  const sortedItems = useMemo(() => {
+    if (!sortKey) return items;
+    return [...items].sort((a,b) => {
+      let v1 = typeof sortKey === 'function' ? sortKey(a) : a[sortKey];
+      let v2 = typeof sortKey === 'function' ? sortKey(b) : b[sortKey];
+      const clean = v => {
+        if(typeof v === 'string') {
+          if (/^[\$]?[0-9,]+(\.[0-9]+)?%?(\s*(days|hrs|m|w))?$/.test(v.trim().toLowerCase())) return Number(v.replace(/[^0-9.-]/g, ''));
+          return v.toLowerCase();
+        }
+        return v;
+      };
+      v1 = clean(v1); v2 = clean(v2);
+      if (v1 < v2) return -1 * sortDir;
+      if (v1 > v2) return 1 * sortDir;
+      return 0;
+    });
+  }, [items, sortKey, sortDir]);
+  return { sortedItems, requestSort, sortKey, sortDir };
+}
+
+export function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, className }) {
+  const isA = currentSort === sortKey;
+  return (
+    <th className={className} style={{ ...style, cursor: "pointer", userSelect: "none" }} onClick={() => requestSort(sortKey)}>
+      {label} <span style={{ fontSize:10, opacity:0.6 }}>{isA ? (currentDir === 1 ? "▼" : "▲") : "↕"}</span>
+    </th>
+  );
+}
+
 const CUSTOMERS = [
   "Apex Industrial LLC","Beacon Manufacturing Co.","Cornerstone Plastics Inc.",
   "Delta Fabrication Group","Eagle Press & Die","Frontier Castings Ltd.",
@@ -324,8 +361,29 @@ const listKey = (prefix, item, index = 0) => {
     : item;
   return `${prefix}-${String(base ?? "na")}-${index}`;
 };
-const nextQN = () => "RIG-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random()*900+100));
-const nextRN = () => "REQ-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random()*900+100));
+function nextQN(quotes) {
+  const year = String(new Date().getFullYear());
+  const maxSeq = (quotes || []).reduce((mx, q) => {
+    const raw = String(q?.qn || q?.quote_number || "").trim();
+    const m = raw.match(/^RIG-(\d{4})-(\d{3,})$/);
+    if (!m || m[1] !== year) return mx;
+    const seq = Number(m[2]);
+    return Number.isFinite(seq) ? Math.max(mx, seq) : mx;
+  }, 0);
+  return `RIG-${year}-${String(maxSeq + 1).padStart(3, "0")}`;
+}
+
+function nextRN(reqs) {
+  const year = String(new Date().getFullYear());
+  const maxSeq = (reqs || []).reduce((mx, r) => {
+    const raw = String(r?.rn || r?.rfq_number || "").trim();
+    const m = raw.match(/^REQ-(\d{4})-(\d{3,})$/);
+    if (!m || m[1] !== year) return mx;
+    const seq = Number(m[2]);
+    return Number.isFinite(seq) ? Math.max(mx, seq) : mx;
+  }, 0);
+  return `REQ-${year}-${String(maxSeq + 1).padStart(3, "0")}`;
+}
 const today  = () => new Date().toISOString().slice(0,10);
 
 function nextJobNumber(quotes, dateValue) {
@@ -352,11 +410,15 @@ function defLaborRows(client, customerRates, baseLabor) {
   });
 }
 
-function blankQuote(req, customerRates, isCO=false, parentQ=null) {
+function blankQuote(jobs=[], req, customerRates, isCO=false, parentQ=null) {
   const client = req?.company || "";
   return {
-    id:uid(), qn:nextQN(), client,
+    id:uid(), qn:nextQN(jobs), client,
     jobSite:      req?.jobSite    || "",
+    jobSiteAddress1: req?.jobSiteAddress1 || "",
+    jobSiteCity:     req?.jobSiteCity || "",
+    jobSiteState:    req?.jobSiteState || "",
+    jobSiteZip:      req?.jobSiteZip || "",
     desc:         isCO && parentQ ? `Change Order – ${parentQ.desc}` : (req?.desc || ""),
     contactName:  req?.requester  || "",
     contactEmail: req?.email      || "",
@@ -1117,7 +1179,7 @@ function buildReportData(reportId, jobs, reqs) {
     }
     case "rev-by-month": {
       const m={};
-      won.forEach(q=>{ const mo=q.start_date?.slice(0,7)||"Unknown"; if(!m[mo])m[mo]={month:mo,revenue:0,jobs:0,qs:[]}; m[mo].revenue+=(q.total||0); m[mo].jobs+=1; m[mo].qs.push(q); });
+      won.forEach(q=>{ const mo=(q.start_date||q.date)?.slice(0,7)||"Unknown"; if(!m[mo])m[mo]={month:mo,revenue:0,jobs:0,qs:[]}; m[mo].revenue+=(q.total||0); m[mo].jobs+=1; m[mo].qs.push(q); });
       const data=Object.keys(m).sort().map(k=>m[k]);
       return { cols:["Month","Revenue","Jobs"], clickHint:"Click a month to see its jobs",
         rows:data.map(r=>[r.month,fmt2(r.revenue),r.jobs]),
@@ -1151,7 +1213,7 @@ function buildReportData(reportId, jobs, reqs) {
       };
     }
     case "pipeline-summary": {
-      const statuses=["In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost"];
+      const statuses=["Pending","In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost"];
       const data=statuses.map(st=>{ 
         const qs=jobs.filter(q=>q.status===st); 
         const staleCount = qs.filter(q => {
@@ -1185,20 +1247,20 @@ function buildReportData(reportId, jobs, reqs) {
     }
     case "quote-aging": {
       const now=new Date();
-      const openQ=jobs.filter(q=>!["Won","Lost","Dead"].includes(q.status));
-      const data=openQ.map(q=>({ q, days:Math.floor((now-new Date(q.start_date||now))/86400000) })).sort((a,b)=>b.days-a.days);
+      const openQ=jobs.filter(q=>!["Won","Lost","Dead","HISTORICAL"].includes(q.status));
+      const data=openQ.map(q=>({ q, days:Math.floor((now-new Date(q.start_date||q.date||now))/86400000) })).sort((a,b)=>b.days-a.days);
       return { cols:["Quote #","Customer","Status","Age","Value"], clickHint:"Click a quote to open it",
-        rows:data.map(({q,days})=>[q.job_num,q.client,q.status,days+" days",fmt2(q.total||0)]),
+        rows:data.map(({q,days})=>[q.job_num||q.quote_number,q.client,q.status,days+" days",fmt2(q.total||0)]),
         rawRefs:data.map(({q})=>({type:"quote",quote:q})),
         summary:`${openQ.length} open jobs · Oldest: ${data[0]?data[0].days+" days":"—"}` };
     }
     case "open-estimates": {
       const now = new Date();
-      const openQ = jobs.filter(q => !["Won", "Lost", "Dead"].includes(q.status));
-      const data = openQ.map(q => ({ q, age: Math.floor((now - new Date(q.start_date || now)) / 86400000) })).sort((a,b) => b.age - a.age);
+      const openQ = jobs.filter(q => !["Won", "Lost", "Dead", "HISTORICAL"].includes(q.status));
+      const data = openQ.map(q => ({ q, age: Math.floor((now - new Date(q.start_date || q.date || now)) / 86400000) })).sort((a,b) => b.age - a.age);
       return {
         cols: ["Quote #", "Customer", "Estimator", "Age", "Value"],
-        rows: data.map(({q, age}) => [q.job_num, q.client, q.salesAssoc || "Unassigned", age + " days", fmt2(q.total || 0)]),
+        rows: data.map(({q, age}) => [q.job_num||q.quote_number, q.client, q.salesAssoc || "Unassigned", age + " days", fmt2(q.total || 0)]),
         rawRefs: data.map(({q}) => ({ type: "quote", quote: q })),
         summary: `${openQ.length} open estimates formatting as aging summary`
       };
@@ -1841,6 +1903,11 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
   const [drillRef,     setDrillRef]     = useState(null);
   const [editingReport,setEditingReport]= useState(null);
 
+  const [sCol, setSCol] = useState(null);
+  const [sDir, setSDir] = useState(1);
+  const handleSort = (idx) => { if(sCol===idx) setSDir(-sDir); else { setSCol(idx); setSDir(1); } };
+  useEffect(() => { setSCol(null); setSDir(1); }, [activeReport]);
+
   function saveCustomReports(r) {
     setCustomReports(r);
     localStorage.setItem("rigpro_custom_reports", JSON.stringify(r));
@@ -1853,12 +1920,30 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
 
 
   const filtered = allReports.filter(r=>r.category===catFilter);
-  const reportData = useMemo(() => {
+  const rawReportData = useMemo(() => {
     if(!activeReport) return null;
     const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===activeReport.id);
     if(isCustom) return runCustomReport(activeReport, jobs);
     return buildReportData(activeReport.id, jobs, reqs);
   }, [activeReport, jobs, reqs]);
+
+  const reportData = useMemo(() => {
+    if (!rawReportData) return null;
+    if (sCol === null) return rawReportData;
+    const clean = v => {
+      if(typeof v === 'string') {
+        if (/^[\$]?[0-9,]+(\.[0-9]+)?%?(\s*(days|hrs|m|w))?$/.test(v.trim().toLowerCase())) return Number(v.replace(/[^0-9.-]/g, ''));
+        return v.toLowerCase();
+      }
+      return v;
+    };
+    let arr = rawReportData.rows.map((r,i) => ({ r, ref: rawReportData.rawRefs?.[i] }));
+    arr.sort((a,b) => {
+      let v1 = clean(a.r[sCol]); let v2 = clean(b.r[sCol]);
+      if(v1<v2) return -1*sDir; if(v1>v2) return 1*sDir; return 0;
+    });
+    return { ...rawReportData, rows: arr.map(x=>x.r), rawRefs: arr.map(x=>x.ref) };
+  }, [rawReportData, sCol, sDir]);
 
   function deleteCustom(id) {
     if(!window.confirm("Delete this report?")) return;
@@ -1977,7 +2062,9 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                   <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
                     <thead>
                       <tr style={{ background:C.bg }}>
-                        {reportData.cols.map(c=><th key={c} style={{ ...thS, padding:"12px 14px", borderBottom:`2px solid ${C.bdr}`, textAlign:"left" }}>{c}</th>)}
+                        {reportData.cols.map((c, idx) => (
+                          <SortTh key={c} style={{ ...thS, padding:"12px 14px", borderBottom:`2px solid ${C.bdr}`, textAlign:"left" }} label={c} sortKey={idx} currentSort={sCol} currentDir={sDir} requestSort={handleSort} />
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
@@ -2436,6 +2523,7 @@ function RecentQuotesCard({ jobs, openEdit, setView, onBack }) {
   const [expandedCustFilter, setExpandedCustFilter] = useState(false);
 
   const filtered = custFilter==="all" ? jobs : jobs.filter(q=>q.client===custFilter);
+  const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filtered);
 
   return (
     <>
@@ -2475,16 +2563,16 @@ function RecentQuotesCard({ jobs, openEdit, setView, onBack }) {
         <table className="rq-table" style={{ width:"100%", borderCollapse:"collapse", minWidth:460 }}>
           <thead>
             <tr>
-              <th style={thS}>Job #</th>
-              <th style={thS}>Customer</th>
-              <th className="rq-hide-mobile" style={thS}>Description</th>
-              <th className="rq-hide-mobile" style={thS}>Start Date</th>
-              <th style={thS}>Status</th>
-              <th className="rq-hide-mobile" style={thS}>Total</th>
+              <SortTh style={thS} label="Job #" sortKey="job_num" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+              <SortTh style={thS} label="Customer" sortKey="client" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+              <SortTh className="rq-hide-mobile" style={thS} label="Description" sortKey="job_description" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+              <SortTh className="rq-hide-mobile" style={thS} label="Start Date" sortKey="start_date" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+              <SortTh style={thS} label="Status" sortKey="status" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+              <SortTh className="rq-hide-mobile" style={thS} label="Total" sortKey="total" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
             </tr>
           </thead>
           <tbody>
-            {filtered.slice(0,12).map((q, i)=>(
+            {sortedItems.slice(0,12).map((q, i)=>(
               <tr key={listKey("hist-quote", q, i)} style={{ cursor:"pointer" }} onClick={()=>openEdit(q)}>
                 <td style={{ ...tdS, color:C.acc, fontWeight:600, whiteSpace:"nowrap" }}>{q.job_num}</td>
                 <td style={{ ...tdS, fontWeight:600 }}>{q.client}</td>
@@ -2700,7 +2788,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
 }
 
 // ── RFQ LIST VIEW ─────────────────────────────────────────────────────────────
-function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setShowRM, setDeadModal }) {
+function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setShowRM, setDeadModal, deleteRfq, reopenRfq }) {
   const [rfqView, setRfqView] = useState("active"); // active | all | dead
   const [layoutMode, setLayoutMode] = useState("list"); // list | card
 
@@ -2789,9 +2877,9 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
                     <button style={{ background:"#1c1f26", color:"#9ca3af", border:"1px solid #374151", borderRadius:6, padding:"4px 9px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:600 }} onClick={()=>setDeadModal({type:"rfq",item:r})}>Mark Dead</button>
                   </>}
                   {isDead && (
-                    <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 9px" }} onClick={()=>setReqs(p=>p.map(x=>x.id===r.id?{...x,status:"New",deadNote:""}:x))}>Reopen</button>
+                    <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 9px" }} onClick={() => reopenRfq(r)}>Reopen</button>
                   )}
-                  <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 9px" }} onClick={()=>setReqs(p=>p.filter(x=>x.id!==r.id))}>Delete</button>
+                  <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 9px" }} onClick={() => deleteRfq(r.id)}>Delete</button>
                 </div>
               </div>
             </Card>
@@ -3242,13 +3330,13 @@ function ActionBtns({ onReq, onFromReq, onNew }) {
 }
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
-function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData, jobs=[], profileUser, role }) {
+function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData, jobs=[], profileUser, role, reqs=[] }) {
   const blank = useMemo(() => {
     let estimator = "";
     if (profileUser && role !== "admin") {
       estimator = profileUser.username;
     }
-    return { id:uid(), rn:nextRN(), company:"", requester:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:estimator };
+    return { id:uid(), rn:nextRN(reqs), company:"", requester:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:estimator };
   }, [profileUser, role]);
   const [f, setF] = useState(init || blank);
   const u = (k,v) => setF(x => ({ ...x, [k]:v }));
@@ -3415,46 +3503,29 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
             <Lbl c="JOB SITE ADDRESS"/>
             {(() => {
               const hasLocations = custData[f.company]?.locations?.length > 0;
-              const isKnown = hasLocations && custData[f.company].locations.some(l => (l.address || l.name) === f.jobSite);
+              const isKnown = hasLocations && custData[f.company].locations.some(l => l.address === f.jobSite);
               const isCustom = !isKnown && f.jobSite !== "";
-
-              // Helper to parse existing string into parts safely
-              const parseAddr = (str) => {
-                if(!str || str==="__custom__") return { st:"", cty:"", state:"", zip:"" };
-                const parts = str.split(", ");
-                if(parts.length >= 3) {
-                   const sz = parts[2].trim().split(" ");
-                   return { st:parts[0], cty:parts[1], state:sz[0]||"", zip:sz[1]||"" };
-                }
-                return { st:str, cty:"", state:"", zip:"" };
-              };
-              
-              const updatePart = (field, val) => {
-                let p = parseAddr(f.jobSite);
-                p[field] = val;
-                
-                // State validity filtering (only letters, max 2)
-                if(field === "state") p.state = val.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
-                // Zip validity filtering (only numbers, max 5)
-                if(field === "zip") p.zip = val.replace(/[^0-9]/g, "").slice(0, 5);
-
-                let full = p.st;
-                if(p.cty || p.state || p.zip) full += ", " + p.cty;
-                if(p.state || p.zip) full += ", " + p.state + (p.zip ? " " + p.zip : "");
-                u("jobSite", full);
-              };
-
-              const p = parseAddr(f.jobSite);
-
-              const stateValid = !p.state || p.state.length === 2;
-              const zipValid = !p.zip || p.zip.length === 5;
 
               return (
                 <>
                   {hasLocations && (
                     <select style={{ ...sel, width:"100%", marginBottom:8 }}
                       value={isKnown ? f.jobSite : (f.jobSite ? "__custom__" : "")}
-                      onChange={e => u("jobSite", e.target.value === "__custom__" ? " , ,  " : e.target.value)}>
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === "__custom__") {
+                          u("jobSite", "");
+                          u("jobSiteAddress1", "");
+                          u("jobSiteCity", "");
+                          u("jobSiteState", "");
+                          u("jobSiteZip", "");
+                        } else {
+                          u("jobSite", val);
+                          // For a known location, we might just store the raw string in jobSite 
+                          // or attempt to parse it cleanly if they want it split.
+                          // But we can let them type in the explicit boxes if custom.
+                        }
+                      }}>
                       <option value="">— Select a known location or type below —</option>
                       {custData[f.company].locations.map(l=>(
                         <option key={l.id} value={l.address||l.name}>{l.name}{l.address?" — "+l.address:""}</option>
@@ -3463,21 +3534,19 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
                     </select>
                   )}
                   
-                  {(!hasLocations || isCustom || f.jobSite === "") && (
-                    <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:8 }}>
+                  {(!hasLocations || isCustom || !f.jobSite) && (
+                    <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:8 }}>
                       <div style={{ gridColumn:"1/-1" }}>
-                        <input style={inp} value={p.st} placeholder="Street Address" onChange={e=>updatePart("st", e.target.value)}/>
+                        <input style={inp} value={f.jobSiteAddress1||""} placeholder="Street Address" onChange={e=>u("jobSiteAddress1", e.target.value)}/>
                       </div>
                       <div>
-                        <input style={inp} value={p.cty} placeholder="City" onChange={e=>updatePart("cty", e.target.value)}/>
+                        <input style={inp} value={f.jobSiteCity||""} placeholder="City" onChange={e=>u("jobSiteCity", e.target.value)}/>
                       </div>
                       <div>
-                        <input style={{...inp, border: !stateValid ? "1px solid red" : inp.border}} value={p.state} placeholder="State (OH)" onChange={e=>updatePart("state", e.target.value)}/>
-                        {!stateValid && <div style={{fontSize:9, color:'red', marginTop:2}}>Requires 2 letters</div>}
+                        <input style={inp} value={f.jobSiteState||""} placeholder="State (OH)" onChange={e=>u("jobSiteState", e.target.value.toUpperCase().slice(0, 2))} maxLength={2}/>
                       </div>
                       <div>
-                        <input style={{...inp, border: !zipValid ? "1px solid red" : inp.border}} value={p.zip} placeholder="Zip (44312)" onChange={e=>updatePart("zip", e.target.value)}/>
-                        {!zipValid && <div style={{fontSize:9, color:'red', marginTop:2}}>Requires 5 digits</div>}
+                        <input style={inp} value={f.jobSiteZip||""} placeholder="Zip (44312)" onChange={e=>u("jobSiteZip", e.target.value.replace(/[^0-9]/g, "").slice(0, 5))} maxLength={5}/>
                       </div>
                     </div>
                   )}
@@ -7297,9 +7366,10 @@ function DatabaseBrowser({ token }) {
           return String(val).toLowerCase().includes(searchTerm);
         })
       );
+  const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filteredData);
 
-  const totalPages = Math.ceil(filteredData.length / pageSize);
-  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(sortedItems.length / pageSize);
+  const paginatedData = sortedItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -7383,7 +7453,7 @@ function DatabaseBrowser({ token }) {
                   <thead style={{ position:"sticky", top:0, zIndex:10 }}>
                     <tr style={{ background:C.bg }}>
                       <th style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}`, position:"sticky", left:0, background:C.bg, zIndex:11, boxShadow:"2px 0 5px rgba(0,0,0,0.05)" }}>Actions</th>
-                      {headers.map(h=><th key={h} style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}` }}>{h}</th>)}
+                      {headers.map(h=><SortTh key={h} style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}` }} label={h} sortKey={h} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />)}
                     </tr>
                   </thead>
                   <tbody>
@@ -8481,28 +8551,42 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 export default function App() {
   const [token,      setToken]      = useState(localStorage.getItem("token") || "");
   const [role,       setRole]       = useState(localStorage.getItem("role") || "user");
-  const [viewState,  setViewState]  = useState(localStorage.getItem("token") ? "dash" : "landing");
-  const [viewHistory, setViewHistory] = useState([]);
+  
+  const [viewState, setViewState] = useState(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash) return hash;
+    return localStorage.getItem("token") ? "dash" : "landing";
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) setViewState(hash);
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    
+    if (!window.location.hash) {
+      window.history.replaceState(null, '', '#' + viewState);
+    }
+    
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
   const view = viewState;
   const setView = (v) => {
     setViewState(prev => {
       const next = typeof v === "function" ? v(prev) : v;
       if (prev !== next) {
-        if (["dash","customers","rfqs","reports","admin"].includes(next)) setViewHistory([]);
-        else setViewHistory(h => [...h, prev]);
+        window.location.hash = next;
       }
       return next;
     });
   };
+
   const goBack = () => {
-    let target = "dash";
-    setViewHistory(h => {
-      const copy = [...h];
-      if (copy.length > 0) target = copy.pop();
-      return copy;
-    });
-    setViewState(target);
+    window.history.back();
   };
+
   const [profileUser, setProfileUser] = useState(null);
   const [rfqStageFilter, setRfqStageFilter] = useState("all");
   const [appUsers,   setAppUsers]   = useState([]);
@@ -8669,7 +8753,7 @@ export default function App() {
   }, [jobs, custData]);
 
   function openNew(req=null, isCO=false, parentQ=null) {
-    setActive(blankQuote(req, customerRates, isCO, parentQ));
+    setActive(blankQuote(jobs, req, customerRates, isCO, parentQ));
     setView("editor");
   }
 
@@ -8732,6 +8816,23 @@ export default function App() {
       })
       .catch(err => console.error("Error saving RFQ:", err));
   }
+
+  const deleteRfq = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this RFQ?")) return;
+    try {
+      await fetch(`/api/rfqs/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      setReqs(p => p.filter(x => x.id !== id));
+    } catch(e) {
+      console.error("Delete error:", e);
+      alert("Failed to delete RFQ.");
+    }
+  };
+
+  const reopenRfq = (r) => {
+    const nr = { ...r, status: "New", deadNote: "" };
+    setReqs(p => p.map(x => x.id === r.id ? nr : x));
+    persistReq(nr);
+  };
 
   function persistQuote(quote) {
     fetch(`/api/quotes/${quote.id}`, {
@@ -8947,7 +9048,7 @@ export default function App() {
           <span style={{ fontSize: 18 }}>💡</span> {SYSTEM_PROMPT}
         </div>
       )}
-      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} profileUser={profileUser} role={role} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
+      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} reqs={reqs} profileUser={profileUser} role={role} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
         itemType={deadModal.type==="rfq"?"RFQ":"Job"}
@@ -9072,7 +9173,7 @@ export default function App() {
   // ── RFQs ───────────────────────────────────────────────────────────────
   if (view==="rfqs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize:14 }}>
-      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
+      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} reqs={reqs} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
         itemType={deadModal.type==="rfq"?"RFQ":"Job"}
@@ -9086,7 +9187,7 @@ export default function App() {
       />}
       <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <div className="app-page-container" style={{ maxWidth:1160 }}>
-        <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal}/>
+        <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal} deleteRfq={deleteRfq} reopenRfq={reopenRfq} />
       </div>
       <Footer />
     </div>
@@ -9409,14 +9510,24 @@ export default function App() {
           </div>
 
           <Card>
-            <Sec c="Quote Information"/>
+            <Sec c="Customer Information" />
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:10 }}>
               <div style={{ gridColumn:"span 2" }}>
-                <Lbl c="CLIENT *"/>
-                <AutoInput val={active.client||""} on={handleClientChange} list={CUSTOMERS} ph="Company name"/>
+                <Lbl c="CLIENT *" />
+                <AutoInput 
+                  val={active.client||""} 
+                  on={handleClientChange} 
+                  list={[...new Set([...CUSTOMERS, ...Object.keys(custData||{}), ...jobs.map(q=>q.client).filter(Boolean)])].sort()} 
+                  ph="Company name"
+                />
                 {customerRates[active.client] && <div style={{ fontSize:11, color:C.yel, marginTop:2 }}>⚡ Special labor rates saved for this client</div>}
               </div>
-              <div style={{ gridColumn:"span 2" }}><Lbl c="JOB SITE ADDRESS"/><input style={inp} value={active.jobSite||""} onChange={e=>u("jobSite",e.target.value)} placeholder="123 Main St, City, State ZIP" disabled={active.locked}/></div>
+              <div style={{ gridColumn:"span 2", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:10 }}>
+                <div style={{ gridColumn:"1/-1" }}><Lbl c="JOB SITE ADDRESS 1" /><input style={inp} value={active.jobSiteAddress1||""} onChange={e=>u("jobSiteAddress1",e.target.value)} placeholder="123 Main St" disabled={active.locked} /></div>
+                <div><Lbl c="CITY" /><input style={inp} value={active.jobSiteCity||""} onChange={e=>u("jobSiteCity",e.target.value)} placeholder="City" disabled={active.locked} /></div>
+                <div><Lbl c="STATE" /><input style={inp} value={active.jobSiteState||""} onChange={e=>u("jobSiteState",e.target.value)} placeholder="State" disabled={active.locked} maxLength={2} /></div>
+                <div><Lbl c="ZIP" /><input style={inp} value={active.jobSiteZip||""} onChange={e=>u("jobSiteZip",e.target.value)} placeholder="ZIP" disabled={active.locked} maxLength={10} /></div>
+              </div>
               <div><Lbl c="QUOTE TYPE"/><select style={{ ...sel, width:"100%" }} value={active.qtype} onChange={e=>u("qtype",e.target.value)} disabled={active.locked}><option>Contract</option><option>T&M</option><option>Not To Exceed</option></select></div>
               <div><Lbl c="STATUS"/><select style={{ ...sel, width:"100%" }} value={active.status} onChange={e=>u("status",e.target.value)} disabled={active.locked}>{["In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost","Dead"].map(x=><option key={x}>{x}</option>)}</select></div>
             {/* Lift Plan fields */}

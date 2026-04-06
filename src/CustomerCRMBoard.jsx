@@ -1,4 +1,41 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+
+function useTableSort(items) {
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState(1);
+  const requestSort = (key) => {
+    if (sortKey === key) setSortDir(-sortDir);
+    else { setSortKey(key); setSortDir(1); }
+  };
+  const sortedItems = useMemo(() => {
+    if (!sortKey) return items;
+    return [...items].sort((a,b) => {
+      let v1 = typeof sortKey === 'function' ? sortKey(a) : a[sortKey];
+      let v2 = typeof sortKey === 'function' ? sortKey(b) : b[sortKey];
+      const clean = v => {
+        if(typeof v === 'string') {
+          if (/^[\$]?[0-9,]+(\.[0-9]+)?%?(\s*(days|hrs|m|w))?$/.test(v.trim().toLowerCase())) return Number(v.replace(/[^0-9.-]/g, ''));
+          return v.toLowerCase();
+        }
+        return v;
+      };
+      v1 = clean(v1); v2 = clean(v2);
+      if (v1 < v2) return -1 * sortDir;
+      if (v1 > v2) return 1 * sortDir;
+      return 0;
+    });
+  }, [items, sortKey, sortDir]);
+  return { sortedItems, requestSort, sortKey, sortDir };
+}
+
+function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style }) {
+  const isA = currentSort === sortKey;
+  return (
+    <th style={{ ...style, cursor: "pointer", userSelect: "none" }} onClick={() => requestSort(sortKey)}>
+      {label} <span style={{ fontSize:10, opacity:0.6 }}>{isA ? (currentDir === 1 ? "▼" : "▲") : "↕"}</span>
+    </th>
+  );
+}
 
 const CustomerCRMBoard = (props) => {
   const { 
@@ -29,6 +66,8 @@ const CustomerCRMBoard = (props) => {
 
   const currentSelectionData = selC ? custData[selC] : null;
   const contacts = currentSelectionData?.contacts || [];
+
+  const { sortedItems: sortedCustomers, requestSort, sortKey, sortDir } = useTableSort(customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))));
 
   // RESTORE SCROLL POSITION WITH ROBUST TIMING
   useEffect(() => {
@@ -92,15 +131,15 @@ const CustomerCRMBoard = (props) => {
               <table style={{ width:"100%", borderCollapse:"collapse" }}>
                 <thead>
                   <tr>
-                    <th style={thS}>Customer Name</th>
-                    <th style={thS}>Status</th>
-                    <th style={{ ...thS, textAlign:"center" }}>Master Jobs</th>
-                    <th style={{ ...thS, textAlign:"right" }}>Total Billings</th>
+                    <SortTh style={thS} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                    <SortTh style={thS} label="Status" sortKey="isProspect" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                    <SortTh style={{ ...thS, textAlign:"center" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                    <SortTh style={{ ...thS, textAlign:"right" }} label="Total Billings" sortKey={(c) => (c.quotes||[]).reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0)} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                     <th style={{ ...thS, textAlign:"center" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).map(c => {
+                  {sortedCustomers.map(c => {
                     const custJobs = c.quotes || []; 
                     const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
                     const isSel = selC === c.name;
@@ -121,7 +160,7 @@ const CustomerCRMBoard = (props) => {
                       </tr>
                     );
                   })}
-                  {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).length === 0 && (
+                  {sortedCustomers.length === 0 && (
                     <tr>
                       <td colSpan={5} style={{ padding:40, textAlign:"center", color:C.txtM, fontSize:14 }}>
                         No customers found matching your criteria.
@@ -133,7 +172,7 @@ const CustomerCRMBoard = (props) => {
             </div>
           ) : (
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))", gap:25 }}>
-              {customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))).map(c => {
+              {sortedCustomers.map(c => {
                 const custJobs = c.quotes || []; 
                 const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
                 return (

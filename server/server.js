@@ -293,8 +293,12 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         ...json,
         ...row,
         qn: row.qn || json.qn || '',
-        client: row.client || json.client || '',
-        jobSite: row.jobSite || json.jobSite || '',
+        client: row.client || row.customer_name || json.client || '',
+        jobSite: row.jobSite || row.job_site || json.jobSite || '',
+        jobSiteAddress1: row.job_site_address1 || json.jobSiteAddress1 || '',
+        jobSiteCity: row.job_site_city || json.jobSiteCity || '',
+        jobSiteState: row.job_site_state || json.jobSiteState || '',
+        jobSiteZip: row.job_site_zip || json.jobSiteZip || '',
         desc: row.jobDesc || row.desc || json.desc || '',
         qtype: row.qtype || json.qtype || 'Contract',
         salesAssoc: row.salesAssoc || json.salesAssoc || '',
@@ -324,6 +328,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
           qtype: row.quote_type || row.qtype || 'Contract',
           salesAssoc: row.sales_assoc || row.salesAssoc || '',
           locked: Boolean(row.is_locked ?? row.locked),
+          status: 'Won'
         };
       });
       jobs = [
@@ -331,7 +336,15 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         ...mappedMaster.filter(m => !existingKeys.has(m.qn || `master:${m.id}`)),
       ];
     }
-    const rfqs = await safeQuery('SELECT r.*, c.name AS company, r.rfq_number as rn FROM rfqs r LEFT JOIN customers c ON r.customer_id = c.id');
+    const rfqsRaw = await safeQuery('SELECT r.*, c.name AS company, r.rfq_number as rn FROM rfqs r LEFT JOIN customers c ON r.customer_id = c.id');
+    const rfqs = rfqsRaw.map(r => ({
+      ...r,
+      jobSiteAddress1: r.job_site_address1 || '',
+      jobSiteCity: r.job_site_city || '',
+      jobSiteState: r.job_site_state || '',
+      jobSiteZip: r.job_site_zip || '',
+      jobSite: r.job_site || ''
+    }));
     const users = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, user_number, created_at FROM users');
     const estimators = await safeQuery('SELECT * FROM estimators');
 
@@ -1487,6 +1500,20 @@ app.post('/api/admin/restore-local', authenticateToken, authenticateAdmin, async
   });
 });
 
+// DELETE RFQ ENDPOINT
+app.delete('/api/rfqs/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const safeId = Number(id);
+  if (!Number.isInteger(safeId) || safeId <= 0) return res.status(400).json({ error: 'Invalid ID' });
+  try {
+    await db.query('DELETE FROM rfqs WHERE id = ?', [safeId]);
+    res.json({ success: true });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to delete rfq' });
+  }
+});
+
 // SAVE QUOTE ENDPOINT
 app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
@@ -1514,7 +1541,7 @@ app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
       if (existingByRn.length > 0) targetId = existingByRn[0].id;
     }
 
-    const { rn, company, requester, email, phone, jobSite, desc, notes, date, status, salesAssoc } = rfq;
+    const { rn, company, requester, email, phone, jobSite, jobSiteAddress1, jobSiteCity, jobSiteState, jobSiteZip, desc, notes, date, status, salesAssoc } = rfq;
     
     let custId = null;
     if (company) {
@@ -1525,16 +1552,16 @@ app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
     if (targetId) {
       await connection.query(
         `UPDATE rfqs SET 
-          rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, description=?, notes=?, date=?, status=?, sales_assoc=?
+          rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, notes=?, date=?, status=?, sales_assoc=?
          WHERE id=?`,
-        [rn, custId, requester||'', email||'', phone||'', jobSite||'', desc||'', notes||'', date||null, status||'', salesAssoc||'', targetId]
+        [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', date||null, status||'', salesAssoc||'', targetId]
       );
     } else {
       await connection.query(
         `INSERT INTO rfqs 
-          (rfq_number, customer_id, requester, email, phone, job_site, description, notes, date, status, sales_assoc) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [rn, custId, requester||'', email||'', phone||'', jobSite||'', desc||'', notes||'', date||null, status||'', salesAssoc||'']
+          (rfq_number, customer_id, requester, email, phone, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, notes, date, status, sales_assoc) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', date||null, status||'', salesAssoc||'']
       );
     }
 
@@ -1592,20 +1619,29 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
 
     // Ensure new estimate customers are represented in customers table.
     const customerName = String(quote.client || '').trim();
+    let custId = null;
     if (customerName) {
       const [existingCustomer] = await connection.query('SELECT id FROM customers WHERE name = ? LIMIT 1', [customerName]);
       if (existingCustomer.length === 0) {
-        await connection.query(
+        const [inserted] = await connection.query(
           'INSERT INTO customers (name, billing_address, notes) VALUES (?, ?, ?)',
           [customerName, String(quote.jobSite || '').trim(), 'Auto-created from quote save']
         );
+        custId = inserted.insertId;
+      } else {
+        custId = existingCustomer[0].id;
       }
     }
 
     const rowValues = [
       quote.qn || '',
-      quote.client || '',
+      custId,
+      customerName,
       quote.jobSite || '',
+      quote.jobSiteAddress1 || '',
+      quote.jobSiteCity || '',
+      quote.jobSiteState || '',
+      quote.jobSiteZip || '',
       quote.desc || '',
       quote.date || null,
       quote.status || 'Draft',
@@ -1629,12 +1665,12 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
     let savedId = targetId;
     if (targetId) {
       await connection.query(
-        'UPDATE quotes SET quote_number=?, customer_name=?, job_site=?, description=?, date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=? WHERE id=?',
+        'UPDATE quotes SET quote_number=?, customer_id=?, customer_name=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=? WHERE id=?',
         [...rowValues, targetId]
       );
     } else {
       const [insertResult] = await connection.query(
-        'INSERT INTO quotes (quote_number, customer_name, job_site, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO quotes (quote_number, customer_id, customer_name, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         rowValues
       );
       savedId = insertResult.insertId;
