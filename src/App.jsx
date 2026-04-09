@@ -588,7 +588,7 @@ const AccordionCard = ({ title, children, defaultOpen=false, isOpen, onToggle, s
   const open   = isOpen !== undefined ? isOpen : internalOpen;
   const toggle = () => { if(onToggle) onToggle(!open); else setInternalOpen(!open); };
   return (
-    <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, overflow:open ? "visible" : "hidden", marginBottom:12, boxShadow:open?"0 4px 20px rgba(0,0,0,0.04)":"none", transition:"all 0.3s ease", ...style }}>
+    <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, overflow:"hidden", marginBottom:12, boxShadow:open?"0 4px 20px rgba(0,0,0,0.04)":"none", transition:"all 0.3s ease", width:"100%", minWidth:0, ...style }}>
       <div 
         onClick={toggle}
         style={{ padding:"14px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", background:open ? C.accL : "transparent", userSelect:"none" }}
@@ -7420,7 +7420,7 @@ function DatabaseBrowser({ token }) {
   };
 
   return (
-    <div style={{}}>
+    <div style={{ width: "100%", overflow: "hidden" }}>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <div style={{ fontSize: 12, color: C.txtS }}>Live view of all MySQL database records.</div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -7463,7 +7463,7 @@ function DatabaseBrowser({ token }) {
                   {loading && <div style={{ fontSize:11, color:C.acc, fontWeight:700 }}>⏳ Loading records...</div>}
                 </div>
               </div>
-              <div style={{ overflowX:"auto", borderRadius:6, border:`1px solid ${C.bdr}`, background:C.sur }}>
+              <div style={{ overflowX:"auto", borderRadius:6, border:`1px solid ${C.bdr}`, background:C.sur, width:"100%", maxWidth:"100%" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
                   <thead style={{ position:"sticky", top:0, zIndex:10 }}>
                     <tr style={{ background:C.bg }}>
@@ -8034,8 +8034,8 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
   };
 
   return (
-    <div style={{ padding:"24px", maxWidth:1100, margin:"0 auto" }}>
-      <Card>
+    <div style={{ padding:"24px 16px", maxWidth:1100, margin:"0 auto", width:"100%", boxSizing:"border-box", overflowX:"hidden", minWidth:0 }}>
+      <Card style={{ maxWidth:"100%", overflowX:"hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ fontSize:22, fontWeight:800, color:C.acc, marginBottom:4 }}>Admin Portal</div>
@@ -8756,14 +8756,20 @@ export default function App() {
   }, [jobs, reqs]);
 
   const customers = useMemo(() => {
-    const qList = jobs; 
+    const qList = jobs;
     const m = {};
-    // Build from jobs first using 'client' (mismatch with jobs key, aliased in server.js)
-    qList.forEach(q => { if(q.client){ if(!m[q.client]) m[q.client]={name:q.client,jobs:[]}; m[q.client].jobs.push(q); } });
-    // Also include any custData entries that have no jobs yet (new prospects)
-    Object.keys(custData).forEach(name => { if(!m[name]) m[name]={name,jobs:[]}; });
+    // Only compile customers from the actual customers database table
+    Object.keys(custData).forEach(name => {
+      m[name] = { name, quotes: [], ...custData[name] };
+    });
+    // Associate jobs with mapped customers
+    qList.forEach(q => {
+      if (q.client && m[q.client]) {
+        m[q.client].quotes.push(q);
+      }
+    });
     return Object.values(m)
-      .map(c => ({ ...c, isProspect: c.jobs.length === 0 }))
+      .map(c => ({ ...c, isProspect: c.quotes.length === 0 }))
       .sort((a,b) => a.name.localeCompare(b.name));
   }, [jobs, custData]);
 

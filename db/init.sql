@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS customers (
     industry VARCHAR(100),
     payment_terms VARCHAR(50),
     account_num VARCHAR(50),
+    tombstone TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -182,6 +183,7 @@ CREATE TABLE IF NOT EXISTS customer_contacts (
     name VARCHAR(100) NOT NULL,
     title VARCHAR(100),
     email VARCHAR(100),
+    mobile VARCHAR(100),
     phone VARCHAR(50),
     is_primary BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
