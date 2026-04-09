@@ -50,9 +50,9 @@ const EQ_MAP = {};
 EQUIPMENT.forEach(e => { EQ_MAP[e.code] = e; });
 const EQ_CATS = [...new Set(EQUIPMENT.map(e => e.cat))];
 
-export function useTableSort(items) {
-  const [sortKey, setSortKey] = useState(null);
-  const [sortDir, setSortDir] = useState(1);
+export function useTableSort(items, initialKey = null, initialDir = 1) {
+  const [sortKey, setSortKey] = useState(initialKey);
+  const [sortDir, setSortDir] = useState(initialDir);
   const requestSort = (key) => {
     if (sortKey === key) setSortDir(-sortDir);
     else { setSortKey(key); setSortDir(1); }
@@ -70,12 +70,17 @@ export function useTableSort(items) {
         return v;
       };
       v1 = clean(v1); v2 = clean(v2);
+      
+      // Handle nulls
+      if (v1 == null) return 1;
+      if (v2 == null) return -1;
+      
       if (v1 < v2) return -1 * sortDir;
       if (v1 > v2) return 1 * sortDir;
       return 0;
     });
   }, [items, sortKey, sortDir]);
-  return { sortedItems, requestSort, sortKey, sortDir };
+  return { sortedItems, requestSort, sortKey, sortDir, setSortKey, setSortDir };
 }
 
 export function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, className }) {
@@ -632,7 +637,7 @@ function AutoInput({ val, on, list, ph }) {
 }
 
 // ── HEADER ────────────────────────────────────────────────────────────────────
-function Header({ view, setView, extra, crumb, role, token, setToken, setRole, profileUser, setProfileUser }) {
+function Header({ view, setView, extra, crumb, role, token, setToken, setRole, profileUser, setProfileUser, customerCount, reqCount, quoteCount, jobCount }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({ first_name:"", last_name:"", username:"", email:"", cell_phone:"", role:"user", password:"" });
@@ -642,8 +647,8 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
   const comp = compStr ? JSON.parse(compStr) : { name: "Shoemaker Rigging & Transport LLC", logoSrc: null };
 
   const TABS = token ? [
-    ["dash","Dashboard"], ["customers","Customers"], ["rfqs","RFQ List"], ["quotes", "Quotes"],
-    ["jobs","Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
+    ["dash","Dashboard"], ["customers", customerCount !== undefined ? `Customers (${customerCount})` : "Customers"], ["rfqs", reqCount !== undefined ? `RFQ List (${reqCount})` : "RFQ List"], ["quotes", quoteCount !== undefined ? `Quotes (${quoteCount})` : "Quotes"],
+    ["jobs", jobCount !== undefined ? `Job List (${jobCount})` : "Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
   if (token && role === "admin") TABS.push(["admin", "Admin Portal"]);
@@ -7372,7 +7377,7 @@ function DatabaseBrowser({ token }) {
           return String(val).toLowerCase().includes(searchTerm);
         })
       );
-  const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filteredData);
+  const { sortedItems, requestSort, sortKey, sortDir, setSortKey } = useTableSort(filteredData, 'name');
 
   const totalPages = Math.ceil(sortedItems.length / pageSize);
   const paginatedData = sortedItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -7380,6 +7385,10 @@ function DatabaseBrowser({ token }) {
   useEffect(() => {
     setCurrentPage(1);
   }, [tableSearch]);
+
+  useEffect(() => {
+    setSortKey('name');
+  }, [selectedTable, setSortKey]);
 
   const saveEdit = async (updatedData) => {
     if (!editingRow || !editingRow.id) return;
@@ -8991,7 +9000,7 @@ export default function App() {
   // ── LANDING PAGE ───────────────────────────────────────────────────────────
   if (view==="landing") return (
     <div style={{ minHeight:"100vh", background:C.sur, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", display:"flex", flexDirection:"column" }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:"6rem", fontWeight:800, color:C.acc, letterSpacing:"-2px", lineHeight:1, marginBottom:10 }}>RigPro</div>
@@ -9013,7 +9022,7 @@ export default function App() {
     }
     return (
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
-        <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} />
         </div>
@@ -9026,7 +9035,7 @@ export default function App() {
   if (view==="admin" && role!=="admin") return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
   if (view==="admin") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <AdminPage token={token} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo}/>
       <Footer />
     </div>
@@ -9067,7 +9076,7 @@ export default function App() {
         onClose={()=>setDeadModal(null)}
       />}
       {showNotifs && <NotifPanel/>}
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
           <button style={{ ...mkBtn("ghost"), padding:"5px 9px", position:"relative" }} onClick={()=>setShowNotifs(true)}>
             🔔
@@ -9191,7 +9200,7 @@ export default function App() {
         }}
         onClose={()=>setDeadModal(null)}
       />}
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <div className="app-page-container" style={{ maxWidth:1160 }}>
         <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal} deleteRfq={deleteRfq} reopenRfq={reopenRfq} />
       </div>
@@ -9202,7 +9211,7 @@ export default function App() {
   // ── QUOTES ─────────────────────────────────────────────────────────────
   if (view==="quotes") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <QuotesPageView jobs={jobs} custData={custData} setView={setView} openEdit={openEdit} />
     </div>
   );
@@ -9210,7 +9219,7 @@ export default function App() {
   // ── EQUIPMENT RATES ────────────────────────────────────────────────────────
   if (view==="equipment") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv} role={role}/>
       <Footer />
     </div>
@@ -9219,7 +9228,7 @@ export default function App() {
   // ── LABOR RATES ────────────────────────────────────────────────────────────
   if (view==="labor") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates} role={role} baseLabor={baseLabor} setBaseLabor={setBaseLabor}/>
       <Footer />
     </div>
@@ -9229,7 +9238,7 @@ export default function App() {
   // ── MASTER JOB LIST ──────────────────────────────────────────────────────────
   if (view==="jobs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Job"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
       <MasterJobList
@@ -9292,7 +9301,7 @@ export default function App() {
 
   if (view==="calendar") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <CalendarPage jobs={jobs} setJobs={setJobs} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
       <Footer />
     </div>
@@ -9301,7 +9310,7 @@ export default function App() {
   // ── REPORTS ───────────────────────────────────────────────────────────────
   if (view==="reports") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14, overflowX:"auto" }}>
-      <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <ReportsPage
         jobs={jobs}
         reqs={reqs}
@@ -9498,7 +9507,7 @@ export default function App() {
         {deadModal && <MarkDeadModal itemType="Quote" itemLabel={deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d=>{ u("discounts",[...(active.discounts||[]),d]); setShowDiscModal(false); }} onClose={()=>setShowDiscModal(false)}/>}
         {showCustDoc && <CustomerDocModal quote={{...active, total:cv.total}} onClose={()=>setShowCustDoc(false)}/>}
-        <Header token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
+        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
           <div style={{ display:"flex", gap:5 }}>
             <button style={mkBtn("ghost")} onClick={()=>setView("dash")}>Cancel</button>
             {!active.locked && <button style={mkBtn("primary")} onClick={()=>saveQuote()}>Save Quote</button>}

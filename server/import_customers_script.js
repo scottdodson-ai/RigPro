@@ -18,7 +18,7 @@ async function run() {
   const connection = await mysql.createConnection(dbConfig);
   try {
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.readFile('../import_data/rigpro_tables_export.xlsx');
+    await wb.xlsx.readFile('./import_data/rigpro_cust_job_tables_export.xlsx');
 
     const customerWs = wb.getWorksheet('customers');
     const contactWs = wb.getWorksheet('customer_contacts');
@@ -26,81 +26,49 @@ async function run() {
     if (!customerWs) throw new Error('Customers worksheet not found');
 
     await connection.query('SET FOREIGN_KEY_CHECKS = 0');
-    await connection.query('TRUNCATE TABLE customer_contacts');
     await connection.query('TRUNCATE TABLE customers');
+    // Not truncating contacts unless we actually import them properly, wait skip modifying contacts for now since only Customers table replacement is requested.
+    // wait the prompt ONLY said "replace Customers table in database with customers sheet in server/import_dta/rigpro_cust_job_tables_export.xlsx, keep all extra columns"
     await connection.query('SET FOREIGN_KEY_CHECKS = 1');
 
-    const nameToId = new Map();
-    const cleanNameToId = new Map();
-    const allCustomerNames = [];
+    // Read headers dynamically
+    const headerRow = customerWs.getRow(1);
+    const headers = [];
+    headerRow.eachCell((cell, colNumber) => {
+      headers[colNumber] = cell.value;
+    });
+
     let custCount = 0;
 
     for (let i = 2; i <= customerWs.rowCount; i++) {
         const row = customerWs.getRow(i);
         if (!row.hasValues) continue;
-        const excelId = row.getCell(1).value;
-        const nameValue = row.getCell(2).value;
-        if (!nameValue) continue;
-        const name = nameValue.toString().trim();
-        const [result] = await connection.query(
-            'INSERT INTO customers (name, notes, billing_address, website, industry, payment_terms, account_num, customer_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [name, row.getCell(3).value || null, row.getCell(4).value || null, row.getCell(5).value || null, row.getCell(6).value || null, row.getCell(7).value || null, row.getCell(8).value || null, excelId || null]
-        );
-        const lName = name.toLowerCase();
-        const cName = cleanStr(name);
-        // Link by both name and this new numeric ID
-        nameToId.set(lName, result.insertId);
-        cleanNameToId.set(cName, result.insertId);
-        allCustomerNames.push({ name: lName, clean: cName, id: result.insertId, excelId });
-        custCount++;
-    }
-
-    let contactCount = 0;
-    if (contactWs) {
-        for (let i = 2; i <= contactWs.rowCount; i++) {
-            const row = contactWs.getRow(i);
-            if (!row.hasValues) continue;
-            const companyValue = row.getCell(2).value?.toString().trim();
-            const contactName = row.getCell(3).value?.toString().trim();
-            
-            if (!contactName || !companyValue) continue;
-
-            const company = companyValue.toLowerCase();
-            const cleanCompany = cleanStr(companyValue);
-
-            let customerId = nameToId.get(company) || cleanNameToId.get(cleanCompany);
-            
-            // Fuzzy fallback
-            if (!customerId) {
-                const partial = company.replace(/^\([^)]+\)\s*/, '').replace(/^\/\s*/, '').trim();
-                const cleanPartial = cleanStr(partial);
-                customerId = nameToId.get(partial) || cleanNameToId.get(cleanPartial);
-
-                if (!customerId) {
-                   const found = allCustomerNames.find(c => cleanCompany.includes(c.clean) || c.clean.includes(cleanCompany));
-                   if (found) customerId = found.id;
-                }
+        
+        let cols = [];
+        let vals = [];
+        
+        for (let c = 1; c < headers.length; c++) {
+            if (headers[c]) {
+                cols.push(headers[c]);
+                vals.push(row.getCell(c).value !== undefined ? row.getCell(c).value : null);
             }
-
-            if (customerId) {
+        }
+        
+        if (cols.length > 0) {
+            const placeholders = cols.map(() => '?').join(', ');
+            try {
                 await connection.query(
-                    'INSERT INTO customer_contacts (customer_id, name, title, email, mobile, phone, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [
-                        customerId, 
-                        contactName, 
-                        row.getCell(4).value || null,  // Title
-                        row.getCell(5).value || null,  // Email
-                        row.getCell(6).value || null,  // Mobile
-                        row.getCell(7).value || null,  // Phone
-                        row.getCell(8).value ? 1 : 0    // IsPrimary
-                    ]
+                    `INSERT INTO customers (${cols.join(', ')}) VALUES (${placeholders})`,
+                    vals
                 );
-                contactCount++;
+                custCount++;
+            } catch (err) {
+                console.error('Error inserting row', i, err.message);
             }
         }
     }
 
-    console.log(`Final results: ${custCount} customers and ${contactCount} contacts imported successfully.`);
+    console.log(`Final results: ${custCount} customers imported successfully.`);
   } catch (err) {
     console.error('Master Import Error:', err);
   } finally {
