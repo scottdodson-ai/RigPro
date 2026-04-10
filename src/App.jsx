@@ -2618,7 +2618,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
     setPromptInfo(null);
   }
 
-  const pendingReqs = reqs.filter(r=>r.status!=="Quoted"&&r.status!=="Dead");
+  const pendingReqs = reqs.filter(r=>r.status!=="Quoted"&&r.status!=="Dead").sort((a,b) => new Date(b.date || "1970-01-01").getTime() - new Date(a.date || "1970-01-01").getTime());
   if (pendingReqs.length === 0) return null;
 
   const filteredReqs = pendingReqs.filter(r => {
@@ -2800,11 +2800,11 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
   const [rfqView, setRfqView] = useState("active"); // active | all | dead
   const [layoutMode, setLayoutMode] = useState("list"); // list | card
 
-  const filtered = rfqView==="active"
+  const filtered = (rfqView==="active"
     ? reqs.filter(r=>r.status!=="Dead"&&r.status!=="Quoted")
     : rfqView==="dead"
     ? reqs.filter(r=>r.status==="Dead"||r.status==="Quoted")
-    : reqs;
+    : reqs).sort((a, b) => new Date(b.date || "1970-01-01").getTime() - new Date(a.date || "1970-01-01").getTime());
 
   const activeCount = reqs.filter(r=>r.status!=="Dead"&&r.status!=="Quoted").length;
   const quotedCount = reqs.filter(r=>r.status==="Quoted").length;
@@ -3279,6 +3279,39 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
 }
 
 // ── MARK DEAD MODAL ──────────────────────────────────────────────────────────
+
+function CompanySummaryModal({ custName, summary, onClose }) {
+  const formatMD = (text) => {
+    return text.split('\n').map((line, i) => {
+      if (!line.trim()) return <div key={i} style={{height:10}} />;
+      if (line.startsWith('### ')) return <h3 key={i} style={{marginTop:20, marginBottom:8, color:"#1e3a8a", fontSize:20, fontWeight:900}}>{line.replace('### ', '')}</h3>;
+      if (line.startsWith('#### ')) return <h4 key={i} style={{marginTop:18, marginBottom:8, color:"#1e40af", fontSize:16, fontWeight:800}}>{line.replace('#### ', '')}</h4>;
+      if (line.startsWith('* ')) return <li key={i} style={{marginLeft:20, marginTop:5, color:"#475569", fontSize:14}}><span dangerouslySetInnerHTML={{__html: line.replace('* ', '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}} /></li>;
+      return <p key={i} style={{marginTop:5, marginBottom:5, color:"#334155", lineHeight:1.7, fontSize:14}}><span dangerouslySetInnerHTML={{__html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}} /></p>;
+    });
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.75)", zIndex:9999, display:"flex", justifyContent:"center", alignItems:"center", padding:20 }}>
+      <div style={{ background:"#fff", width:"100%", maxWidth:700, borderRadius:16, boxShadow:"0 25px 50px -12px rgba(0,0,0,0.25)", display:"flex", flexDirection:"column", maxHeight:"90vh", animation:"0.2s ease-out 0s 1 normal forwards running popIn" }}>
+        <style>{`@keyframes popIn { 0%{opacity:0;transform:scale(0.95)} 100%{opacity:1;transform:scale(1)} }`}</style>
+        <div style={{ padding:"20px 24px", borderBottom:"1px solid #e2e5ea", display:"flex", justifyContent:"space-between", alignItems:"center", background:"#f8fafc", borderRadius:"16px 16px 0 0" }}>
+          <div>
+            <div style={{ fontSize:12, fontWeight:800, color:"#64748b", textTransform:"uppercase", letterSpacing:1 }}>Summary</div>
+            <div style={{ fontSize:22, fontWeight:900, color:"#0f172a", marginTop:2 }}>{custName}</div>
+          </div>
+          <button onClick={onClose} style={{ background:"#e2e8f0", color:"#475569", border:"none", borderRadius:8, width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"0.2s" }}>
+             <span style={{fontSize:20, lineHeight:1}}>×</span>
+          </button>
+        </div>
+        <div style={{ padding:"24px 30px", overflowY:"auto", flex:1, whiteSpace:"normal" }}>
+          {formatMD(summary)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MarkDeadModal({ itemType, itemLabel, onConfirm, onClose }) {
   const [note, setNote] = useState("");
   const [err,  setErr]  = useState("");
@@ -3354,7 +3387,75 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
     return { id:uid(), rn:nextRN(reqs), company:"", requester:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:estimator };
   }, [profileUser, role]);
   const [f, setF] = useState(init || blank);
+  const [isListening, setIsListening] = useState(false);
+
+  const toggleDictation = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition isn't supported in this browser. Try Chrome or Safari.");
+      return;
+    }
+    
+    if (isListening) return; // Native API automatically stops after transcript
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setF(prev => ({ 
+        ...prev, 
+        desc: prev.desc ? prev.desc + " " + transcript : transcript 
+      }));
+    };
+    
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+    };
+    
+    recognition.onend = () => setIsListening(false);
+
+    recognition.start();
+  };
   const u = (k,v) => setF(x => ({ ...x, [k]:v }));
+
+  const handleDescBlur = () => {
+    if (!f.desc) return;
+    let txt = f.desc;
+    // Fix spacing
+    txt = txt.replace(/\s+/g, ' ').trim();
+    // Space before punctuation fixes
+    txt = txt.replace(/\s+\./g, '.');
+    txt = txt.replace(/\s+,/g, ',');
+    // Capitalize sentences
+    txt = txt.replace(/(^\s*\w|[.?!]\s*\w)/g, c => c.toUpperCase());
+    // Capitalize "I"
+    txt = txt.replace(/\b(i)\b/g, 'I');
+    
+    // Spelling fixes
+    const typos = { 
+      "teh": "the", "grammer": "grammar", "puctuation": "punctuation", 
+      "recieve":"receive", "accomodate":"accommodate", "seperate":"separate", 
+      "alot":"a lot", "definetly":"definitely", "occured":"occurred",
+      "untill":"until"
+    };
+    Object.keys(typos).forEach(err => {
+      const regex = new RegExp(`\\b${err}\\b`, 'gi');
+      txt = txt.replace(regex, match => match.charAt(0) === match.charAt(0).toUpperCase() ? typos[err].charAt(0).toUpperCase() + typos[err].slice(1) : typos[err]);
+    });
+    
+    // Auto terminate with period if missing
+    if (!/[.!?]$/.test(txt)) {
+      txt += '.';
+    }
+    
+    u("desc", txt);
+  };
 
   // ── Customer / contact matching ──────────────────────────────────────────
   // All known company names: from custData keys + CUSTOMERS list + existing jobs
@@ -3570,7 +3671,29 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
             })()}
           </div>
 
-          <div style={{ gridColumn:"1/-1" }}><Lbl c="JOB DESCRIPTION *"/><textarea style={{ ...inp, height:80, resize:"vertical" }} value={f.desc} onChange={e=>u("desc",e.target.value)}/></div>
+                    <div style={{ gridColumn:"1/-1" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+               <Lbl c="JOB DESCRIPTION *" />
+               <button 
+                 onClick={toggleDictation} 
+                 style={{ 
+                   background: "transparent", 
+                   border: "none", 
+                   color: isListening ? "#ef4444" : "#3b82f6", 
+                   fontSize: 13, 
+                   fontWeight: 700, 
+                   cursor: "pointer", 
+                   display:"flex", 
+                   alignItems:"center", 
+                   gap:5,
+                   padding: "2px 0 6px 0"
+                 }}>
+                 <span style={{ fontSize: 16 }}>{isListening ? "🔴" : "🎤"}</span> 
+                 {isListening ? "Listening..." : "Dictate"}
+               </button>
+            </div>
+            <textarea style={{ ...inp, height:80, resize:"vertical" }} spellCheck={true} autoCapitalize="sentences" autoCorrect="on" value={f.desc} onChange={e=>u("desc",e.target.value)} onBlur={handleDescBlur} placeholder="Enter description... (Auto-corrects on blur)"/>
+          </div>
 
           <div><Lbl c="STATUS"/><select style={{ ...sel, width:"100%" }} value={f.status} onChange={e=>u("status",e.target.value)}>{["New","In Progress","Quoted","Dead"].map(x=><option key={x}>{x}</option>)}</select></div>
           <div>
@@ -5497,6 +5620,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
   });
   const [search,      setSearch]      = useState("");
   const [tab,         setTab]         = useState("overview");
+  const [showSummary, setShowSummary] = useState(false);
   const [showDeadRfqs, setShowDeadRfqs] = useState(false);
   const [selLoc,      setSelLoc]      = useState("ALL");        // "ALL" or locationId
   const [showAddContact,  setShowAddContact]  = useState(false);
@@ -5650,7 +5774,17 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
 
               {/* Left: Profile fields */}
               <div>
-                <div style={{ fontWeight:700, fontSize:14, marginBottom:12 }}>Profile Information</div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                  <div style={{ fontWeight:700, fontSize:14 }}>Profile Information</div>
+                  {data.company_summary && (
+                    <button onClick={() => setShowSummary(true)} style={{ background:"#f5f6f8", color:"#4a5060", border:"1px solid #e2e5ea", borderRadius:5, padding:"5px 12px", fontSize:11, fontWeight:700, cursor:"pointer", transition:"0.2s" }}>
+                      COMPANY SUMMARY
+                    </button>
+                  )}
+                </div>
+                {showSummary && data.company_summary && (
+                  <CompanySummaryModal custName={custName} summary={data.company_summary} onClose={() => setShowSummary(false)} />
+                )}
 
                 {/* Location selector for contacts */}
                 {locations.length > 0 && (
@@ -9192,7 +9326,7 @@ export default function App() {
         profileTemplate, showProfileTempl, setShowProfileTempl,
         openEdit, openNew, liftTonThreshold, globalCheck, setGlobalCheck, appUsers,
         setReqs, setJobs, jobListFilter, setJobListFilter,
-        Header, RFQModal, JobFolderModal, MarkDeadModal, CustomerModal, SearchResultsModal, SalesAdjustmentModal, ProfileTemplateModal
+        Header, RFQModal, JobFolderModal, MarkDeadModal, CustomerModal, CompanySummaryModal, SearchResultsModal, SalesAdjustmentModal, ProfileTemplateModal
       }}
     />
     <Footer />

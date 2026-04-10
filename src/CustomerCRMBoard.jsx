@@ -52,11 +52,13 @@ const CustomerCRMBoard = (props) => {
   } = props;
 
   const [gridScroll, setGridScroll] = useState(0);
+  const [showSummaryBoard, setShowSummaryBoard] = useState(false);
   const gridRef = useRef(null);
 
   // Modals...
   const Header = props.Header;
   const RFQModal = props.RFQModal;
+  const CompanySummaryModal = props.CompanySummaryModal;
   const JobFolderModal = props.JobFolderModal;
   const MarkDeadModal = props.MarkDeadModal;
   const CustomerModal = props.CustomerModal;
@@ -212,7 +214,7 @@ const CustomerCRMBoard = (props) => {
                <div style={{ flex:1, overflowY:"auto", padding:"40px 20px", background:"#fff" }}>
                  <div style={{ maxWidth:950, margin:"0 auto" }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
-                    <div style={{ display:"flex", gap:15, alignItems:"center", justifyContent:"flex-end" }}>
+                    <div style={{ display:"flex", gap:15, alignItems:"flex-start", justifyContent:"flex-end" }}>
                       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
                         <button 
                           style={{ ...mkBtn("ghost"), padding:"16px 25px", borderRadius:14, fontSize:15, border:`2px solid ${C.blu}`, color:C.blu, fontWeight:800, opacity:jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? 0.75 : 1, cursor: jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 ? "not-allowed" : "pointer" }} 
@@ -228,7 +230,17 @@ const CustomerCRMBoard = (props) => {
                           )}
                         </div>
                       </div>
-                      <button className="edit-profile-btn" style={{ ...mkBtn("primary"), padding:"16px 25px", borderRadius:14, fontSize:15 }} onClick={()=>setShowCustModal(selC)}>Edit Company Profile</button>
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8 }}>
+                        <button className="edit-profile-btn" style={{ ...mkBtn("primary"), padding:"16px 25px", borderRadius:14, fontSize:15 }} onClick={()=>setShowCustModal(selC)}>Edit Company Profile</button>
+                        {currentSelectionData?.company_summary && (
+                          <button onClick={() => setShowSummaryBoard(true)} style={{ background:"#f5f6f8", color:"#4a5060", border:"1px solid #e2e5ea", borderRadius:8, padding:"8px 14px", fontSize:12, fontWeight:700, cursor:"pointer", transition:"0.2s" }}>
+                            COMPANY SUMMARY
+                          </button>
+                        )}
+                        {showSummaryBoard && currentSelectionData?.company_summary && CompanySummaryModal && (
+                          <CompanySummaryModal custName={currentSelectionData.name} summary={currentSelectionData.company_summary} onClose={() => setShowSummaryBoard(false)} />
+                        )}
+                      </div>
                     </div>
 
                     <div>

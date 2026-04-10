@@ -377,6 +377,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       custData[c.name] = {
         ...c,
         customer_num: c.customer_num,
+        company_summary: c.company_summary || "",
         address1: mbSite.address1 || "",
         city: mbSite.city || "",
         state: mbSite.state || "",
