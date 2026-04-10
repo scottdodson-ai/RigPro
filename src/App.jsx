@@ -3054,12 +3054,23 @@ function QuotePreviewPanel({ quote, custData, onEdit }) {
   );
 }
 
-function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJobNum, onViewAttachments, jobListFilter, setJobListFilter, setView }) {
+function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJobNum, onViewAttachments, jobListFilter, setJobListFilter, setView, setSelC }) {
   const [search,      setSearch]      = useState("");
   const [sortBy,      setSortBy]      = useState("jobNum");
-  const [sortDir,     setSortDir]     = useState("asc");
+  const [sortDir,     setSortDir]     = useState("desc");
   const [editingJobId,setEditingJobId]= useState(null);
   const [editJobNum,  setEditJobNum]  = useState("");
+  const [showCurrentYear, setShowCurrentYear] = useState(false);
+  const [mobileModalJob, setMobileModalJob] = useState(null);
+
+  useEffect(() => {
+    if (mobileModalJob) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileModalJob]);
 
   // Only Master Jobs appear in the Master Job List
   const allJobs = useMemo(() => {
@@ -3078,7 +3089,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
           client:    q.client || "",
           desc:      q.desc || q.jobDesc || q.job_description || "",
           jobSite:   q.jobSite || rfq?.jobSite || "",
-          estimator: q.salesAssoc || "—",
+          estimator: q.estimator || q.salesAssoc || "—",
           startDate: q.startDate || q.start_date || "",
           compDate:  q.compDate || q.end_date || "",
           date:      q.date || "",
@@ -3098,6 +3109,10 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
     if(jobListFilter) {
       rows = rows.filter(j => j.client === jobListFilter);
     }
+    if (showCurrentYear) {
+      const cy = new Date().getFullYear().toString();
+      rows = rows.filter(j => (j.jobNum && j.jobNum.includes(cy)) || (j.startDate && j.startDate.includes(cy)) || (j.quoteNum && j.quoteNum.includes(cy)) || (j.date && j.date.includes(cy)));
+    }
     if(search) {
       const s = search.toLowerCase();
       rows = rows.filter(j=>[j.jobNum,j.quoteNum,j.client,j.desc,j.jobSite,j.estimator].some(v=>v?.toLowerCase().includes(s)));
@@ -3108,7 +3123,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
       const res = av>bv?1:av<bv?-1:0;
       return sortDir==="asc"?res:-res;
     });
-  }, [allJobs, search, sortBy, sortDir, jobListFilter]);
+  }, [allJobs, search, sortBy, sortDir, jobListFilter, showCurrentYear]);
 
   function toggleSort(col) {
     if(sortBy===col) setSortDir(d=>d==="asc"?"desc":"asc");
@@ -3153,16 +3168,31 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
             </div>
           </div>
         </div>
-        <input style={{ ...inp, width:280, fontSize:13, border:`2px solid ${C.acc}`, borderRadius:8 }}
-          placeholder="Search job #, customer, description, location…"
-          value={search} onChange={e=>setSearch(e.target.value)}/>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <button style={{ ...mkBtn(showCurrentYear?"primary":"outline"), padding:"8px 16px", borderRadius:8, fontSize:13, fontWeight:600 }}
+            onClick={()=>setShowCurrentYear(!showCurrentYear)}>
+            {showCurrentYear ? "Showing Current Year" : "Show Current Year"}
+          </button>
+          <input style={{ ...inp, width:280, fontSize:13, border:`2px solid ${C.acc}`, borderRadius:8 }}
+            placeholder="Search job #, customer, description, location…"
+            value={search} onChange={e=>setSearch(e.target.value)}/>
+        </div>
       </div>
 
       {/* Table */}
-      <Card style={{ padding:0, overflow:"hidden", display: "flex", flexDirection: "column" }}>
-        <div className="app-table-wrap" style={{ overflowX:"auto", overflowY:"auto", maxHeight:"calc(100vh - 240px)" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-            <thead style={{ background:C.bg, position:"sticky", top:0, zIndex:10, boxShadow:"0 2px 4px rgba(0,0,0,0.05)" }}>
+      <style>{`
+        @media (max-width: 950px) {
+          .desktop-only-table { display: none !important; }
+        }
+        @media (min-width: 951px) {
+          .mobile-only-list { display: none !important; }
+        }
+      `}</style>
+      <div className="desktop-only-table">
+        <Card style={{ padding:0, overflow:"hidden", display: "flex", flexDirection: "column" }}>
+          <div className="app-table-wrap" style={{ overflowX:"auto", overflowY:"auto", maxHeight:"calc(100vh - 240px)" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+              <thead style={{ background:C.bg, position:"sticky", top:0, zIndex:10, boxShadow:"0 2px 4px rgba(0,0,0,0.05)" }}>
               <tr>
                 <SortHdr col="customer_num" label="Cust. #"    width={90}/>
                 <SortHdr col="jobNum"       label="Job #"      width={110}/>
@@ -3220,7 +3250,19 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
                   </td>
                   <td style={{ ...tdS, padding:"10px 12px", color:C.txtS }}>{j.quoteNum}</td>
                   <td style={{ ...tdS, padding:"10px 12px", color:C.txtS }}>{j.date}</td>
-                  <td style={{ ...tdS, padding:"10px 12px", fontWeight:600 }}>{j.client}</td>
+                  <td style={{ ...tdS, padding:"10px 12px", fontWeight:600 }}>
+                    {j.client ? (
+                      <span
+                        style={{ cursor:"pointer", color:C.blue, textDecoration:"underline" }}
+                        onClick={() => {
+                          setSelC(j.client);
+                          setView("customers");
+                        }}
+                      >
+                        {j.client}
+                      </span>
+                    ) : "—"}
+                  </td>
                   <td style={{ ...tdS, padding:"10px 12px", color:C.txtM, maxWidth:200 }}>
                     <div style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }} title={j.desc}>{j.desc||"—"}</div>
                   </td>
@@ -3259,6 +3301,21 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
           </table>
         </div>
       </Card>
+      </div>
+
+      {/* Mobile List View */}
+      <div className="mobile-only-list" style={{ marginTop: 15 }}>
+        {filtered.length===0 && <div style={{ padding:20, textAlign: "center", color: C.txtS }}>No jobs match your search.</div>}
+        {filtered.map((j, i) => (
+          <div key={i} onClick={() => setMobileModalJob(j)} style={{ padding: 16, background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 12, marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.02)", cursor:"pointer" }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16, color: C.txt, marginBottom: 4 }}>{j.client || "—"}</div>
+              <div style={{ fontSize: 14, color: C.acc, fontWeight: 700 }}>{j.jobNum || "No Job #"}</div>
+            </div>
+            <div style={{ fontSize: 24, color: C.txtS, fontWeight:300 }}>›</div>
+          </div>
+        ))}
+      </div>
 
       {/* Summary */}
       {filtered.length > 0 && (
@@ -3272,6 +3329,36 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
               <span style={{ color:C.txtS }}>{x.l}: </span><span style={{ fontWeight:700, color:x.c }}>{x.v}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Mobile Details Modal */}
+      {mobileModalJob && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:9999, display:"flex", justifyContent:"center", alignItems:"center", padding:20 }}>
+          <div style={{ background:C.sur, width:"100%", maxWidth:400, borderRadius:16, overflow:"hidden", display:"flex", flexDirection:"column", maxHeight:"90vh", boxShadow:"0 20px 40px rgba(0,0,0,0.2)" }}>
+            <div style={{ padding:"16px 20px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL }}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:800, color:C.acc, textTransform:"uppercase" }}>Job Profile Info</div>
+                <div style={{ fontSize:18, fontWeight:700, marginTop:2, color:C.acc }}>{mobileModalJob.jobNum || mobileModalJob.quoteNum}</div>
+              </div>
+              <button onClick={() => setMobileModalJob(null)} style={{ background:"none", border:"none", fontSize:26, cursor:"pointer", color:C.txtS, padding:0, lineHeight:1 }}>×</button>
+            </div>
+            <div style={{ padding:20, overflowY:"auto", display:"flex", flexDirection:"column", gap:16 }}>
+              <div><strong style={{fontSize:11, color:C.txtS, display:"block", marginBottom:4}}>CUSTOMER</strong><div style={{fontSize:16, fontWeight:600, color:C.txt}}>{mobileModalJob.client}</div></div>
+              <div><strong style={{fontSize:11, color:C.txtS, display:"block", marginBottom:4}}>DESCRIPTION</strong><div style={{fontSize:15, color:C.txtM, lineHeight:1.5}}>{mobileModalJob.desc || "—"}</div></div>
+              <div><strong style={{fontSize:11, color:C.txtS, display:"block", marginBottom:4}}>LOCATION</strong><div style={{fontSize:15, color:C.txtM}}>{mobileModalJob.jobSite || "—"}</div></div>
+              <div style={{ display:"flex", gap:20 }}>
+                <div style={{ flex:1 }}><strong style={{fontSize:11, color:C.txtS, display:"block", marginBottom:4}}>START DATE</strong><div style={{fontSize:14, color:C.txtM}}>{mobileModalJob.startDate || "—"}</div></div>
+                <div style={{ flex:1 }}><strong style={{fontSize:11, color:C.txtS, display:"block", marginBottom:4}}>COMPLETION</strong><div style={{fontSize:14, color:C.txtM}}>{mobileModalJob.compDate || "—"}</div></div>
+              </div>
+              <div><strong style={{fontSize:11, color:C.txtS, display:"block", marginBottom:4}}>ESTIMATOR</strong><div style={{fontSize:15, color:C.txtM}}>{mobileModalJob.estimator || "—"}</div></div>
+              <div style={{ padding:"14px", background:"#f8fafc", borderRadius:10, border:"1px solid #e2e8f0" }}><strong style={{fontSize:11, color:C.txtS, display:"block", marginBottom:4}}>REPORTED VALUE</strong><div style={{fontSize:20, fontWeight:800, color:C.acc}}>{fmt(mobileModalJob.total)}</div></div>
+            </div>
+            <div style={{ padding:"16px 20px", borderTop:`1px solid ${C.bdr}`, display:"flex", gap:12, background:"#f8fafc" }}>
+              <button style={{ ...mkBtn("outline"), flex:1, padding:"12px", borderRadius:10 }} onClick={() => { setMobileModalJob(null); openEdit(mobileModalJob.quote); }}>📋 Quote</button>
+              {mobileModalJob.rfq && <button style={{ ...mkBtn("primary"), flex:1, padding:"12px", borderRadius:10 }} onClick={() => { setMobileModalJob(null); setShowJFM(mobileModalJob.rfq); }}>📁 Job Folder</button>}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -9393,7 +9480,7 @@ export default function App() {
         jobs={jobs} reqs={reqs} jobFolders={jobFolders} openEdit={openEdit} setShowJFM={setShowJFM}
         onUpdateJobNum={(id, num) => setJobs(p=>p.map(q=>q.id===id?{...q,job_num:num}:q))}
         onViewAttachments={j=>setAttachModal(j)}
-        jobListFilter={jobListFilter} setJobListFilter={setJobListFilter} setView={setView}
+        jobListFilter={jobListFilter} setJobListFilter={setJobListFilter} setView={setView} setSelC={setSelC}
       />
       {attachModal && (
         <div className="app-modal-overlay" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:600, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 12px", overflowY:"auto" }}>
