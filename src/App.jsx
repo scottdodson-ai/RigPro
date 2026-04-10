@@ -3573,8 +3573,8 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
             <Lbl c="ESTIMATOR"/>
             <select style={{ ...sel, width:"100%" }} value={f.salesAssoc||""} onChange={e=>u("salesAssoc",e.target.value)}>
               <option value="">Unassigned</option>
-              {appUsers.filter(u=>u.role==="estimator"||u.role==="manager").map(u=>(
-                <option key={u.id} value={u.username}>{u.username} ({u.role})</option>
+              {appUsers.filter(u=>u.role==="estimator").map(u=>(
+                <option key={u.id} value={u.username}>{u.first_name} {u.last_name||""} ({u.username})</option>
               ))}
             </select>
           </div>
@@ -3586,7 +3586,10 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
             const companyOk = !!(f.company && f.company.trim());
             const requesterOk = !!(f.requester && f.requester.trim());
             const phoneOk = !!(f.phone && f.phone.replace(/\D/g, "").length >= 10);
-            const addressOk = !!(f.jobSite && f.jobSite.trim().length >= 10);
+            const addressOk = !!(
+              (f.jobSite && f.jobSite.trim().length >= 10) ||
+              (f.jobSiteAddress1?.trim() && f.jobSiteCity?.trim() && f.jobSiteState?.trim() && f.jobSiteZip?.trim())
+            );
             const estimatorOk = !!f.salesAssoc;
             const emailOk = !f.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email);
             const canSave = companyOk && requesterOk && phoneOk && addressOk && estimatorOk && emailOk;
@@ -3813,8 +3816,8 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
                     <select value={rfqEdits.salesAssoc||""} onChange={e=>ue("salesAssoc",e.target.value)}
                       style={{ ...sel, flex:1, fontSize:11, padding:"4px 7px" }}>
                       <option value="">Unassigned</option>
-                      {appUsers.filter(u=>u.role==="estimator"||u.role==="manager").map(u=>(
-                        <option key={u.id} value={u.username}>{u.username}</option>
+                      {appUsers.filter(u=>u.role==="estimator").map(u=>(
+                        <option key={u.id} value={u.username}>{u.first_name} {u.last_name||""} ({u.username})</option>
                       ))}
                     </select>
                   </div>
@@ -9572,8 +9575,8 @@ export default function App() {
                 <Lbl c="ESTIMATOR"/>
                 <select style={{ ...sel, width:"100%" }} value={active.salesAssoc||""} onChange={e=>u("salesAssoc",e.target.value)} disabled={active.locked}>
                   <option value="">Unassigned</option>
-                  {appUsers.filter(usr=>usr.role==="estimator"||usr.role==="manager").map(usr=>(
-                    <option key={usr.id} value={usr.username}>{usr.username} ({usr.role})</option>
+                  {appUsers.filter(usr=>usr.role==="estimator").map(usr=>(
+                    <option key={usr.id} value={usr.username}>{usr.first_name} {usr.last_name||""} ({usr.username})</option>
                   ))}
                 </select>
               </div>
