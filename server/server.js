@@ -318,6 +318,11 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       const mappedMaster = masterRows.map((row) => {
         const qn = row.quote_number || row.qn || '';
         const jobNum = row.job_num || row.job_number || '';
+        const fmtDate = (d) => {
+          if (!d) return '';
+          if (d instanceof Date) return d.toISOString().split('T')[0];
+          return String(d).split('T')[0];
+        };
         return {
           ...row,
           qn,
@@ -328,7 +333,15 @@ app.get('/api/data', authenticateToken, async (req, res) => {
           qtype: row.quote_type || row.qtype || 'Contract',
           salesAssoc: row.sales_assoc || row.salesAssoc || '',
           locked: Boolean(row.is_locked ?? row.locked),
-          status: 'Won'
+          status: 'Won',
+          date: fmtDate(row.month_closed) || fmtDate(row.start_date) || '',
+          startDate: fmtDate(row.start_date) || '',
+          compDate: fmtDate(row.end_date) || fmtDate(row.month_closed) || '',
+          labor: row.total_expense ? (row.total_expense / 0.6) : 0, // Faked to make gross margin math work
+          mats: 0,
+          equip: 0,
+          hauling: 0,
+          travel: 0
         };
       });
       jobs = [
@@ -646,7 +659,7 @@ app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, a
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs'];
   const table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
@@ -665,7 +678,7 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
 
 // UPDATE RECORD IN TABLE (Admin Only)
 app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs'];
   const table = req.params.table;
   const id = req.params.id;
   const data = req.body;
