@@ -28,10 +28,10 @@ function useTableSort(items) {
   return { sortedItems, requestSort, sortKey, sortDir };
 }
 
-function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style }) {
+function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, className }) {
   const isA = currentSort === sortKey;
   return (
-    <th style={{ ...style, cursor: "pointer", userSelect: "none" }} onClick={() => requestSort(sortKey)}>
+    <th className={className} style={{ ...style, cursor: "pointer", userSelect: "none" }} onClick={() => requestSort(sortKey)}>
       {label} <span style={{ fontSize:10, opacity:0.6 }}>{isA ? (currentDir === 1 ? "▼" : "▲") : "↕"}</span>
     </th>
   );
@@ -88,15 +88,16 @@ const CustomerCRMBoard = (props) => {
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {adjModal && <SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
-      {showCustModal && <CustomerModal custName={showCustModal} jobs={jobs.filter(q=>q.customer_name===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)}/>}
-      {showSearchModal && <SearchResultsModal search={search} quotes={jobs} reqs={reqs} custData={custData} onClose={()=>setShowSearchModal(false)} onOpenQuote={openEdit} onOpenReq={r=>{setEditR(r);setShowRM(true);}} onOpenCust={setSelC}/>}
       {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} quotes={jobs} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>props.setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Quote"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.qn+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") props.setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else props.setQuotes(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)} />}
       
       <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       
-      <div style={{ padding:"14px", maxWidth:1280, margin:"0 auto" }}>
+      {showCustModal ? (
+        <CustomerModal custName={showCustModal} jobs={jobs.filter(q=>q.customer_name===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)}/>
+      ) : (
+      <div style={{ padding:"14px", maxWidth:1280, margin:"0 auto", width:"100%" }}>
         
         {/* CRM CONTROLS PANEL (STICKY) */}
         <div style={{ position:"sticky", top:0, zIndex:10, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
@@ -132,10 +133,8 @@ const CustomerCRMBoard = (props) => {
                 <thead>
                   <tr>
                     <SortTh style={thS} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                    <SortTh style={thS} label="Status" sortKey="isProspect" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                    <SortTh style={{ ...thS, textAlign:"center" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                    <SortTh style={{ ...thS, textAlign:"right" }} label="Total Billings" sortKey={(c) => (c.quotes||[]).reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0)} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                    <th style={{ ...thS, textAlign:"center" }}>Action</th>
+                    <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                    <th className="mobile-hidden" style={{ ...thS, textAlign:"center" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -148,13 +147,12 @@ const CustomerCRMBoard = (props) => {
                         if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
                         setSelC(c.name); 
                       }}>
-                        <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt }}>{c.name}</td>
-                        <td style={tdS}>
-                          {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:800 }}>CUSTOMER</span>}
+                        <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt }}>
+                          <span className="mobile-hidden" style={{ color:C.txtS, fontSize:12, marginRight:8 }}>cust_no {c.id}</span>
+                          {c.name}
                         </td>
-                        <td style={{ ...tdS, textAlign:"center", fontWeight:700, fontSize:14 }}>{custJobs.length}</td>
-                        <td style={{ ...tdS, textAlign:"right", fontWeight:800, fontSize:15, color:C.acc }}>{fmt(tot)}</td>
-                        <td style={{ ...tdS, textAlign:"center" }}>
+                        <td className="mobile-hidden" style={{ ...tdS, textAlign:"center", fontWeight:700, fontSize:14 }}>{custJobs.length}</td>
+                        <td className="mobile-hidden" style={{ ...tdS, textAlign:"center" }}>
                           <button style={{ ...mkBtn("outline"), padding:"6px 12px", fontSize:12 }}>View Profile</button>
                         </td>
                       </tr>
@@ -181,7 +179,10 @@ const CustomerCRMBoard = (props) => {
                     setSelC(c.name); 
                   }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                      <div style={{ fontWeight:900, fontSize:17 }}>{c.name}</div>
+                      <div style={{ fontWeight:900, fontSize:17 }}>
+                        <span className="mobile-hidden" style={{ color:C.txtS, fontSize:14, marginRight:6 }}>cust_no {c.id}</span>
+                        {c.name}
+                      </div>
                       {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>CUSTOMER</span>}
                     </div>
                     <div style={{ fontSize:22, fontWeight:900, color:C.acc, marginBottom:15 }}>{fmt(tot)}</div>
@@ -202,8 +203,8 @@ const CustomerCRMBoard = (props) => {
             <div style={{ background:"#fff", width:"100%", maxWidth:1200, borderRadius:12, boxShadow:"0 20px 50px rgba(0,0,0,0.3)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
                {/* Modal Header */}
                <div style={{ background:C.bg, padding:"14px 20px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10 }}>
-                 <button onClick={()=>setSelC(null)} style={{ ...mkBtn("outline"), padding:"6px 14px", fontSize:12, borderColor:C.bdr, color:C.txtM, background:"#fff", fontWeight:700 }}>← Back to Search Grid</button>
-                 <div style={{ fontWeight:800, fontSize:15, color:C.txt }}>{selC}</div>
+                 <button onClick={()=>setSelC(null)} style={{ ...mkBtn("outline"), padding:"6px 14px", fontSize:12, borderColor:C.bdr, color:C.txtM, background:"#fff", fontWeight:700 }}>← Back to Customers</button>
+
                  <button onClick={()=>setSelC(null)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS, lineHeight:1, padding:"0 4px" }}>×</button>
                </div>
 
@@ -223,15 +224,14 @@ const CustomerCRMBoard = (props) => {
                         >📊 Job List ({jobs.filter(q => q.client === currentSelectionData?.name && q.job_number).length})</button>
                         <div style={{ height:15, display:"flex", alignItems:"center", justifyContent:"center" }}>
                           {jobs.filter(q => q.client === currentSelectionData?.name && q.job_number).length === 0 && (
-                            <div style={{ fontSize:10, color:C.red, fontWeight:900, textTransform:"uppercase", letterSpacing:0.8 }}>No historical data exists for this account</div>
+                            <div className="mobile-hidden" style={{ fontSize:10, color:C.red, fontWeight:900, textTransform:"uppercase", letterSpacing:0.8 }}>No historical data exists for this account</div>
                           )}
                         </div>
                       </div>
-                      <button style={{ ...mkBtn("primary"), padding:"16px 25px", borderRadius:14, fontSize:15 }} onClick={()=>setShowCustModal(selC)}>Edit Company Profile</button>
+                      <button className="edit-profile-btn" style={{ ...mkBtn("primary"), padding:"16px 25px", borderRadius:14, fontSize:15 }} onClick={()=>setShowCustModal(selC)}>Edit Company Profile</button>
                     </div>
 
                     <div>
-                      <div style={{ fontSize:11, fontWeight:900, color:C.acc, letterSpacing:2, marginBottom:12 }}>MASTER DATA PROFILE [ ID: # {currentSelectionData?.customer_num || "N/A"} ]</div>
                       <div style={{ fontSize:44, fontWeight:900, color:C.txt, letterSpacing:"-1px", lineHeight:1 }}>{selC}</div>
                       <div style={{ display:"flex", gap:20, marginTop:18 }}>
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>{currentSelectionData?.industry || "Industrial Sector"}</div>
@@ -240,11 +240,18 @@ const CustomerCRMBoard = (props) => {
                     </div>
                   </div>
 
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:60 }}>
+                  <div className="app-two-col" style={{ gap:60 }}>
                     <div style={{ display:"flex", flexDirection:"column", gap:45 }}>
                       <div>
                         <Sec c="Master Billing Address"/>
-                        <div style={{ background:C.bg, padding:30, borderRadius:20, marginTop:15, fontSize:17, fontWeight:600, color:C.txt, lineHeight:1.7, border:`1px solid ${C.bdrL}`, boxShadow:"inset 0 2px 4px rgba(0,0,0,0.02)" }}>{currentSelectionData?.billingAddr || "Detailed Address Pending Validation"}</div>
+                        <div style={{ background:C.bg, padding:30, borderRadius:20, marginTop:15, fontSize:15, fontWeight:600, color:C.txt, lineHeight:1.7, border:`1px solid ${C.bdrL}`, boxShadow:"inset 0 2px 4px rgba(0,0,0,0.02)" }}>
+                          <div style={{display:"flex", flexDirection:"column", gap:8}}>
+                            <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{currentSelectionData?.address1 || "—"}</span></div>
+                            <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>City:</span><span>{currentSelectionData?.city || "—"}</span></div>
+                            <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>State:</span><span>{currentSelectionData?.state || "—"}</span></div>
+                            <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{currentSelectionData?.zip || "—"}</span></div>
+                          </div>
+                        </div>
                       </div>
                       <div>
                         <Sec c="Official Company Domain"/>
@@ -312,8 +319,13 @@ const CustomerCRMBoard = (props) => {
           @media (min-width: 951px) {
             .mobile-only-return-btn { display: none !important; }
           }
+          @media (max-width: 950px) {
+            .mobile-hidden { display: none !important; }
+            .edit-profile-btn { padding: 10px 16px !important; font-size: 13px !important; border-radius: 10px !important; }
+          }
         `}</style>
       </div>
+      )}
     </div>
   );
 };

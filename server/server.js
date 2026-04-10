@@ -257,6 +257,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const labor = await safeQuery('SELECT * FROM base_labor');
     const equipment = await safeQuery('SELECT * FROM equipment');
     const customers = await safeQuery('SELECT * FROM customers');
+    const sites = await safeQuery('SELECT * FROM sites');
     const contacts = await safeQuery('SELECT * FROM customer_contacts');
     // Load quotes from the working table first, then optionally append master_jobs history.
     const quotesRows = await safeQuery(`SELECT id,
@@ -307,6 +308,12 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         startDate: row.startDate || json.startDate || '',
         compDate: row.compDate || json.compDate || '',
         locked: Boolean(row.locked ?? json.locked),
+        total: parseFloat(row.total || json.total) || 0,
+        labor: parseFloat(row.labor || json.labor) || 0,
+        mats: parseFloat(row.materials || json.mats) || 0,
+        equip: parseFloat(row.equip || json.equip) || 0,
+        hauling: parseFloat(row.hauling || json.hauling) || 0,
+        travel: parseFloat(row.travel || json.travel) || 0,
       };
     });
 
@@ -337,11 +344,13 @@ app.get('/api/data', authenticateToken, async (req, res) => {
           date: fmtDate(row.month_closed) || fmtDate(row.start_date) || '',
           startDate: fmtDate(row.start_date) || '',
           compDate: fmtDate(row.end_date) || fmtDate(row.month_closed) || '',
-          labor: row.total_expense ? (row.total_expense / 0.6) : 0, // Faked to make gross margin math work
+          total: parseFloat(row.total) || 0,
+          labor: row.total_expense ? (parseFloat(row.total_expense) / 0.6) : 0, // Faked to make gross margin math work
           mats: 0,
           equip: 0,
           hauling: 0,
-          travel: 0
+          travel: 0,
+          is_master_job: true
         };
       });
       jobs = [
@@ -364,14 +373,26 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
     customers.forEach(c => {
+      const mbSite = sites.find(s => s.customer_id === c.id && s.site_type === 'master_billing') || {};
       custData[c.name] = {
         ...c,
         customer_num: c.customer_num,
-        billingAddr: c.billing_address || c.address || "",
-        billing_address: c.billing_address || "",
+        address1: mbSite.address1 || "",
+        city: mbSite.city || "",
+        state: mbSite.state || "",
+        zip: mbSite.zip || "",
+        master_billing_site_id: mbSite.id || null,
         paymentTerms: c.payment_terms || "",
         accountNum: c.account_num || "",
-        locations: c.billing_address ? [{ id: 'hq', name: 'HQ / Billing', address: c.billing_address, notes: 'Imported address' }] : [],
+        locations: sites.filter(s => s.customer_id === c.id).map(s => ({
+          id: s.id,
+          name: s.site_type === 'master_billing' ? 'HQ / Billing' : s.site_type,
+          address: s.address1,
+          city: s.city,
+          state: s.state,
+          zip: s.zip,
+          notes: s.notes || ''
+        })),
         contacts: contacts.filter(con => con.customer_id === c.id).map(con => ({
           ...con,
           mobile: con.mobile || "",
@@ -789,8 +810,8 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
     for (const name in customers) {
       const c = customers[name];
       const [result] = await connection.query(
-        'INSERT INTO customers (name, notes, billing_address, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [name, passStr(c.notes), passStr(c.billingAddr), passStr(c.website), passStr(c.industry), passStr(c.paymentTerms), passStr(c.accountNum)]
+        'INSERT INTO customers (name, notes, address1, city, state, zip, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [name, passStr(c.notes), passStr(c.address1), passStr(c.city), passStr(c.state), passStr(c.zip), passStr(c.website), passStr(c.industry), passStr(c.paymentTerms), passStr(c.accountNum)]
       );
       const customerId = result.insertId;
       
@@ -1170,7 +1191,7 @@ app.get('/api/admin/customers', authenticateToken, authenticateAdmin, async (req
 
 // Add a new customer
 app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { name, notes, billing_address, website, industry, payment_terms, account_num } = req.body;
+  const { name, notes, address1, city, state, zip, website, industry, payment_terms, account_num } = req.body;
   
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Customer name is required' });
@@ -1178,8 +1199,8 @@ app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (re
 
   try {
     const [result] = await db.query(
-      'INSERT INTO customers (name, notes, billing_address, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [name.trim(), notes || '', billing_address || '', website || '', industry || '', payment_terms || '', account_num || '']
+      'INSERT INTO customers (name, notes, address1, city, state, zip, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [name.trim(), notes || '', address1 || '', city || '', state || '', zip || '', website || '', industry || '', payment_terms || '', account_num || '']
     );
     
     const [newCustomer] = await db.query('SELECT * FROM customers WHERE id = ?', [result.insertId]);
@@ -1195,7 +1216,7 @@ app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (re
 
 // Edit existing customer
 app.put('/api/admin/customers/:id', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { name, notes, billing_address, website, industry, payment_terms, account_num } = req.body;
+  const { name, notes, address1, city, state, zip, website, industry, payment_terms, account_num } = req.body;
   const customerId = req.params.id;
 
   if (!name || !name.trim()) {
@@ -1215,7 +1236,7 @@ app.put('/api/admin/customers/:id', authenticateToken, authenticateAdmin, async 
 
     await db.query(
       'UPDATE customers SET name = ?, notes = ?, billing_address = ?, website = ?, industry = ?, payment_terms = ?, account_num = ? WHERE id = ?',
-      [name.trim(), notes || '', billing_address || '', website || '', industry || '', payment_terms || '', account_num || '', customerId]
+      [name.trim(), notes || '', address1, city, state, zip, website || '', industry || '', payment_terms || '', account_num || '', customerId]
     );
     
     const [updated] = await db.query('SELECT * FROM customers WHERE id = ?', [customerId]);
@@ -1637,8 +1658,8 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       const [existingCustomer] = await connection.query('SELECT id FROM customers WHERE name = ? LIMIT 1', [customerName]);
       if (existingCustomer.length === 0) {
         const [inserted] = await connection.query(
-          'INSERT INTO customers (name, billing_address, notes) VALUES (?, ?, ?)',
-          [customerName, String(quote.jobSite || '').trim(), 'Auto-created from quote save']
+          'INSERT INTO customers (name, address1, city, state, zip, notes) VALUES (?, ?, ?, ?, ?, ?)',
+          [customerName, String(quote.jobSiteAddress1 || '').trim(), String(quote.jobSiteCity || '').trim(), String(quote.jobSiteState || '').trim(), String(quote.jobSiteZip || '').trim(), 'Auto-created from quote save']
         );
         custId = inserted.insertId;
       } else {

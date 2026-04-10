@@ -344,7 +344,10 @@ const INIT_CUST_DATA = {
 };
 
 const DEFAULT_PROFILE_TEMPLATE = [
-  { key:"billingAddr",   label:"Billing Address",   type:"textarea", enabled:true  },
+  { key:"address1",      label:"Address",          type:"text",     enabled:true  },
+  { key:"city",          label:"City",               type:"text",     enabled:true  },
+  { key:"state",         label:"State",              type:"text",     enabled:true  },
+  { key:"zip",           label:"ZIP Code",           type:"text",     enabled:true  },
   { key:"website",       label:"Website",            type:"text",     enabled:true  },
   { key:"industry",      label:"Industry",           type:"text",     enabled:true  },
   { key:"paymentTerms",  label:"Payment Terms",      type:"text",     enabled:true  },
@@ -3058,9 +3061,10 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
   const [editingJobId,setEditingJobId]= useState(null);
   const [editJobNum,  setEditJobNum]  = useState("");
 
-  // Only Won jobs appear in the Master Job List
+  // Only Master Jobs appear in the Master Job List
   const allJobs = useMemo(() => {
     return jobs
+      .filter(q => q.is_master_job)
       .map(q => {
         const rfq    = reqs.find(r => r.id===q.fromReqId);
         const folder = rfq ? jobFolders[rfq.id] : null;
@@ -3069,7 +3073,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
         return {
           id:        q.id,
           customer_num: q.customer_num || "—",
-          jobNum:    q.job_num || q.jobNum || "",
+          jobNum:    q.jobNum || q.job_number || "",
           quoteNum:  q.qn || "",
           client:    q.client || "",
           desc:      q.desc || q.jobDesc || q.job_description || "",
@@ -5586,18 +5590,19 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
   const enabledFields = (profileTemplate||[]).filter(f=>f.enabled);
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:2000,
+    <div className="customer-profile-screen" style={{ flex:1, background:C.bg, 
                   display:"flex", alignItems:"flex-start", justifyContent:"center",
-                  padding:"16px 12px", overflowY:"auto" }}>
-      <div style={{ background:"#fff", borderRadius:10, width:"100%", maxWidth:900,
-                    boxShadow:"0 12px 40px rgba(0,0,0,.25)", display:"flex", flexDirection:"column" }}>
+                  padding:"40px 20px" }}>
+      <div style={{ background:"#fff", borderRadius:12, width:"100%", maxWidth:1200, minHeight:"85vh",
+                    boxShadow:"0 4px 20px rgba(0,0,0,.08)", display:"flex", flexDirection:"column" }}>
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div style={{ padding:"18px 22px 0", borderBottom:"1px solid #e2e5ea" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
             <div>
-              <div style={{ fontSize:11, color:"#8a93a2", textTransform:"uppercase", letterSpacing:1 }}>
-                {jobs.some(q=>q.status==="Won") ? "Customer Profile" : "Prospect Profile"}
+              <div style={{ fontSize:11, color:"#8a93a2", textTransform:"uppercase", letterSpacing:1, display:"flex", alignItems:"center", gap:8 }}>
+                {jobs.length === 0 ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"3px 8px", fontSize:10, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", borderRadius:6, padding:"3px 8px", fontSize:10, fontWeight:800 }}>CUSTOMER</span>}
+                <span>Profile</span>
               </div>
               <div style={{ fontSize:20, fontWeight:700, marginTop:2 }}>{custName}</div>
               {data.accountNum && <div style={{ fontSize:12, color:"#8a93a2", marginTop:1 }}>Account: {data.accountNum}</div>}
@@ -5614,7 +5619,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
                   { l:"Total Quotes", v:jobs.length,   c:"#4a5060" },
                   { l:"Won",          v:won.length,       c:"#16a34a" },
                   { l:"In Pipeline",  v:submitted.length, c:"#2563eb" },
-                  { l:"Revenue",      v:"$"+Math.round(revenue).toLocaleString(), c:"#b86b0a" },
+                  { l:"Total Billings", v:new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(revenue), c:"#059669" },
                   { l:"Open RFQs",    v:openRfqs,         c:openRfqs>0?"#2563eb":"#8a93a2" },
                   { l:"Locations",    v:locations.length, c:"#7c3aed" },
                 ].map(x => (
@@ -5637,11 +5642,11 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
         </div>
 
         {/* ── Body ────────────────────────────────────────────────────────── */}
-        <div style={{ padding:"18px 22px", overflowY:"auto", maxHeight:"62vh" }}>
+        <div style={{ padding:"25px 30px", overflowY:"auto", flex:1 }}>
 
           {/* ════ OVERVIEW TAB ════ */}
           {tab==="overview" && (
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+            <div className="app-two-col" style={{ gap:18 }}>
 
               {/* Left: Profile fields */}
               <div>
@@ -5691,7 +5696,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
 
                 {showAddContact && (
                   <div style={{ background:"#f5f6f8", borderRadius:7, padding:12, marginBottom:10, border:"1px solid #e2e5ea" }}>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:7 }}>
+                    <div className="app-two-col" style={{ gap:7 }}>
                       <div style={{ gridColumn:"1/-1" }}><div style={{ fontSize:11,color:"#4a5060",fontWeight:600,marginBottom:2 }}>NAME *</div><input style={inp2} value={newContact.name} placeholder="Full name" onChange={e=>setNewContact(x=>({...x,name:e.target.value}))}/></div>
                       <div><div style={{ fontSize:11,color:"#4a5060",fontWeight:600,marginBottom:2 }}>TITLE</div><input style={inp2} value={newContact.title} placeholder="Job title" onChange={e=>setNewContact(x=>({...x,title:e.target.value}))}/></div>
                       <div><div style={{ fontSize:11,color:"#4a5060",fontWeight:600,marginBottom:2 }}>PHONE</div><input style={inp2} value={newContact.phone} placeholder="XXX-XXX-XXXX" onChange={e=>setNewContact(x=>({...x,phone:e.target.value}))}/></div>
@@ -9009,7 +9014,7 @@ export default function App() {
   // ── LANDING PAGE ───────────────────────────────────────────────────────────
   if (view==="landing") return (
     <div style={{ minHeight:"100vh", background:C.sur, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", display:"flex", flexDirection:"column" }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:"6rem", fontWeight:800, color:C.acc, letterSpacing:"-2px", lineHeight:1, marginBottom:10 }}>RigPro</div>
@@ -9031,7 +9036,7 @@ export default function App() {
     }
     return (
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
-        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} />
         </div>
@@ -9044,7 +9049,7 @@ export default function App() {
   if (view==="admin" && role!=="admin") return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
   if (view==="admin") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <AdminPage token={token} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo}/>
       <Footer />
     </div>
@@ -9085,7 +9090,7 @@ export default function App() {
         onClose={()=>setDeadModal(null)}
       />}
       {showNotifs && <NotifPanel/>}
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
           <button style={{ ...mkBtn("ghost"), padding:"5px 9px", position:"relative" }} onClick={()=>setShowNotifs(true)}>
             🔔
@@ -9209,7 +9214,7 @@ export default function App() {
         }}
         onClose={()=>setDeadModal(null)}
       />}
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <div className="app-page-container" style={{ maxWidth:1160 }}>
         <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal} deleteRfq={deleteRfq} reopenRfq={reopenRfq} />
       </div>
@@ -9220,7 +9225,7 @@ export default function App() {
   // ── QUOTES ─────────────────────────────────────────────────────────────
   if (view==="quotes") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <QuotesPageView jobs={jobs} custData={custData} setView={setView} openEdit={openEdit} />
     </div>
   );
@@ -9228,7 +9233,7 @@ export default function App() {
   // ── EQUIPMENT RATES ────────────────────────────────────────────────────────
   if (view==="equipment") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv} role={role}/>
       <Footer />
     </div>
@@ -9237,7 +9242,7 @@ export default function App() {
   // ── LABOR RATES ────────────────────────────────────────────────────────────
   if (view==="labor") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates} role={role} baseLabor={baseLabor} setBaseLabor={setBaseLabor}/>
       <Footer />
     </div>
@@ -9247,7 +9252,7 @@ export default function App() {
   // ── MASTER JOB LIST ──────────────────────────────────────────────────────────
   if (view==="jobs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Job"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
       <MasterJobList
@@ -9310,7 +9315,7 @@ export default function App() {
 
   if (view==="calendar") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <CalendarPage jobs={jobs} setJobs={setJobs} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
       <Footer />
     </div>
@@ -9319,7 +9324,7 @@ export default function App() {
   // ── REPORTS ───────────────────────────────────────────────────────────────
   if (view==="reports") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14, overflowX:"auto" }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <ReportsPage
         jobs={jobs}
         reqs={reqs}
@@ -9516,7 +9521,7 @@ export default function App() {
         {deadModal && <MarkDeadModal itemType="Quote" itemLabel={deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d=>{ u("discounts",[...(active.discounts||[]),d]); setShowDiscModal(false); }} onClose={()=>setShowDiscModal(false)}/>}
         {showCustDoc && <CustomerDocModal quote={{...active, total:cv.total}} onClose={()=>setShowCustDoc(false)}/>}
-        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
+        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
           <div style={{ display:"flex", gap:5 }}>
             <button style={mkBtn("ghost")} onClick={()=>setView("dash")}>Cancel</button>
             {!active.locked && <button style={mkBtn("primary")} onClick={()=>saveQuote()}>Save Quote</button>}
