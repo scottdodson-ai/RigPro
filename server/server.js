@@ -1584,19 +1584,37 @@ app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
       if (exCust.length > 0) custId = exCust[0].id;
     }
 
+    let cleanDate = null;
+    if (date) {
+      try {
+        cleanDate = new Date(date).toISOString().split('T')[0];
+      } catch(e) { cleanDate = null; }
+    }
+
     if (targetId) {
-      await connection.query(
-        `UPDATE rfqs SET 
-          rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, notes=?, date=?, status=?, sales_assoc=?
-         WHERE id=?`,
-        [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', date||null, status||'', salesAssoc||'', targetId]
-      );
+      const activeFlag = rfq.active !== undefined ? (rfq.active ? 1 : 0) : null;
+      if (activeFlag !== null) {
+        await connection.query(
+          `UPDATE rfqs SET 
+            rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, notes=?, date=?, status=?, sales_assoc=?, active=?
+           WHERE id=?`,
+          [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', activeFlag, targetId]
+        );
+      } else {
+        await connection.query(
+          `UPDATE rfqs SET 
+            rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, notes=?, date=?, status=?, sales_assoc=?
+           WHERE id=?`,
+          [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', targetId]
+        );
+      }
     } else {
+      const activeFlag = rfq.active !== undefined ? (rfq.active ? 1 : 0) : 1;
       await connection.query(
         `INSERT INTO rfqs 
-          (rfq_number, customer_id, requester, email, phone, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, notes, date, status, sales_assoc) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', date||null, status||'', salesAssoc||'']
+          (rfq_number, customer_id, requester, email, phone, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, notes, date, status, sales_assoc, active) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', activeFlag]
       );
     }
 

@@ -2796,22 +2796,52 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
 }
 
 // ── RFQ LIST VIEW ─────────────────────────────────────────────────────────────
-function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setShowRM, setDeadModal, deleteRfq, reopenRfq }) {
+function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setShowRM, setDeadModal, deleteRfq, reopenRfq, persistReq }) {
   const [rfqView, setRfqView] = useState("active"); // active | all | dead
   const [layoutMode, setLayoutMode] = useState("list"); // list | card
+  const [toggleMsg, setToggleMsg] = useState("");
+
+  const toggleActive = (r, active) => {
+    const updated = { ...r, active: active ? 1 : 0 };
+    setReqs(prev => prev.map(x => x.id === r.id ? updated : x));
+    if (persistReq) persistReq(updated);
+    setToggleMsg(active ? "Adding this RFQ to ACTIVE status...." : "Removing this from ACTIVE status....");
+    setTimeout(() => setToggleMsg(""), 2000);
+  };
 
   const filtered = (rfqView==="active"
-    ? reqs.filter(r=>r.status!=="Dead"&&r.status!=="Quoted")
+    ? reqs.filter(r=>r.active)
     : rfqView==="dead"
-    ? reqs.filter(r=>r.status==="Dead"||r.status==="Quoted")
+    ? reqs.filter(r=>!r.active)
     : reqs).sort((a, b) => new Date(b.date || "1970-01-01").getTime() - new Date(a.date || "1970-01-01").getTime());
 
-  const activeCount = reqs.filter(r=>r.status!=="Dead"&&r.status!=="Quoted").length;
+  const activeCount = reqs.filter(r=>r.active).length;
   const quotedCount = reqs.filter(r=>r.status==="Quoted").length;
-  const deadCount   = reqs.filter(r=>r.status==="Dead").length;
+  const deadCount   = reqs.filter(r=>!r.active).length;
 
   return (
     <div>
+      {/* Toast Notification */}
+      {toggleMsg && (
+        <div style={{
+          position: "fixed",
+          bottom: 40,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "#1e293b",
+          color: "#fff",
+          padding: "12px 24px",
+          borderRadius: 8,
+          boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+          zIndex: 9999,
+          fontWeight: 600,
+          fontSize: 14,
+          animation: "fadeIn 0.2s ease-out"
+        }}>
+          {toggleMsg}
+        </div>
+      )}
+
       {/* Header + toggle */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14, flexWrap:"wrap", gap:10 }}>
         <div>
@@ -2850,14 +2880,20 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
           const isDead   = r.status==="Dead";
           const isQuoted = r.status==="Quoted";
           const linkedQ  = jobs.find(q=>q.fromReqId===r.id);
+          const bg = r.active ? "#f0fdf4" : (isDead ? "#111318" : C.sur);
+          const bdr = r.active ? `1px solid ${C.bdr}` : (isDead ? `1px solid #374151` : `1px solid ${C.bdr}`);
           return (
-            <Card key={listKey("rfq-card", r, i)} style={{ marginBottom:0, opacity:isDead?0.75:1, background:isDead?"#111318":C.sur, border:isDead?`1px solid #374151`:`1px solid ${C.bdr}`, display:"flex", flexDirection:"column", height:"100%" }}>
+            <Card key={listKey("rfq-card", r, i)} style={{ marginBottom:0, opacity: (!r.active && isDead) ? 0.75 : 1, background: bg, border: bdr, display:"flex", flexDirection:"column", height:"100%" }}>
               <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:layoutMode==="card"?"stretch":"flex-start", flex:1, flexDirection:layoutMode==="card"?"column":"row" }}>
                 <div style={{ flex:1, minWidth:200 }}>
                   <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginBottom:3 }}>
                     <span style={{ fontWeight:700, color:isDead?"#9ca3af":C.acc, fontSize:12 }}>{r.rn}</span>
                     <Badge status={r.status}/>
                     <span style={{ fontSize:11, color:C.txtS }}>{r.date}</span>
+                    <label style={{ display:"flex", alignItems:"center", gap: 4, fontSize: 11, cursor:"pointer", background:"#f1f5f9", padding:"2px 6px", borderRadius:4, border:"1px solid #e2e8f0" }}>
+                      <input type="checkbox" checked={!!r.active} onChange={(e) => toggleActive(r, e.target.checked)} style={{ margin:0 }} />
+                      <span style={{ fontWeight: 600, color:"#475569" }}>Active</span>
+                    </label>
                   </div>
                   <div style={{ fontWeight:700, fontSize:15, color:isDead?"#6b7280":C.txt }}>{r.company}</div>
                   {r.jobSite   && <div style={{ fontSize:12, color:C.txtM, marginTop:1 }}>{r.jobSite}</div>}
@@ -9437,7 +9473,7 @@ export default function App() {
       />}
       <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <div className="app-page-container" style={{ maxWidth:1160 }}>
-        <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal} deleteRfq={deleteRfq} reopenRfq={reopenRfq} />
+        <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal} deleteRfq={deleteRfq} reopenRfq={reopenRfq} persistReq={persistReq} />
       </div>
       <Footer />
     </div>
