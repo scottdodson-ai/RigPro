@@ -1171,9 +1171,9 @@ function buildReportData(reportId, jobs, reqs) {
       const m={};
       won.forEach(q=>{ if(!m[q.client])m[q.client]={customer:q.client,revenue:0,jobs:0,qs:[]}; m[q.client].revenue+=(q.total||0); m[q.client].jobs+=1; m[q.client].qs.push(q); });
       const data=Object.values(m).sort((a,b)=>b.revenue-a.revenue);
-      return { cols:["Customer","Revenue","Jobs Won","Avg Deal"], clickHint:"Click a row to see individual jobs",
-        rows:data.map(r=>[r.customer,fmt2(r.revenue),r.jobs,fmt2(r.jobs?Math.round(r.revenue/r.jobs):0)]),
-        rawRefs:data.map(r=>({type:"group-customer",key:r.customer,jobs:r.qs})),
+      return { cols:["Customer","Revenue"], clickHint:"Click a row to see individual jobs",
+        rows:data.map(r=>[r.customer,fmt2(r.revenue)]),
+        rawRefs:data.map(r=>({type:"group-customer",key:r.customer,jobs:r.qs,avgDeal:r.jobs?Math.round(r.revenue/r.jobs):0,jobsWon:r.jobs})),
         summary:`${data.length} customers · Total: ${fmt2(data.reduce((s,r)=>s+r.revenue,0))}` };
     }
     case "rev-by-estimator": {
@@ -1655,7 +1655,15 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
             <div>
               <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Drill-Down · {groupQuotes.length} jobs</div>
               <div style={{ fontSize:17, fontWeight:700, marginTop:2 }}>{groupLabel}</div>
-              <div style={{ fontSize:12, color:C.acc, fontWeight:600, marginTop:2 }}>Total: {fmt2(total)}</div>
+              {rawRef.type === "group-customer" && rawRef.avgDeal !== undefined ? (
+                <div style={{ fontSize:13, color:C.acc, fontWeight:600, marginTop:4, display:"flex", gap:12 }}>
+                  <span>Revenue: {fmt2(total)}</span>
+                  <span>Won: {rawRef.jobsWon}</span>
+                  <span>Avg Deal: {fmt2(rawRef.avgDeal)}</span>
+                </div>
+              ) : (
+                <div style={{ fontSize:12, color:C.acc, fontWeight:600, marginTop:2 }}>Total: {fmt2(total)}</div>
+              )}
             </div>
             <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.txtS }}>×</button>
           </div>
@@ -2042,7 +2050,9 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                   <div style={{ fontSize:13, color:C.txtM, marginTop:4 }}>{activeReport.desc}</div>
                   {reportData?.summary && <div style={{ fontSize:13, color:C.acc, fontWeight:700, marginTop:6 }}>{reportData.summary}</div>}
                 </div>
-                <button style={{ ...mkBtn("ghost"), fontSize:12, padding:"6px 14px" }} onClick={exportCSV}>↓ Export CSV</button>
+                {activeReport.id !== "rev-by-customer" && (
+                  <button style={{ ...mkBtn("ghost"), fontSize:12, padding:"6px 14px" }} onClick={exportCSV}>↓ Export CSV</button>
+                )}
               </div>
 
               {/* Click hint */}
@@ -3098,6 +3108,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
   const [editJobNum,  setEditJobNum]  = useState("");
   const [showCurrentYear, setShowCurrentYear] = useState(false);
   const [mobileModalJob, setMobileModalJob] = useState(null);
+  const [drillRef,       setDrillRef]       = useState(null);
 
   useEffect(() => {
     if (mobileModalJob) {
@@ -3291,8 +3302,10 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
                       <span
                         style={{ cursor:"pointer", color:C.blue, textDecoration:"underline" }}
                         onClick={() => {
-                          setSelC(j.client);
-                          setView("customers");
+                          const customerJobs = jobs.filter(x => x.client === j.client);
+                          const rev = customerJobs.reduce((s,x)=>s+(x.total||0),0);
+                          const wonN = customerJobs.length; 
+                          setDrillRef({ type:"group-customer", key: j.client, jobs: customerJobs, revenue: rev, jobsWon: wonN, avgDeal: wonN?Math.round(rev/wonN):0 });
                         }}
                       >
                         {j.client}
@@ -3396,6 +3409,18 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
             </div>
           </div>
         </div>
+      )}
+
+      {drillRef && (
+        <ReportDrillDownModal
+          ref={drillRef}
+          jobs={jobs}
+          reqs={reqs}
+          jobFolders={jobFolders}
+          onOpenQuote={openEdit}
+          onOpenJobFolder={(req) => setShowJFM(req)}
+          onClose={() => setDrillRef(null)}
+        />
       )}
     </div>
   );

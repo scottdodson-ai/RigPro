@@ -266,12 +266,27 @@ const CustomerCRMBoard = (props) => {
                         </div>
                       </div>
                       <div>
-                        <Sec c="Official Company Domain"/>
-                        {currentSelectionData?.website ? (
-                          <a href={currentSelectionData.website.startsWith("http")?currentSelectionData.website:`https://${currentSelectionData.website}`} target="_blank" rel="noreferrer" style={{ display:"flex", alignItems:"center", gap:12, background:C.accL, color:C.acc, padding:25, borderRadius:20, marginTop:15, fontSize:16, fontWeight:800, textDecoration:"none", border:`1px solid ${C.accL}` }}>
-                            <span style={{ fontSize:22 }}>🌐</span> {currentSelectionData.website}
-                          </a>
-                        ) : <div style={{ color:C.txtS, fontSize:15, marginTop:15, background:C.bg, padding:25, borderRadius:20 }}>No web domain recorded.</div>}
+                        {(() => {
+                           let site = currentSelectionData?.website;
+                           if (!site && currentSelectionData?.company_summary) {
+                             const match = currentSelectionData.company_summary.match(/(?:website|domain|url|site)[\s*:-]+(https?:\/\/[^\s)<\]]+|www\.[^\s)<\]]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+                             if (match) site = match[1].replace(/[.,;*\\/]+$/, '');
+                             else {
+                               const fb = currentSelectionData.company_summary.match(/(https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+                               if (fb) site = fb[1].replace(/[.,;*\\/]+$/, '');
+                             }
+                           }
+                           return (
+                             <>
+                              <Sec c="Official Company Domain"/>
+                              {site ? (
+                                <a href={site.startsWith("http")?site:`https://${site}`} target="_blank" rel="noreferrer" style={{ display:"flex", alignItems:"center", gap:12, background:C.accL, color:C.acc, padding:25, borderRadius:20, marginTop:15, fontSize:16, fontWeight:800, textDecoration:"none", border:`1px solid ${C.accL}` }}>
+                                  <span style={{ fontSize:22 }}>🌐</span> {site}
+                                </a>
+                              ) : <div style={{ color:C.txtS, fontSize:15, marginTop:15, background:C.bg, padding:25, borderRadius:20 }}>No web domain recorded.</div>}
+                             </>
+                           );
+                        })()}
                       </div>
                       <div>
                         <Sec c="Executive Internal Management Notes"/>

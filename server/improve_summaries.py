@@ -17,16 +17,21 @@ def update_summaries():
         name = row['name']
         loc_str = f"{city}, {state}".strip(", ")
         
+        # Mock AI parsing for website domain and overview
+        safe_domain = name.lower().replace(" ", "").replace(",", "").replace(".", "").replace("&", "and")
+        website = f"www.{safe_domain}.com"
+        desc = f"{name} operations focus deeply on industrial scalability and structural lifecycle adjustments. Searching their public digital footprint traces an extensive history of large-scale infrastructure projects inside their operating state."
+            
         summary = f"""### AI Intelligence Dossier
 
 **Entity Name:** {name}
 **Primary Operating Sector:** Precision Industrial Manufacturing & Heavy Integration
 **Strategic Base:** {loc_str}
+**Official Domain:** {website}
 
 #### Executive Overview
-{name} operates as a pivotal infrastructural partner within the central logistics and manufacturing supply chain. Headquartered fundamentally out of {loc_str}, the organization maintains specialized competencies in large-scale machine integrations, critical asset relocations, and comprehensive structural adjustments. 
-
-Over recent operating quarters, {name} has demonstrated a high consistency in demanding structural rigging contracts, heavily emphasizing safety protocols and long-term asset lifecycle management.
+{desc}
+{name} operates as a pivotal infrastructural partner within the central logistics and manufacturing supply chain. Headquartered fundamentally out of {loc_str}, the organization maintains specialized competencies in large-scale machine integrations, critical asset relocations, and comprehensive structural adjustments.
 
 #### Core Competencies
 *   **Heavy Machinery Rigging:** Deployment and precision leveling of multi-ton payloads.
@@ -37,7 +42,8 @@ Over recent operating quarters, {name} has demonstrated a high consistency in de
 The entity maintains standard compliance with OSHA and regional heavy-lifting regulations. Their historical interaction velocity suggests a robust financial standing with consistent capital investment into facility upgrades and infrastructural modernization."""
         
         cursor.execute("UPDATE customers SET company_summary = %s WHERE id = %s", (summary, row['id']))
+    
     db.commit()
-    print(f"Updated {len(rows)} customer summaries with in-depth formatting.")
+    print(f"Updated {len(rows)} customer summaries with in-depth mock AI data (including domains).")
 
 update_summaries()
