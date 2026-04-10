@@ -220,9 +220,9 @@ const CustomerCRMBoard = (props) => {
                             props.setJobListFilter(selC);
                             setView("jobs"); 
                           }}
-                        >📊 Job List ({jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length})</button>
+                        >📊 Job List ({jobs.filter(q => q.client === currentSelectionData?.name && q.job_number).length})</button>
                         <div style={{ height:15, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          {jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 && (
+                          {jobs.filter(q => q.client === currentSelectionData?.name && q.job_number).length === 0 && (
                             <div style={{ fontSize:10, color:C.red, fontWeight:900, textTransform:"uppercase", letterSpacing:0.8 }}>No historical data exists for this account</div>
                           )}
                         </div>
@@ -280,7 +280,7 @@ const CustomerCRMBoard = (props) => {
 
                       <Sec c="Master Transaction History"/>
                       <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:15 }}>
-                        {jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).slice(0, 50).map((q, idx) => (
+                        {jobs.filter(q => q.client === currentSelectionData?.name && q.job_number).slice(0, 50).map((q, idx) => (
                            <div key={idx} style={{ padding:18, border:`1px solid ${C.bdrL}`, borderRadius:14, background:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                               <div style={{ flex:1 }}>
                                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -295,7 +295,7 @@ const CustomerCRMBoard = (props) => {
                               </div>
                            </div>
                         ))}
-                        {jobs.filter(q => q.customer_num === currentSelectionData?.customer_num).length === 0 && <div style={{ padding:30, textAlign:"center", background:C.bg, borderRadius:20, color:C.txtS, fontSize:13 }}>No historical job transactions found.</div>}
+                        {jobs.filter(q => q.client === currentSelectionData?.name && q.job_number).length === 0 && <div style={{ padding:30, textAlign:"center", background:C.bg, borderRadius:20, color:C.txtS, fontSize:13 }}>No historical job transactions found.</div>}
                       </div>
                     </div>
                   </div>
