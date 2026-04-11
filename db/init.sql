@@ -4,8 +4,8 @@ USE rigpro;
 DROP TABLE IF EXISTS company_info;
 DROP TABLE IF EXISTS user_auth_audit;
 DROP TABLE IF EXISTS admin_tasks;
-DROP TABLE IF EXISTS job_folders;
-DROP TABLE IF EXISTS rfqs;
+
+
 DROP TABLE IF EXISTS quotes;
 DROP TABLE IF EXISTS customer_contacts;
 DROP TABLE IF EXISTS customers;
@@ -239,40 +239,6 @@ INSERT INTO quotes (id, quote_number, customer_name, job_site, description, date
 (4, 'RIG-2024-002', 'Beacon Manufacturing Co.', '500 Commerce Blvd, Dayton, OH 45402', 'Hydraulic press installation', '2024-12-01', 'Submitted', 'Contract', 142500.00, 0, 'Sarah K', '', NULL, NULL, false),
 (5, 'RIG-2024-011', 'Beacon Manufacturing Co.', '500 Commerce Blvd, Dayton, OH 45402', 'CNC lathe bank relocation – Bldg B', '2024-09-15', 'Won', 'Contract', 71600.00, 0.07, 'Sarah K', 'J-2024-095', '2026-03-24', '2026-03-27', true),
 (6, 'RIG-2025-003', 'Beacon Manufacturing Co.', '500 Commerce Blvd, Dayton, OH 45402', 'Transformer set – electrical bay', '2025-01-22', 'Draft', 'T&M', 48300.00, 0, 'Mike R', '', NULL, NULL, false);
-
--- 7. RFQs (Requests for Quote)
-CREATE TABLE IF NOT EXISTS rfqs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    rfq_number VARCHAR(20) NOT NULL,
-    customer_id INT,
-    requester VARCHAR(100),
-    email VARCHAR(100),
-    phone VARCHAR(50),
-    job_site VARCHAR(255),
-    description TEXT,
-    notes TEXT,
-    date DATE,
-    status VARCHAR(50),
-    sales_assoc VARCHAR(50),
-    active TINYINT(1) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
-);
-
-INSERT INTO rfqs (rfq_number, company, requester, email, phone, job_site, description, notes, date, status, sales_assoc) VALUES
-('REQ-2025-001', 'Apex Industrial LLC', 'James Whitfield', 'j.whitfield@apexind.com', '330-555-0182', '1200 Industrial Pkwy, Akron, OH 44312', 'Relocate 40-ton hydraulic press from Bay 3 to Bay 7, 200ft.', '', '2025-01-06', 'Quoted', 'Dan M'),
-('REQ-2025-002', 'Beacon Manufacturing Co.', 'Carolyn Marsh', 'c.marsh@beaconmfg.com', '937-555-0244', '500 Commerce Blvd, Dayton, OH 45402', 'Install transformer 15,000 lbs, second floor.', 'Need quote by end of week.', '2025-01-15', 'Quoted', 'Mike R'),
-('REQ-2026-011', 'Quartz Industrial Services', 'Steve Mallory', 's.mallory@quartzind.com', '419-555-1610', '600 Industrial Ct, Mansfield, OH 44903', 'Cooling tower pump skid replacement.', '', '2026-03-19', 'New', '');
-
--- 8. Job Folders
-CREATE TABLE IF NOT EXISTS job_folders (
-    rfq_id INT PRIMARY KEY,
-    folder_data JSON,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (rfq_id) REFERENCES rfqs(id) ON DELETE CASCADE
-);
 
 -- 9. PHI Configuration
 CREATE TABLE IF NOT EXISTS phi_config (

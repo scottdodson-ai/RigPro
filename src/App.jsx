@@ -650,7 +650,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
   const comp = compStr ? JSON.parse(compStr) : { name: "Shoemaker Rigging & Transport LLC", logoSrc: null };
 
   const TABS = token ? [
-    ["dash","Dashboard"], ["customers", customerCount !== undefined ? `Customers (${customerCount})` : "Customers"], ["rfqs", reqCount !== undefined ? `RFQ List (${reqCount})` : "RFQ List"], ["quotes", quoteCount !== undefined ? `Quotes (${quoteCount})` : "Quotes"],
+    ["dash","Dashboard"], ["customers", customerCount !== undefined ? `Customers (${customerCount})` : "Customers"], ["quotes", quoteCount !== undefined ? `Quotes (${quoteCount})` : "Quotes"],
     ["jobs", jobCount !== undefined ? `Job List (${jobCount})` : "Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
@@ -2947,8 +2947,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
 // ── MASTER JOB LIST ───────────────────────────────────────────────────────────
 // ── QUOTES PAGE VIEW ─────────────────────────────────────────────────────────
 
-function QuotesPageView({ jobs, custData, setView, openEdit }) {
-  const [selectedQuote, setSelectedQuote] = useState(null);
+function QuotesPageView({ jobs, custData, setView, openEdit, selectedQuote, setSelectedQuote }) {
   const [filter, setFilter] = useState('');
   
   const quotes = useMemo(() => {
@@ -3031,6 +3030,17 @@ function QuotesPageView({ jobs, custData, setView, openEdit }) {
 }
 
 function QuotePreviewPanel({ quote, custData, onEdit }) {
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    if (!quote?.id) return;
+    const tkn = localStorage.getItem('token');
+    fetch(`/api/quotes/${quote.id}/history`, { headers: { 'Authorization': `Bearer ${tkn}`} })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setHistory(data))
+      .catch(e => console.error(e));
+  }, [quote?.id]);
+
   let qd = {};
   if (typeof quote.quote_data === 'string') {
     try { qd = JSON.parse(quote.quote_data); } catch(e){}
@@ -3087,13 +3097,38 @@ function QuotePreviewPanel({ quote, custData, onEdit }) {
       </div>
 
       {(qd.project_conditions || quote.notes) && (
-        <div style={{ background:C.bg, borderRadius:12, border:`1px dashed ${C.bdr}`, padding:"20px" }}>
+        <div style={{ background:C.bg, borderRadius:12, border:`1px dashed ${C.bdr}`, padding:"20px", marginBottom:24 }}>
           <h3 style={{ fontSize:15, fontWeight:700, margin:"0 0 12px 0", color:C.txtM, display:"flex", alignItems:"center", gap:6 }}>
             <span style={{ fontSize:16 }}>⚖️</span> Conditions & Notes
           </h3>
           <p style={{ fontSize:13, lineHeight:1.6, color:C.txtS, margin:0, whiteSpace:"pre-wrap" }}>
             {qd.project_conditions || quote.notes}
           </p>
+        </div>
+      )}
+
+      {history && history.length > 0 && (
+        <div style={{ paddingBottom: 24 }}>
+          <h3 style={{ fontSize:18, fontWeight:800, margin:"0 0 16px 0", color:C.txt, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:20 }}>⏳</span> Status Timeline
+          </h3>
+          <div style={{ position:"relative", paddingLeft: 24 }}>
+            <div style={{ position:"absolute", left:6, top:8, bottom:8, width:2, background:C.accB }} />
+            {history.map((h, i) => (
+              <div key={h.id} style={{ position:"relative", marginBottom: 16 }}>
+                <div style={{ position:"absolute", left:-22, top:4, width:10, height:10, borderRadius:"50%", background:C.acc, border:`2px solid ${C.sur}` }} />
+                <div style={{ background:C.sur, borderRadius:8, border:`1px solid ${C.bdr}`, padding:12, boxShadow:"0 2px 4px rgba(0,0,0,0.02)" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                    <span style={{ fontWeight:700, color:C.acc }}>{h.status_name}</span>
+                    <span style={{ fontSize:11, color:C.txtM, fontWeight:600 }}>{new Date(h.changed_at).toLocaleString()}</span>
+                  </div>
+                  <div style={{ fontSize:12, color:C.txt }}>
+                    {h.notes} {h.first_name ? <span style={{ color:C.txtS }}>• by {h.first_name} {h.last_name}</span> : ''}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -8541,6 +8576,17 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                     <div style={{ fontSize:12, color:C.txtM, marginBottom:4, lineHeight:1.4 }}>Generates a complete MySQL dump or Excel export. Recommended before legacy data changes.</div>
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop:8 }}>
                       <button style={{ ...mkBtn("won"), padding:"10px 18px", fontSize:13, gap:8 }} onClick={handleBackup}>📥 Create Database Backup</button>
+                      <button style={{ ...mkBtn("blue"), padding:"10px 18px", fontSize:13, gap:8 }} onClick={async () => {
+                        try {
+                          const res = await fetch("/api/admin/backups/list", { headers: { 'Authorization': `Bearer ${token}` } });
+                          const data = await res.json();
+                          if (data && data.length > 0) {
+                            downloadLocalBackup(data[0].filename);
+                          } else {
+                            alert("No backups found on server. Create one first!");
+                          }
+                        } catch (e) { alert("Failed to fetch latest backup."); }
+                      }}>⬇️ Download Latest Backup</button>
                       <button style={{ ...mkBtn("ghost"), padding:"10px 18px", fontSize:13, gap:8, border:`1px solid ${C.bdr}` }} onClick={async () => {
                         try {
                           const res = await fetch("/api/admin/export-excel", { headers: { 'Authorization': `Bearer ${token}` } });
@@ -8877,6 +8923,7 @@ export default function App() {
   const [reqs,       setReqs]       = useState(SAMPLE_REQS);
   const [dbStatus,   setDbStatus]   = useState("Local Mode");
   const [active,     setActive]     = useState(null);
+  const [globalSelectedQuote, setGlobalSelectedQuote] = useState(null);
   const [selC,       setSelC]       = useState(null);
   const [search,     setSearch]     = useState("");
   const [showRM,     setShowRM]     = useState(false);
@@ -9486,7 +9533,7 @@ export default function App() {
   if (view==="quotes") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
       <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
-      <QuotesPageView jobs={jobs} custData={custData} setView={setView} openEdit={openEdit} />
+      <QuotesPageView jobs={jobs} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} />
     </div>
   );
 
@@ -9783,7 +9830,7 @@ export default function App() {
         {showCustDoc && <CustomerDocModal quote={{...active, total:cv.total}} onClose={()=>setShowCustDoc(false)}/>}
         <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
           <div style={{ display:"flex", gap:5 }}>
-            <button style={mkBtn("ghost")} onClick={()=>setView("dash")}>Cancel</button>
+            <button style={mkBtn("ghost")} onClick={goBack}>Cancel</button>
             {!active.locked && <button style={mkBtn("primary")} onClick={()=>saveQuote()}>Save Quote</button>}
           </div>
         }/>

@@ -1612,20 +1612,27 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
   try {
     const safeId = Number(id);
     let targetId = null;
+    let oldStatus = null;
 
     // Only trust route id if it fits INT range used by quotes.id
     if (Number.isInteger(safeId) && safeId > 0 && safeId <= 2147483647) {
-      const [existingById] = await connection.query('SELECT id FROM quotes WHERE id = ?', [safeId]);
-      if (existingById.length > 0) targetId = existingById[0].id;
+      const [existingById] = await connection.query('SELECT id, status FROM quotes WHERE id = ?', [safeId]);
+      if (existingById.length > 0) {
+        targetId = existingById[0].id;
+        oldStatus = existingById[0].status;
+      }
     }
 
     // Fallback: resolve by quote number so client-side timestamp ids can still update correctly
     if (!targetId && quote.qn) {
       const [existingByQn] = await connection.query(
-        'SELECT id FROM quotes WHERE quote_number = ? ORDER BY id DESC LIMIT 1',
+        'SELECT id, status FROM quotes WHERE quote_number = ? ORDER BY id DESC LIMIT 1',
         [quote.qn]
       );
-      if (existingByQn.length > 0) targetId = existingByQn[0].id;
+      if (existingByQn.length > 0) {
+        targetId = existingByQn[0].id;
+        oldStatus = existingByQn[0].status;
+      }
     }
 
     let resolvedJobNum = (quote.jobNum || quote.job_num || '').trim();
@@ -1694,12 +1701,22 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
         'UPDATE quotes SET quote_number=?, customer_id=?, customer_name=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=? WHERE id=?',
         [...rowValues, targetId]
       );
+      if (oldStatus !== (quote.status || 'Draft')) {
+        await connection.query(
+          'INSERT INTO quote_status_history (quote_id, status_name, changed_by, notes) VALUES (?, ?, ?, ?)',
+          [targetId, quote.status || 'Draft', req.user ? req.user.id : null, 'Status updated via Quote form']
+        );
+      }
     } else {
       const [insertResult] = await connection.query(
         'INSERT INTO quotes (quote_number, customer_id, customer_name, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         rowValues
       );
       savedId = insertResult.insertId;
+      await connection.query(
+        'INSERT INTO quote_status_history (quote_id, status_name, changed_by, notes) VALUES (?, ?, ?, ?)',
+        [savedId, quote.status || 'Draft', req.user ? req.user.id : null, 'Initial quote creation']
+      );
     }
 
     connection.release();
@@ -1708,6 +1725,27 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
     connection.release();
     console.error('Error saving quote:', error);
     res.status(500).json({ error: 'Failed to save quote', details: error.message });
+  }
+});
+
+app.get('/api/quotes/:id/history', authenticateToken, async (req, res) => {
+  try {
+    const quoteId = Number(req.params.id);
+    if (!Number.isInteger(quoteId) || quoteId <= 0) {
+      return res.status(400).json({ error: 'Invalid ID' });
+    }
+    const [historyInfo] = await db.query(
+      `SELECT h.id, h.status_name, h.changed_at, h.notes, u.first_name, u.last_name 
+       FROM quote_status_history h
+       LEFT JOIN users u ON h.changed_by = u.id
+       WHERE h.quote_id = ?
+       ORDER BY h.changed_at ASC`,
+      [quoteId]
+    );
+    res.json(historyInfo);
+  } catch (err) {
+    console.error('Failed to fetch quote history:', err);
+    res.status(500).json({ error: 'Failed to fetch history' });
   }
 });
 
