@@ -369,6 +369,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     }));
     const users = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, user_number, created_at FROM users');
     const estimators = await safeQuery('SELECT * FROM estimators');
+    const statuses = await safeQuery('SELECT * FROM statuses ORDER BY sort_order ASC');
 
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
@@ -409,14 +410,15 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       jobs,
       rfqs,
       users,
-      estimators
+      estimators,
+      statuses
     });
   } catch (error) {
     console.error('[API] /api/data error:', error);
     // If the tables don't exist yet (e.g. after a failed restore wipe), return empty data
     // so the frontend can automatically trigger the DB re-initialization routine.
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ labor: [], equipment: [], customers: {}, jobs: [], rfqs: [], users: [], estimators: [] });
+      return res.json({ labor: [], equipment: [], customers: {}, jobs: [], rfqs: [], users: [], estimators: [], statuses: [] });
     }
     res.status(500).json({ error: 'Failed to fetch data', details: error.message });
   }

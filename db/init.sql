@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS base_labor;
 DROP TABLE IF EXISTS equipment;
 DROP TABLE IF EXISTS estimators;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS statuses;
 
 -- 1. Users table for login
 CREATE TABLE IF NOT EXISTS users (
@@ -307,3 +308,23 @@ CREATE TABLE IF NOT EXISTS phi_config (
 
 INSERT IGNORE INTO phi_config (company_id) VALUES (1);
 
+-- 10. Statuses
+CREATE TABLE IF NOT EXISTS statuses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    sort_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO statuses (name, sort_order) VALUES
+('Requested', 10),
+('Customer Contact', 20),
+('In process', 30),
+('Accepted', 40),
+('Modification needed', 50),
+('Quoted', 60),
+('Accepted', 70),
+('Job complete', 80),
+('Partial Payment', 90),
+('Full Payment', 100);

@@ -12,6 +12,7 @@ async function run() {
     user: 'root',
     password: 'password123',
     database: 'rigpro',
+    port: 3308,
     multipleStatements: true
   });
   
