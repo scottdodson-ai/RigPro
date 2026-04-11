@@ -865,9 +865,7 @@ app.get('/api/admin/backup', authenticateToken, authenticateAdmin, (req, res) =>
   const database = process.env.DB_NAME || 'rigpro';
 
   console.log(`[BACKUP] Starting backup: ${filename}`);
-
-  res.setHeader('Content-Type', 'application/sql');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  // No longer setting headers for download since we only want to save to the server
 
   const dumpCommand = `mariadb-dump --skip-ssl -h ${host} -u ${user} ${database}`;
   const backupEnv = { ...process.env, MYSQL_PWD: password };
@@ -900,10 +898,8 @@ app.get('/api/admin/backup', authenticateToken, authenticateAdmin, (req, res) =>
           });
         }
 
-        // Stream the file back to the client
-        res.download(backupPath, filename, (err) => {
-          if (err) console.error('[BACKUP] Error sending file to client:', err);
-        });
+        // Do not stream the file back to the client, just return success
+        res.json({ success: true, message: 'Backup saved to server', filename });
       } catch (rotationErr) {
         console.error('[BACKUP] Rotation error:', rotationErr);
         if (!res.headersSent) res.status(500).json({ error: 'Backup rotation failed' });
@@ -936,6 +932,19 @@ app.get('/api/admin/backups/list', authenticateToken, authenticateAdmin, (req, r
     console.error("[LIST BACKUPS] Error:", error);
     res.status(500).json({ error: 'Failed to list backups', details: error.message });
   }
+});
+
+// DOWNLOAD LOCAL BACKUP
+app.get('/api/admin/backups/download/:filename', authenticateToken, authenticateAdmin, (req, res) => {
+  const filename = req.params.filename;
+  if (!filename) return res.status(400).json({ error: 'Filename is required' });
+
+  const safePath = path.join(BACKUPS_DIR, path.basename(filename));
+  if (!fs.existsSync(safePath)) return res.status(404).json({ error: 'Backup file not found' });
+
+  res.download(safePath, filename, (err) => {
+    if (err) console.error('[BACKUP DOWNLOAD] Error sending file to client:', err);
+  });
 });
 
 // EXPORT EXCEL
@@ -1058,44 +1067,6 @@ app.post('/api/admin/backups/delete', authenticateToken, authenticateAdmin, (req
     res.status(500).json({ error: 'Failed to delete some backups' });
   }
 });
-
-// RESTORE DATABASE (Admin Only) - Takes a .sql file as raw text
-app.post('/api/admin/restore', authenticateToken, authenticateAdmin, (req, res) => {
-  const sql = req.body;
-  if (!sql || typeof sql !== 'string') return res.status(400).json({ error: 'No SQL content provided' });
-
-  const host = process.env.DB_HOST || 'localhost';
-  const user = process.env.DB_USER || 'root';
-  const password = process.env.DB_PASSWORD || 'password123';
-  const database = process.env.DB_NAME || 'rigpro';
-
-  const tempPath = path.join(BACKUPS_DIR, `temp_restore_${Date.now()}.sql`);
-  
-  try {
-    fs.writeFileSync(tempPath, sql);
-    console.log('[RESTORE] Using mariadb CLI for restoration...');
-
-    const restoreCmd = `mariadb --skip-ssl -h ${host} -u ${user} ${database} < "${tempPath}"`;
-    const envWithPass = { ...process.env, MYSQL_PWD: password };
-
-    exec(restoreCmd, { env: envWithPass }, (error, stdout, stderr) => {
-      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-
-      if (error) {
-        console.error('[RESTORE] CLI Error:', error, stderr);
-        return res.status(500).json({ error: 'Restoration failed', details: stderr || error.message });
-      }
-      
-      console.log('[RESTORE] Native restoration completed successfully');
-      res.json({ message: 'Database restored successfully' });
-    });
-  } catch (err) {
-    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-    console.error('[RESTORE] Post Error:', err);
-    res.status(500).json({ error: 'Failed to initiate restoration', details: err.message });
-  }
-});
-
 
 // ADMIN TASKS & TODOS
 app.get('/api/admin/tasks', authenticateToken, authenticateAdmin, async (req, res) => {

@@ -8237,29 +8237,12 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       });
       if (!res.ok) throw new Error("Backup failed");
       
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      
-      const disposition = res.headers.get('Content-Disposition');
-      let filename = `rigpro_backup_${new Date().toISOString().slice(0,10)}.sql`;
-      if (disposition && disposition.indexOf('attachment') !== -1) {
-          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-          const matches = filenameRegex.exec(disposition);
-          if (matches != null && matches[1]) { 
-              filename = matches[1].replace(/['"]/g, '');
-          }
-      }
-      
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      const data = await res.json();
+      alert(`Backup successful! Saved as: ${data.filename}`);
+      loadBackups(); // Refresh the list of local backups
     } catch (err) {
       console.error(err);
-      alert("Failed to download database backup.");
+      alert("Failed to create database backup.");
     }
   };
 
@@ -8287,6 +8270,26 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       setSelectedBackups([]);
       loadBackups();
     } catch (e) { alert("Delete failed"); }
+  };  const downloadLocalBackup = async (filename) => {
+    try {
+      const res = await fetch(`/api/admin/backups/download/${filename}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Download failed");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to download database backup from server.");
+    }
   };
 
   const restoreLocalBackup = async (filename) => {
@@ -8765,41 +8768,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               </div>
               <div style={{ padding:20, maxHeight:400, overflowY:"auto" }}>
                 <div style={{ fontSize:12, color:C.txtS, marginBottom:16 }}>The system maintains up to 5 automated backups. Older snapshots are rotated out automatically.</div>
-                
-                {/* Manual Browse Directory Interface */}
-                <div style={{ marginBottom: 20, padding: 12, background: C.accL, borderRadius: 8, border: `1px solid ${C.accB}` }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: C.acc, marginBottom: 8 }}>Manually Browse for Backup File:</div>
-                  <input 
-                     type="file" 
-                     accept=".sql" 
-                     onChange={(e) => {
-                       const file = e.target.files[0];
-                       if (!file) return;
-                       const reader = new FileReader();
-                       reader.onload = async (ev) => {
-                         const sql = ev.target.result;
-                         if (!window.confirm(`DANGER: Restore system using ${file.name}?\n\nThis will completely overwrite all current database records.`)) return;
-                         try {
-                           const req = await fetch("/api/admin/restore", {
-                             method: "POST",
-                             headers: { 'Content-Type': 'application/sql', 'Authorization': `Bearer ${token}` },
-                             body: sql
-                           });
-                           if (!req.ok) throw new Error("Restore failed");
-                           alert("Database restored successfully. The application will now reload.");
-                           window.location.reload();
-                         } catch (error) {
-                           alert("Failed to restore from file: " + error.message);
-                         }
-                       };
-                       reader.readAsText(file);
-                     }}
-                     style={{ fontSize: 13 }}
-                  />
-                  <div style={{ fontSize: 11, color: C.txtM, marginTop: 4 }}>Works natively on Mac and Windows directory browsers. (Max 50MB)</div>
-                </div>
-
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 8 }}>Local Server Backups:</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 8 }}>Available Server Backups:</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                   {localBackups.length === 0 && <div style={{ textAlign:"center", padding:40, color:C.txtS }}>No local backups found.</div>}
                   {localBackups.map(b => (
@@ -8816,12 +8785,20 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                         <div style={{ fontSize:14, fontWeight:800, color:C.acc }}>{new Date(b.createdAt).toLocaleDateString()} at {new Date(b.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                         <div style={{ fontSize:10, color:C.txtS, fontFamily:"monospace" }}>ID: {b.filename} • {(b.size / 1024).toFixed(1)} KB</div>
                       </div>
-                      <button 
-                        onClick={() => restoreLocalBackup(b.filename)} 
-                        style={{ ...mkBtn("danger"), padding:"6px 12px", fontSize:11, borderRadius:6 }}
-                      >
-                        Restore
-                      </button>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button 
+                          onClick={() => downloadLocalBackup(b.filename)} 
+                          style={{ ...mkBtn("blue"), padding:"6px 12px", fontSize:11, borderRadius:6 }}
+                        >
+                          Download
+                        </button>
+                        <button 
+                          onClick={() => restoreLocalBackup(b.filename)} 
+                          style={{ ...mkBtn("danger"), padding:"6px 12px", fontSize:11, borderRadius:6 }}
+                        >
+                          Restore
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
