@@ -369,7 +369,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     }));
     const users = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, user_number, created_at FROM users');
     const estimators = await safeQuery('SELECT * FROM estimators');
-    const statuses = await safeQuery('SELECT * FROM statuses ORDER BY sort_order ASC');
+    const status = await safeQuery('SELECT * FROM status ORDER BY sort_order ASC');
 
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
@@ -411,14 +411,14 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       rfqs,
       users,
       estimators,
-      statuses
+      status
     });
   } catch (error) {
     console.error('[API] /api/data error:', error);
     // If the tables don't exist yet (e.g. after a failed restore wipe), return empty data
     // so the frontend can automatically trigger the DB re-initialization routine.
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ labor: [], equipment: [], customers: {}, jobs: [], rfqs: [], users: [], estimators: [], statuses: [] });
+      return res.json({ labor: [], equipment: [], customers: {}, jobs: [], rfqs: [], users: [], estimators: [], status: [] });
     }
     res.status(500).json({ error: 'Failed to fetch data', details: error.message });
   }
@@ -683,7 +683,7 @@ app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, a
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status'];
   const table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
@@ -702,7 +702,7 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
 
 // UPDATE RECORD IN TABLE (Admin Only)
 app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status'];
   const table = req.params.table;
   const id = req.params.id;
   const data = req.body;

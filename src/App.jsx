@@ -8341,6 +8341,11 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
 
 
         <div style={{ display:"flex", flexDirection:"column", gap:16, marginBottom:30 }}>
+            {/* DATA BROWSER SECTION */}
+            <AccordionCard title="🗂️ Global Data Browser">
+              <DatabaseBrowser token={token} />
+            </AccordionCard>
+
           {/* USER LIST */}
           <AccordionCard title="User Management">
             <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:14 }}>
@@ -8575,10 +8580,6 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
               <VectorBrowser token={token} />
             </AccordionCard>
 
-            {/* DATA BROWSER SECTION */}
-            <AccordionCard title="🗂️ Global Data Browser">
-              <DatabaseBrowser token={token} />
-            </AccordionCard>
         </div>
 
         {/* ADD USER MODAL */}
