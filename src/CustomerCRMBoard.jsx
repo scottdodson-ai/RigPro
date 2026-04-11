@@ -318,7 +318,7 @@ const CustomerCRMBoard = (props) => {
                            <div key={idx} style={{ padding:18, border:`1px solid ${C.bdrL}`, borderRadius:14, background:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                               <div style={{ flex:1 }}>
                                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                    <div style={{ fontSize:10, fontWeight:900, color:C.acc }}>JOB #: {q.job_number}</div>
+                                    <div style={{ fontSize:10, fontWeight:900, color:C.acc }}>QUOTE #: {q.quote_number || q.qn}</div>
                                     <div style={{ fontSize:9, background:C.accL, color:C.acc, padding:"2px 8px", borderRadius:6, fontWeight:800 }}>ID: # {q.customer_num}</div>
                                  </div>
                                  <div style={{ fontSize:14, fontWeight:700, color:C.txtM, marginTop:3 }}>{q.job_description}</div>

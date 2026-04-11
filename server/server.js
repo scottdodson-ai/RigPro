@@ -26,7 +26,7 @@ const upload = multer({ dest: UPLOADS_DIR });
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.text({ type: 'application/sql', limit: '50mb' }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_for_rigpro';
@@ -260,29 +260,31 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const sites = await safeQuery('SELECT * FROM sites');
     const contacts = await safeQuery('SELECT * FROM customer_contacts');
     // Load quotes from the working table first, then optionally append master_jobs history.
-    const quotesRows = await safeQuery(`SELECT id,
-                quote_number as qn,
-                customer_name as client,
-                job_site as jobSite,
-                description as jobDesc,
-                date,
-                status,
-                quote_type as qtype,
-                labor,
-                equip,
-                hauling,
-                travel,
-                materials as mats,
-                total,
-                markup,
-                sales_assoc as salesAssoc,
-                job_num,
-                start_date as startDate,
-                comp_date as compDate,
-                is_locked as locked,
-                notes,
-                quote_data
-           FROM quotes`);
+    const quotesRows = await safeQuery(`SELECT q.id,
+                q.quote_number as qn,
+                q.customer_name as client,
+                q.job_site as jobSite,
+                q.description as jobDesc,
+                q.date,
+                s.name as status,
+                q.status as status_id,
+                q.quote_type as qtype,
+                q.labor,
+                q.equip,
+                q.hauling,
+                q.travel,
+                q.materials as mats,
+                q.total,
+                q.markup,
+                q.sales_assoc as salesAssoc,
+                q.job_num,
+                q.start_date as startDate,
+                q.comp_date as compDate,
+                q.is_locked as locked,
+                q.notes,
+                q.quote_data
+           FROM quotes q
+           LEFT JOIN status s ON q.status = s.id`);
 
     const mappedQuotes = quotesRows.map((row) => {
       let json = {};
@@ -293,7 +295,9 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       return {
         ...json,
         ...row,
+        status: row.status || json.status || 'Draft',
         qn: row.qn || json.qn || '',
+        quote_number: row.qn || json.qn || '',
         client: row.client || row.customer_name || json.client || '',
         jobSite: row.jobSite || row.job_site || json.jobSite || '',
         jobSiteAddress1: row.job_site_address1 || json.jobSiteAddress1 || '',
@@ -332,6 +336,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         };
         return {
           ...row,
+          id: row.id + 1000000,
           qn,
           job_num: jobNum,
           jobNum,
@@ -683,7 +688,7 @@ app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, a
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History'];
   const table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
@@ -702,7 +707,7 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
 
 // UPDATE RECORD IN TABLE (Admin Only)
 app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History'];
   const table = req.params.table;
   const id = req.params.id;
   const data = req.body;
@@ -1666,6 +1671,24 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       }
     }
 
+    // Resolve status name to ID if needed
+    let resolvedStatusId = quote.status;
+    if (isNaN(resolvedStatusId)) {
+      const [statusRow] = await connection.query('SELECT id FROM status WHERE name = ?', [quote.status]);
+      if (statusRow.length > 0) {
+        resolvedStatusId = statusRow[0].id;
+      } else {
+         // Default fallback or keep as is if it's already an ID
+         resolvedStatusId = (quote.status === 'Draft' ? 0 : (quote.status_id || null));
+      }
+    }
+
+    const formatDate = (val) => {
+      if (!val) return null;
+      if (typeof val === 'string' && val.includes('T')) return val.split('T')[0];
+      return val;
+    };
+
     const rowValues = [
       quote.qn || '',
       custId,
@@ -1676,8 +1699,8 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       quote.jobSiteState || '',
       quote.jobSiteZip || '',
       quote.desc || '',
-      quote.date || null,
-      quote.status || 'Draft',
+      formatDate(quote.date),
+      resolvedStatusId,
       quote.qtype || '',
       quote.labor || 0,
       quote.equip || 0,
@@ -1688,8 +1711,8 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       quote.markup || 0,
       quote.salesAssoc || '',
       resolvedJobNum,
-      quote.startDate || null,
-      quote.compDate || null,
+      formatDate(quote.startDate),
+      formatDate(quote.compDate),
       quote.locked ? 1 : 0,
       quote.notes || '',
       JSON.stringify(quote)
@@ -1703,8 +1726,8 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       );
       if (oldStatus !== (quote.status || 'Draft')) {
         await connection.query(
-          'INSERT INTO quote_status_history (quote_id, status_name, changed_by, notes) VALUES (?, ?, ?, ?)',
-          [targetId, quote.status || 'Draft', req.user ? req.user.id : null, 'Status updated via Quote form']
+          'INSERT INTO Quote_Status_History (quote_id, status_name, changed_by, notes) VALUES (?, ?, ?, ?)',
+          [targetId, quote.status || 'Draft', req.user ? req.user.id || req.user.userId : null, 'Status updated via Quote form']
         );
       }
     } else {
@@ -1714,8 +1737,8 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       );
       savedId = insertResult.insertId;
       await connection.query(
-        'INSERT INTO quote_status_history (quote_id, status_name, changed_by, notes) VALUES (?, ?, ?, ?)',
-        [savedId, quote.status || 'Draft', req.user ? req.user.id : null, 'Initial quote creation']
+        'INSERT INTO Quote_Status_History (quote_id, status_name, changed_by, notes) VALUES (?, ?, ?, ?)',
+        [savedId, quote.status || 'Draft', req.user ? req.user.id || req.user.userId : null, 'Initial quote creation']
       );
     }
 
@@ -1736,7 +1759,7 @@ app.get('/api/quotes/:id/history', authenticateToken, async (req, res) => {
     }
     const [historyInfo] = await db.query(
       `SELECT h.id, h.status_name, h.changed_at, h.notes, u.first_name, u.last_name 
-       FROM quote_status_history h
+       FROM Quote_Status_History h
        LEFT JOIN users u ON h.changed_by = u.id
        WHERE h.quote_id = ?
        ORDER BY h.changed_at ASC`,

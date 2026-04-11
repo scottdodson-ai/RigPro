@@ -432,7 +432,7 @@ function blankQuote(jobs=[], req, customerRates, isCO=false, parentQ=null) {
     contactEmail: req?.email      || "",
     contactPhone: req?.phone      || "",
     salesAssoc:   req?.salesAssoc  || "",
-    date:today(), status:"In Progress", qtype:"Contract", markup:0,
+    date:today(), status:"Quote Requested", qtype:"Contract", markup:0,
     fromReqId: req?.id    || null,
     parentId:  parentQ?.id || null,
     isChangeOrder: isCO,
@@ -525,6 +525,7 @@ const C = {
 };
 
 const SS = {
+  "Quote Requested":   { bg:C.bg,      cl:C.txtS,    bd:C.bdr      },
   "In Progress":       { bg:C.yelB,    cl:C.yel,     bd:C.yelBdr   },
   "In Review":         { bg:C.bluB,    cl:C.blue,     bd:C.bluBdr   },
   "Approved":          { bg:"#f0fdfa", cl:"#0d9488",  bd:"#99f6e4"  },
@@ -537,6 +538,7 @@ const SS = {
   New:                 { bg:C.bluB,    cl:C.blue,     bd:C.bluBdr   },
   "Quoted":            { bg:C.grnB,    cl:C.grn,      bd:C.grnBdr   },
   "Change Order":      { bg:"#f5f3ff", cl:"#6d28d9",  bd:"#ddd6fe"  },
+  "Completed":         { bg:C.grnB,    cl:C.grn,     bd:C.grnBdr   }
 };
 
 const inp = { background:C.sur, border:`1px solid ${C.bdrM}`, borderRadius:5, color:C.txt, fontFamily:"inherit", fontSize:13, padding:"7px 10px", width:"100%", boxSizing:"border-box", outline:"none" };
@@ -575,7 +577,7 @@ const pgBtn = (active) => ({
 
 // ── SMALL COMPONENTS ──────────────────────────────────────────────────────────
 const Badge = ({ status }) => { const x = SS[status]||SS.Draft; return <span style={{ background:x.bg, color:x.cl, border:`1px solid ${x.bd}`, borderRadius:4, padding:"2px 8px", fontSize:11, fontWeight:600, whiteSpace:"nowrap" }}>{status}</span>; };
-const Lbl   = ({ c }) => <div style={{ fontSize:11, color:C.txtM, marginBottom:3, fontWeight:600 }}>{c}</div>;
+const Lbl   = ({ c, children, style }) => <div style={{ fontSize:11, color:C.txtM, marginBottom:3, fontWeight:600, ...style }}>{c || children}</div>;
 const Sec   = ({ c }) => <div style={{ color:C.acc, fontSize:11, letterSpacing:1, marginBottom:10, fontWeight:700, textTransform:"uppercase" }}>{c}</div>;
 const XBtn  = ({ on }) => <button onClick={on} style={{ background:"none", border:"none", color:C.txtS, cursor:"pointer", fontSize:17, padding:"0 3px", lineHeight:1 }}>×</button>;
 const Card  = ({ children, style={}, onClick }) => <div className="app-card" onClick={onClick} style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:16, marginBottom:12, width:"100%", minWidth:0, ...style }}>{children}</div>;
@@ -1026,7 +1028,7 @@ const BUILT_IN_REPORTS = [
 
   // 3. Historical
   { id:"historical-dashboard", name:"Historical Dashboard",      category:"Historical", desc:"Operational history and performance summary",        scope:"org" },
-  { id:"inactive-reqs",        name:"Inactive Requests",        category:"Historical", desc:"Summary of all RFQs marked as Dead/Archived",        scope:"org" },
+  { id:"inactive-reqs",        name:"Inactive Requests",        category:"Historical", desc:"Summary of all RFQs marked as Dead/Complete",        scope:"org" },
   { id:"lost-estimates",       name:"Lost Estimates",           category:"Historical", desc:"Rejected quotes analyzed by customer and reason",    scope:"org" },
 
   // 4. Finance
@@ -1458,7 +1460,7 @@ function buildReportData(reportId, jobs, reqs) {
           ["New Quotes Created", jobs.length],
           ["Estimates Won", won.length],
           ["Estimates Lost", lost.length],
-          ["New RFQs Ingested", reqs.length],
+          ["New Quotes Ingested", reqs.length],
           ["Total Adjustments Made", jobs.reduce((s,q) => s + (q.salesAdjustments?.length || 0), 0)]
         ],
         summary: "General system activity and throughput"
@@ -2770,7 +2772,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
                     <div style={{ background:C.bg, border:`1px dashed ${C.bdrM}`, borderRadius:7, padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
                       <span style={{ fontSize:12, color:C.txtS }}>No estimate yet.</span>
                       <div style={{ display:"flex", gap:8 }}>
-                        <button style={{ ...mkBtn("blue"), fontSize:11, padding:"4px 11px" }} onClick={()=>openNew(r)}>Create Estimate →</button>
+                        <button style={{ ...mkBtn("blue"), fontSize:11, padding:"4px 11px" }} onClick={()=>openNew(r)}>Create Quote →</button>
                         <button style={{ background:"#1c1f26", color:"#9ca3af", border:"1px solid #374151", borderRadius:6, padding:"4px 11px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:600 }} onClick={()=>setDeadModal&&setDeadModal({type:"rfq",item:r})}>Mark Dead</button>
                       </div>
                     </div>
@@ -2856,8 +2858,8 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14, flexWrap:"wrap", gap:10 }}>
         <div>
           <div style={{ fontSize:20, fontWeight:700, display:"flex", alignItems:"center", gap:10 }}>
-            Request For Quotes
-            <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px", borderRadius:6, fontWeight:700 }} onClick={() => { setEditR(null); setShowRM(true); }}>+ New RFQ</button>
+            Quote Requests
+            <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px", borderRadius:6, fontWeight:700 }} onClick={() => { setEditR(null); setShowRM(true); }}>+ New Quote</button>
           </div>
           <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>
             {activeCount} active · {quotedCount} quoted · {deadCount} dead
@@ -2927,7 +2929,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
                   <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 9px" }} onClick={()=>setShowJFM(r)}>Job Folder</button>
                   {!isDead && !isQuoted && <>
                     <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 9px" }} onClick={()=>{setEditR(r);setShowRM(true);}}>Edit</button>
-                    <button style={{ ...mkBtn("blue"), fontSize:11, padding:"4px 9px" }} onClick={()=>openNew(r)}>Create Estimate →</button>
+                    <button style={{ ...mkBtn("blue"), fontSize:11, padding:"4px 9px" }} onClick={()=>openNew(r)}>Create Quote →</button>
                     <button style={{ background:"#1c1f26", color:"#9ca3af", border:"1px solid #374151", borderRadius:6, padding:"4px 9px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:600 }} onClick={()=>setDeadModal({type:"rfq",item:r})}>Mark Dead</button>
                   </>}
                   {isDead && (
@@ -2947,7 +2949,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
 // ── MASTER JOB LIST ───────────────────────────────────────────────────────────
 // ── QUOTES PAGE VIEW ─────────────────────────────────────────────────────────
 
-function QuotesPageView({ jobs, custData, setView, openEdit, selectedQuote, setSelectedQuote }) {
+function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQuote, setSelectedQuote, role }) {
   const [filter, setFilter] = useState('');
   
   const quotes = useMemo(() => {
@@ -2959,7 +2961,7 @@ function QuotesPageView({ jobs, custData, setView, openEdit, selectedQuote, setS
   const filtered = useMemo(() => {
     if (!filter) return quotes;
     const l = filter.toLowerCase();
-    return quotes.filter(q => (q.client?.toLowerCase().includes(l)) || (q.job_description?.toLowerCase().includes(l)) || (q.description?.toLowerCase().includes(l)) || (q.quote_number?.toLowerCase().includes(l)));
+    return quotes.filter(q => (q.client?.toLowerCase().includes(l)) || (q.job_description?.toLowerCase().includes(l)) || (q.description?.toLowerCase().includes(l)) || (q.qn?.toLowerCase().includes(l)));
   }, [quotes, filter]);
 
   return (
@@ -2993,19 +2995,39 @@ function QuotesPageView({ jobs, custData, setView, openEdit, selectedQuote, setS
                   transition:"all 0.2s ease"
                 }}
               >
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <span style={{ fontWeight:700, color:C.txt }}>
-                    {q.client || 'Unknown Client'} 
-                    {custData && custData[q.client] && custData[q.client].customer_num ? ` · #${custData[q.client].customer_num}` : ''}
-                  </span>
-                  <span style={{ fontSize:11, color:C.txtM, fontWeight:600 }}>{q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleDateString() : ''}</span>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
+                  <span style={{ fontSize:10, fontWeight:700, color:C.txtS, textTransform:"uppercase" }}>Customer</span>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:11, color:C.txtM, fontWeight:600 }}>{q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleDateString() : ''}</div>
+                  </div>
                 </div>
-                <div style={{ fontSize:13, color:C.txtM, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", marginBottom:10 }}>
-                  {q.jobSite || q.description || q.job_description}
+                <div style={{ fontWeight:700, color:C.txt, fontSize:15, marginBottom:8 }}>
+                  {q.client || 'Unknown'} 
+                  {custData && custData[q.client] && custData[q.client].customer_num ? ` · #${custData[q.client].customer_num}` : ''}
                 </div>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <span style={{ fontSize:15, fontWeight:800, color:C.acc }}>{fmt(parseFloat(q.total||0))}</span>
-                  {(q.quote_number || q.job_num) && <span style={{ fontSize:10, background:C.bdr, padding:"3px 8px", borderRadius:12, fontWeight:600, color:C.txtM }}>{q.quote_number || q.job_num}</span>}
+                
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                  <div>
+                    <div style={{ fontSize:10, fontWeight:700, color:C.txtS, textTransform:"uppercase" }}>Project Location</div>
+                    <div style={{ fontSize:13, color:C.txtM, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", width:180 }}>
+                      {q.jobSite || q.description || q.job_description || "Not Specified"}
+                    </div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:C.txtS, textTransform:"uppercase", marginBottom:4 }}>Status</div>
+                    <Badge status={q.status || 'Draft'} />
+                  </div>
+                </div>
+
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderTop:`1px solid ${C.bdr}33`, paddingTop:10 }}>
+                  <div>
+                    <div style={{ fontSize:9, fontWeight:800, color:C.txtS, textTransform:"uppercase", marginBottom:2 }}>Estimate</div>
+                    <span style={{ fontSize:16, fontWeight:800, color:C.acc }}>{fmt(parseFloat(q.total||0))}</span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:9, fontWeight:800, color:C.txtS, textTransform:"uppercase", marginBottom:2, textAlign:"right" }}>Quote #</div>
+                    {q.qn && <span style={{ fontSize:11, background:C.accL, color:C.acc, padding:"3px 10px", borderRadius:6, fontWeight:700 }}>{q.qn}</span>}
+                  </div>
                 </div>
               </div>
             );
@@ -3017,7 +3039,7 @@ function QuotesPageView({ jobs, custData, setView, openEdit, selectedQuote, setS
       {/* Right Preview */}
       <div style={{ flex:1, display:"flex", flexDirection:"column", background:C.bg, overflowY:"auto" }}>
         {selectedQuote ? (
-          <QuotePreviewPanel quote={selectedQuote} custData={custData} onEdit={() => openEdit(selectedQuote)} />
+          <QuotePreviewPanel quote={selectedQuote} custData={custData} setJobs={setJobs} setSelectedQuote={setSelectedQuote} onEdit={() => openEdit(selectedQuote)} role={role} />
         ) : (
           <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", color:C.txtM }}>
             <div style={{ fontSize:48, marginBottom:16, opacity:0.2 }}>📄</div>
@@ -3029,7 +3051,7 @@ function QuotesPageView({ jobs, custData, setView, openEdit, selectedQuote, setS
   );
 }
 
-function QuotePreviewPanel({ quote, custData, onEdit }) {
+function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setSelectedQuote, role }) {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
@@ -3052,12 +3074,53 @@ function QuotePreviewPanel({ quote, custData, onEdit }) {
     <div style={{ padding:"32px", maxWidth:880, margin:"0 auto", width:"100%" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:32 }}>
         <div>
-          <h1 style={{ fontSize:28, fontWeight:800, margin:"0 0 10px 0", color:C.txt }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:4 }}>
+            <div style={{ fontSize:11, fontWeight:800, color:C.acc, textTransform:"uppercase" }}>Quote Recipient</div>
+            <Badge status={quote.status || 'Draft'} />
+            {role === 'admin' && (
+              <select 
+                value={quote.status || 'Draft'} 
+                onChange={async (e) => {
+                  const newStatus = e.target.value;
+                  if (!window.confirm(`Are you sure you want to change the status of this quote to "${newStatus}"?`)) return;
+                  
+                  const updatedQuote = { ...quote, status: newStatus };
+                  
+                  // Update local state
+                  setJobs(prev => prev.map(q => q.id === quote.id ? updatedQuote : q));
+                  setSelectedQuote(updatedQuote);
+                  
+                  // Sync to DB
+                  const tkn = localStorage.getItem('token');
+                  try {
+                    const res = await fetch(`/api/quotes/${quote.id}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tkn}` },
+                      body: JSON.stringify(updatedQuote)
+                    });
+                    if (!res.ok) throw new Error("Failed to update status");
+                  } catch (err) {
+                    console.error("Status update error:", err);
+                    alert("Error updating status: " + err.message);
+                  }
+                }}
+                style={{ ...sel, padding: "2px 5px", fontSize: 11, width: "auto", height: "auto", marginLeft: 8 }}
+              >
+                {["Quote Requested","In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost","Dead","Completed"].map(x => (
+                  <option key={x} value={x}>{x}</option>
+                ))}
+              </select>
+            )}
+          </div>
+          <h1 style={{ fontSize:32, fontWeight:900, margin:"0 0 12px 0", color:C.txt, letterSpacing:"-0.5px" }}>
             {quote.client || qd.recipient?.company || 'Quote Preview'}
-            {custData && quote.client && custData[quote.client] && custData[quote.client].customer_num ? ` · #${custData[quote.client].customer_num}` : ''}
+            {custData && quote.client && custData[quote.client] && custData[quote.client].customer_num ? <span style={{ color:C.txtS, fontWeight:400, marginLeft:10 }}>#{custData[quote.client].customer_num}</span> : ''}
           </h1>
-          <div style={{ color:C.txtM, fontSize:15, display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:16 }}>📍</span> {quote.jobSite || qd.recipient?.address || 'No address specified'}
+          <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:C.txtS, textTransform:"uppercase" }}>Service Location</div>
+            <div style={{ color:C.txtM, fontSize:15, display:"flex", alignItems:"center", gap:8, fontWeight:500 }}>
+              <span style={{ fontSize:16 }}>📍</span> {quote.jobSite || qd.recipient?.address || 'No address specified'}
+            </div>
           </div>
         </div>
         <button style={{ ...mkBtn("primary"), fontSize:14, padding:"10px 18px", borderRadius:8, boxShadow:"0 4px 12px rgba(10,37,64,0.15)" }} onClick={onEdit}>Edit Quote</button>
@@ -3066,7 +3129,7 @@ function QuotePreviewPanel({ quote, custData, onEdit }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32 }}>
         <Card style={{ padding:"20px", display:"flex", flexDirection:"column", gap:6 }}>
           <Lbl style={{ margin:0, fontSize:12 }}>Quote Number</Lbl>
-          <div style={{ fontSize:16, fontWeight:700 }}>{quote.quote_number || quote.job_num || 'N/A'}</div>
+          <div style={{ fontSize:16, fontWeight:700 }}>{quote.qn || 'N/A'}</div>
         </Card>
         <Card style={{ padding:"20px", display:"flex", flexDirection:"column", gap:6 }}>
           <Lbl style={{ margin:0, fontSize:12 }}>Date Created</Lbl>
@@ -3277,7 +3340,6 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
               <thead style={{ background:C.bg, position:"sticky", top:0, zIndex:10, boxShadow:"0 2px 4px rgba(0,0,0,0.05)" }}>
               <tr>
                 <SortHdr col="customer_num" label="Cust. #"    width={90}/>
-                <SortHdr col="jobNum"       label="Job #"      width={110}/>
                 <SortHdr col="quoteNum"     label="Quote #"    width={120}/>
                 <SortHdr col="date"         label="Quote Date" width={100}/>
                 <SortHdr col="client"       label="Customer"   width={160}/>
@@ -3304,32 +3366,6 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
 
                   <td style={{ ...tdS, padding:"10px 12px", color:C.acc, fontWeight:700 }}>{j.customer_num}</td>
 
-                  {/* Job # — inline editable */}
-                  <td style={{ ...tdS, padding:"10px 12px", whiteSpace:"nowrap" }}>
-                    {editingJobId===j.id ? (
-                      <div style={{ display:"flex", gap:4, alignItems:"center" }}>
-                        <input
-                          style={{ ...inp, width:90, fontSize:12, padding:"3px 7px" }}
-                          value={editJobNum}
-                          onChange={e=>setEditJobNum(e.target.value)}
-                          onKeyDown={e=>{ if(e.key==="Enter") saveJobNum(j); if(e.key==="Escape") setEditingJobId(null); }}
-                          autoFocus
-                        />
-                        <button style={{ ...mkBtn("primary"), padding:"2px 7px", fontSize:11 }} onClick={()=>saveJobNum(j)}>✓</button>
-                        <button style={{ ...mkBtn("ghost"),   padding:"2px 6px", fontSize:11 }} onClick={()=>setEditingJobId(null)}>×</button>
-                      </div>
-                    ) : (
-                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                        <span style={{ fontWeight:700, color:j.jobNum?C.grn:C.txtS, minWidth:60 }}>
-                          {j.jobNum || <span style={{ fontStyle:"italic", fontWeight:400, fontSize:11 }}>No #</span>}
-                        </span>
-                        <button
-                          title="Edit job number"
-                          style={{ background:"none", border:"none", color:C.txtS, cursor:"pointer", fontSize:11, padding:"1px 4px", lineHeight:1 }}
-                          onClick={()=>startEditJobNum(j)}>✏</button>
-                      </div>
-                    )}
-                  </td>
                   <td style={{ ...tdS, padding:"10px 12px", color:C.txtS }}>{j.quoteNum}</td>
                   <td style={{ ...tdS, padding:"10px 12px", color:C.txtS }}>{j.date}</td>
                   <td style={{ ...tdS, padding:"10px 12px", fontWeight:600 }}>
@@ -3393,8 +3429,18 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
         {filtered.map((j, i) => (
           <div key={i} onClick={() => setMobileModalJob(j)} style={{ padding: 16, background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 12, marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.02)", cursor:"pointer" }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: C.txt, marginBottom: 4 }}>{j.client || "—"}</div>
-              <div style={{ fontSize: 14, color: C.acc, fontWeight: 700 }}>{j.jobNum || "No Job #"}</div>
+              <div style={{ fontSize:10, fontWeight:800, color:C.txtS, textTransform:"uppercase", marginBottom:2 }}>Customer</div>
+              <div style={{ fontWeight: 700, fontSize: 16, color: C.txt, marginBottom: 6 }}>{j.client || "—"}</div>
+              <div style={{ display:"flex", gap:15, alignItems:"center" }}>
+                <div>
+                  <div style={{ fontSize:10, fontWeight:800, color:C.txtS, textTransform:"uppercase", marginBottom:2 }}>Quote #</div>
+                  <div style={{ fontSize: 14, color: C.acc, fontWeight: 700 }}>{j.quoteNum || "No ID"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:10, fontWeight:800, color:C.txtS, textTransform:"uppercase", marginBottom:2 }}>Status</div>
+                  <Badge status={j.quote?.status || 'Draft'} />
+                </div>
+              </div>
             </div>
             <div style={{ fontSize: 24, color: C.txtS, fontWeight:300 }}>›</div>
           </div>
@@ -3423,7 +3469,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
             <div style={{ padding:"16px 20px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL }}>
               <div>
                 <div style={{ fontSize:10, fontWeight:800, color:C.acc, textTransform:"uppercase" }}>Job Profile Info</div>
-                <div style={{ fontSize:18, fontWeight:700, marginTop:2, color:C.acc }}>{mobileModalJob.jobNum || mobileModalJob.quoteNum}</div>
+                <div style={{ fontSize:18, fontWeight:700, marginTop:2, color:C.acc }}>{mobileModalJob.quoteNum}</div>
               </div>
               <button onClick={() => setMobileModalJob(null)} style={{ background:"none", border:"none", fontSize:26, cursor:"pointer", color:C.txtS, padding:0, lineHeight:1 }}>×</button>
             </div>
@@ -3533,7 +3579,7 @@ function MarkDeadModal({ itemType, itemLabel, onConfirm, onClose }) {
   );
 }
 
-function ActionBtns({ onReq, onFromReq, onNew }) {
+function ActionBtns({ onFromReq, onNew }) {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
@@ -3553,7 +3599,6 @@ function ActionBtns({ onReq, onFromReq, onNew }) {
   const s = compact ? { fontSize:10, padding:"5px 8px", gap:3 } : {};
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
-      <button style={{ ...mkBtn("blue"), ...s }} onClick={onReq}>New RFQ</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onFromReq}>Pending Requests</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Quote</button>
     </div>
@@ -3706,7 +3751,7 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
 
         {/* Header */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-          <div><div style={{ fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:1 }}>Request For Quote</div><div style={{ fontSize:17, fontWeight:700 }}>{f.rn}</div></div>
+          <div><div style={{ fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:1 }}>Quote Request</div><div style={{ fontSize:17, fontWeight:700 }}>{f.rn}</div></div>
           <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS }}>×</button>
         </div>
 
@@ -4361,16 +4406,11 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
             )}
           </div>
           <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-            {/* Show assigned job number if linked quote is Won */}
-            {linkedQuote?.jobNum && (
-              <div style={{ display:"flex", alignItems:"center", gap:6, background:C.grnB, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"5px 10px", fontSize:12, color:C.grn, fontWeight:700 }}>
-                🏗 Job #{linkedQuote.jobNum}
-              </div>
-            )}
-            {/* Create Estimate button — only if no estimate yet */}
+
+            {/* Create Quote button — only if no quote yet */}
             {!linkedQuote && onCreateEstimate && rfq.status!=="Dead" && (
               <button style={{ ...mkBtn("blue"), padding:"5px 14px", fontSize:12 }} onClick={()=>{ handleSave(); onCreateEstimate(rfq); }}>
-                Create Estimate →
+                Create Quote →
               </button>
             )}
             {linkedQuote && (
@@ -4855,7 +4895,6 @@ function WonModal({ quote, onSave, onClose }) {
         <div style={{ fontSize:16, fontWeight:700, marginBottom:3 }}>Mark Quote as Won</div>
         <div style={{ fontSize:12, color:C.txtS, marginBottom:14 }}>{quote.qn} — {quote.client}</div>
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          <div><Lbl c="JOB NUMBER *"/><input style={inp} value={jn} placeholder="J-2025-001" onChange={e=>setJn(e.target.value)}/></div>
           <div><Lbl c="EST. COMPLETION DATE"/><input style={inp} type="date" value={cd} onChange={e=>setCd(e.target.value)}/></div>
         </div>
         <div style={{ background:C.yelB, border:`1px solid ${C.yelBdr}`, borderRadius:6, padding:"8px 10px", marginTop:12, fontSize:11, color:C.yel }}>
@@ -4863,7 +4902,7 @@ function WonModal({ quote, onSave, onClose }) {
         </div>
         <div style={{ display:"flex", gap:7, marginTop:14, justifyContent:"flex-end" }}>
           <button style={mkBtn("ghost")} onClick={onClose}>Cancel</button>
-          <button style={{ ...mkBtn("won"), opacity:jn?1:.5 }} onClick={() => jn && onSave(jn,cd)}>Mark as Won</button>
+          <button style={mkBtn("won")} onClick={() => onSave(quote.qn,cd)}>Mark as Won</button>
         </div>
       </div>
     </div>
@@ -5124,12 +5163,23 @@ function SearchResultsModal({ search, jobs, reqs, custData, onClose, onOpenQuote
                     {r.type === 'Quote' ? '📋' : r.type === 'RFQ' ? '📥' : '🏢'}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:2 }}>
-                      <span style={{ fontWeight:700, fontSize:14 }}>{r.label}</span>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
+                      <div>
+                        <div style={{ fontSize:9, fontWeight:800, color:C.txtS, textTransform:"uppercase" }}>{r.type === 'Customer' ? 'Name' : 'ID'}</div>
+                        <div style={{ fontWeight:800, fontSize:15, color:C.txt }}>{r.label}</div>
+                      </div>
                       <span style={{ fontSize:10, fontWeight:800, color:T_COLORS[r.type], textTransform:"uppercase", letterSpacing:0.5, background:C.bg, padding:"2px 6px", borderRadius:4, border:`1px solid ${C.bdr}` }}>{r.type}</span>
                     </div>
-                    <div style={{ fontSize:12, fontWeight:600, color:C.txtM, marginBottom:4 }}>{r.sub}</div>
-                    <div style={{ fontSize:12, color:C.txtS, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.desc}</div>
+                    <div>
+                      <div style={{ fontSize:9, fontWeight:800, color:C.txtS, textTransform:"uppercase" }}>{r.type === 'Customer' ? 'Industry' : 'Customer'}</div>
+                      <div style={{ fontSize:13, fontWeight:600, color:C.txtM }}>{r.sub}</div>
+                    </div>
+                    {r.desc && (
+                      <div style={{ marginTop:4 }}>
+                         <div style={{ fontSize:9, fontWeight:800, color:C.txtS, textTransform:"uppercase" }}>{r.type === 'Customer' ? 'Address' : 'Details'}</div>
+                         <div style={{ fontSize:11, color:C.txtS, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.desc}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -9258,7 +9308,7 @@ export default function App() {
 
   const cv      = active ? calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate) : null;
   const pendN   = notifs.filter(n=>n.status==="Pending").length;
-  const actBtns = <ActionBtns onReq={()=>{setEditR(null);setShowRM(true);}} onFromReq={()=>setView("rfqs")} onNew={()=>openNew()}/>;
+  const actBtns = <ActionBtns onFromReq={()=>setView("rfqs")} onNew={()=>openNew()}/>;
 
   const NotifPanel = () => (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.3)", zIndex:400, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
@@ -9453,7 +9503,7 @@ export default function App() {
         </AccordionCard>
 
         <AccordionCard 
-          title="📝 Requests for Quotes" 
+          title="📝 Quote Requests" 
           isOpen={dashAcc==="rfqs"} 
           onToggle={open => setDashAcc(open ? "rfqs" : null)}
         >
@@ -9512,7 +9562,7 @@ export default function App() {
       {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} reqs={reqs} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
-        itemType={deadModal.type==="rfq"?"RFQ":"Job"}
+        itemType={deadModal.type==="rfq"?"Quote":"Job"}
         itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client}
         onConfirm={note=>{
           if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x));
@@ -9533,7 +9583,7 @@ export default function App() {
   if (view==="quotes") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
       <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
-      <QuotesPageView jobs={jobs} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} />
+      <QuotesPageView jobs={jobs} setJobs={setJobs} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} role={role} />
     </div>
   );
 
@@ -9825,7 +9875,7 @@ export default function App() {
       <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
         {adjModal&&<SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
         {showWM && <WonModal quote={active} onSave={markWon} onClose={()=>setShowWM(false)}/>}
-        {deadModal && <MarkDeadModal itemType="Quote" itemLabel={deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
+        {deadModal && <MarkDeadModal itemType="Quote" itemLabel={active.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d=>{ u("discounts",[...(active.discounts||[]),d]); setShowDiscModal(false); }} onClose={()=>setShowDiscModal(false)}/>}
         {showCustDoc && <CustomerDocModal quote={{...active, total:cv.total}} onClose={()=>setShowCustDoc(false)}/>}
         <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
@@ -9865,7 +9915,7 @@ export default function App() {
                 <div><Lbl c="ZIP" /><input style={inp} value={active.jobSiteZip||""} onChange={e=>u("jobSiteZip",e.target.value)} placeholder="ZIP" disabled={active.locked} maxLength={10} /></div>
               </div>
               <div><Lbl c="QUOTE TYPE"/><select style={{ ...sel, width:"100%" }} value={active.qtype} onChange={e=>u("qtype",e.target.value)} disabled={active.locked}><option>Contract</option><option>T&M</option><option>Not To Exceed</option></select></div>
-              <div><Lbl c="STATUS"/><select style={{ ...sel, width:"100%" }} value={active.status} onChange={e=>u("status",e.target.value)} disabled={active.locked}>{["In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost","Dead"].map(x=><option key={x}>{x}</option>)}</select></div>
+              <div><Lbl c="STATUS"/><select style={{ ...sel, width:"100%" }} value={active.status} onChange={e=>u("status",e.target.value)} disabled={active.locked}>{["Quote Requested","In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost","Dead","Completed"].map(x=><option key={x} value={x}>{x}</option>)}</select></div>
             {/* Lift Plan fields */}
             <div style={{ gridColumn:"1/-1", display:"flex", gap:12, alignItems:"center", background:active.liftPlanRequired?C.yelB:C.bg, border:`1px solid ${active.liftPlanRequired?C.yelBdr:C.bdr}`, borderRadius:6, padding:"8px 12px", flexWrap:"wrap" }}>
               <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, cursor:"pointer", color:active.liftPlanRequired?C.yel:C.txtM }}>
@@ -9923,7 +9973,6 @@ export default function App() {
                       </div>
                       {active.status === "Won" && (
                         <>
-                          <div><Lbl c="JOB NUMBER"/><input style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.jobNum||""} onChange={e=>u("jobNum",e.target.value)} disabled={active.locked}/></div>
                           <div><Lbl c="ACTUAL START DATE"/><input type="date" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.startDate||""} onChange={e=>u("startDate",e.target.value)} disabled={active.locked}/></div>
                           <div><Lbl c="ACTUAL END DATE"/><input type="date" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.compDate||""} onChange={e=>u("compDate",e.target.value)} disabled={active.locked}/></div>
                         </>

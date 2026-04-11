@@ -158,6 +158,10 @@ INSERT INTO equipment (code, category, name, capacity, daily_rate, daily_cost) V
 CREATE TABLE IF NOT EXISTS customers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
+    address1 VARCHAR(255),
+    city VARCHAR(100),
+    state VARCHAR(50),
+    zip VARCHAR(20),
     notes TEXT,
     billing_address VARCHAR(255),
     website VARCHAR(100),
@@ -208,11 +212,16 @@ INSERT INTO customer_contacts (customer_id, name, title, email, phone, is_primar
 CREATE TABLE IF NOT EXISTS quotes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     quote_number VARCHAR(20) NOT NULL,
+    customer_id INT,
     customer_name VARCHAR(100) NOT NULL,
     job_site VARCHAR(255),
+    job_site_address1 VARCHAR(255),
+    job_site_city VARCHAR(100),
+    job_site_state VARCHAR(50),
+    job_site_zip VARCHAR(20),
     description TEXT,
     date DATE,
-    status VARCHAR(50),
+    status INT,
     quote_type VARCHAR(50),
     labor DECIMAL(10,2),
     equip DECIMAL(10,2),
@@ -284,15 +293,25 @@ CREATE TABLE IF NOT EXISTS status (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-INSERT INTO status (name, sort_order) VALUES
-('quote_requested', 10),
-('customer_contact', 20),
-('quote_in_process', 30),
-('quote_in_review', 40),
-('quote_modification_required', 50),
-('quote_sent', 60),
-('quote_accepted', 70),
-('job_complete', 80),
-('partial_payment', 90),
-('full_payment', 100),
-('archived', 110);
+INSERT INTO status (id, name, sort_order) VALUES
+(1, 'Quote Requested', 10),
+(2, 'In Progress', 20),
+(3, 'In Review', 30),
+(4, 'Approved', 40),
+(5, 'Adjustments Needed', 50),
+(6, 'Submitted', 60),
+(7, 'Won', 70),
+(8, 'Lost', 80),
+(9, 'Dead', 90),
+(10, 'Completed', 100);
+
+-- 11. Quote Status History
+CREATE TABLE IF NOT EXISTS Quote_Status_History (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    quote_id INT NOT NULL,
+    status_name VARCHAR(50) NOT NULL,
+    changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    changed_by INT DEFAULT NULL,
+    notes TEXT,
+    FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE CASCADE
+);
