@@ -729,6 +729,25 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, as
   }
 });
 
+// BATCH DELETE RECORDS IN TABLE (Admin Only)
+app.delete('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, async (req, res) => {
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History'];
+  const table = req.params.table;
+  const { ids } = req.body;
+
+  if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'No IDs provided for deletion' });
+
+  try {
+    const placeholders = ids.map(() => '?').join(',');
+    await db.query(`DELETE FROM \`${table}\` WHERE id IN (${placeholders})`, ids);
+    res.json({ success: true, deleted: ids.length });
+  } catch (error) {
+    console.error(`[API] Table batch delete error (${table}):`, error);
+    res.status(500).json({ error: 'Batch delete failed', details: error.message });
+  }
+});
+
 // VECTOR DB / AI MODEL STATUS (Admin Only)
 app.get('/api/admin/vector-db', authenticateToken, authenticateAdmin, async (req, res) => {
   const AI_HOST = process.env.AI_HOST || 'http://ai:8080';
@@ -1084,12 +1103,14 @@ app.get('/api/admin/tasks', authenticateToken, authenticateAdmin, async (req, re
 });
 
 app.post('/api/admin/tasks', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { text, subnotes } = req.body;
+  const { text, subnotes, assigned_to } = req.body;
   if (!text) return res.status(400).json({ error: 'Task text is required' });
 
   try {
-    const [result] = await db.query('INSERT INTO admin_tasks (text, subnotes) VALUES (?, ?)', [text, JSON.stringify(subnotes || [])]);
-    res.json({ id: result.insertId, text, done: false, subnotes: subnotes || [] });
+    // Default to the logged-in user if assigned_to is omitted
+    const assignee = assigned_to || req.user.userId;
+    const [result] = await db.query('INSERT INTO admin_tasks (text, subnotes, assigned_to) VALUES (?, ?, ?)', [text, JSON.stringify(subnotes || []), assignee]);
+    res.json({ id: result.insertId, text, done: false, subnotes: subnotes || [], assigned_to: assignee });
   } catch (error) {
     console.error('[TASKS] Create error:', error);
     res.status(500).json({ error: 'Failed to create task: ' + error.message });
@@ -1097,13 +1118,14 @@ app.post('/api/admin/tasks', authenticateToken, authenticateAdmin, async (req, r
 });
 
 app.patch('/api/admin/tasks/:id', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { done, subnotes, text } = req.body;
+  const { done, subnotes, text, assigned_to } = req.body;
   try {
     const fields = [];
     const values = [];
     if (done !== undefined) { fields.push('done = ?'); values.push(done); }
     if (subnotes !== undefined) { fields.push('subnotes = ?'); values.push(JSON.stringify(subnotes)); }
     if (text !== undefined) { fields.push('text = ?'); values.push(text); }
+    if (assigned_to !== undefined) { fields.push('assigned_to = ?'); values.push(assigned_to); }
     values.push(req.params.id);
 
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
@@ -1120,6 +1142,55 @@ app.delete('/api/admin/tasks/:id', authenticateToken, authenticateAdmin, async (
     res.json({ message: 'Task deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete task' });
+  }
+});
+
+// ANY USER POST TASK
+app.post('/api/tasks', authenticateToken, async (req, res) => {
+  const { text, subnotes, assigned_to } = req.body;
+  if (!text) return res.status(400).json({ error: 'Task text is required' });
+
+  try {
+    let assignee = req.user.userId;
+    
+    if (assigned_to && assigned_to !== req.user.userId) {
+      if (req.user.role === 'admin') {
+         assignee = assigned_to;
+      } else {
+         const [target] = await db.query('SELECT role FROM users WHERE id = ?', [assigned_to]);
+         if (target.length > 0 && target[0].role === req.user.role) {
+            assignee = assigned_to;
+         } else {
+            return res.status(403).json({ error: 'You can only assign tasks to users with the same role.' });
+         }
+      }
+    }
+
+    const [result] = await db.query('INSERT INTO admin_tasks (text, subnotes, assigned_to) VALUES (?, ?, ?)', [text, JSON.stringify(subnotes || []), assignee]);
+    res.json({ id: result.insertId, text, done: false, subnotes: subnotes || [], assigned_to: assignee });
+  } catch (error) {
+    console.error('[TASKS] Create error:', error);
+    res.status(500).json({ error: 'Failed to create task' });
+  }
+});
+
+app.get('/api/tasks/my', authenticateToken, async (req, res) => {
+  try {
+    const [tasks] = await db.query('SELECT * FROM admin_tasks WHERE assigned_to = ? ORDER BY created_at DESC', [req.user.userId]);
+    res.json(tasks.map(t => ({ ...t, subnotes: typeof t.subnotes === 'string' ? JSON.parse(t.subnotes) : (t.subnotes || []) })));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch my tasks' });
+  }
+});
+
+app.patch('/api/tasks/my/:id', authenticateToken, async (req, res) => {
+  const { done } = req.body;
+  try {
+    if (done === undefined) return res.status(400).json({ error: 'Only done status can be updated' });
+    await db.query('UPDATE admin_tasks SET done = ? WHERE id = ? AND assigned_to = ?', [done, req.params.id, req.user.userId]);
+    res.json({ message: 'Task status updated' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update task status' });
   }
 });
 

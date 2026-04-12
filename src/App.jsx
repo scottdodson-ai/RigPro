@@ -3340,6 +3340,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
               <thead style={{ background:C.bg, position:"sticky", top:0, zIndex:10, boxShadow:"0 2px 4px rgba(0,0,0,0.05)" }}>
               <tr>
                 <SortHdr col="customer_num" label="Cust. #"    width={90}/>
+                <SortHdr col="jobNum"       label="Job #"      width={120}/>
                 <SortHdr col="quoteNum"     label="Quote #"    width={120}/>
                 <SortHdr col="date"         label="Quote Date" width={100}/>
                 <SortHdr col="client"       label="Customer"   width={160}/>
@@ -3366,6 +3367,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
 
                   <td style={{ ...tdS, padding:"10px 12px", color:C.acc, fontWeight:700 }}>{j.customer_num}</td>
 
+                  <td style={{ ...tdS, padding:"10px 12px", color:C.txtS }}>{j.jobNum}</td>
                   <td style={{ ...tdS, padding:"10px 12px", color:C.txtS }}>{j.quoteNum}</td>
                   <td style={{ ...tdS, padding:"10px 12px", color:C.txtS }}>{j.date}</td>
                   <td style={{ ...tdS, padding:"10px 12px", fontWeight:600 }}>
@@ -3433,6 +3435,10 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
               <div style={{ fontWeight: 700, fontSize: 16, color: C.txt, marginBottom: 6 }}>{j.client || "—"}</div>
               <div style={{ display:"flex", gap:15, alignItems:"center" }}>
                 <div>
+                  <div style={{ fontSize:10, fontWeight:800, color:C.txtS, textTransform:"uppercase", marginBottom:2 }}>Job #</div>
+                  <div style={{ fontSize: 14, color: C.acc, fontWeight: 700 }}>{j.jobNum || "No Job ID"}</div>
+                </div>
+                <div>
                   <div style={{ fontSize:10, fontWeight:800, color:C.txtS, textTransform:"uppercase", marginBottom:2 }}>Quote #</div>
                   <div style={{ fontSize: 14, color: C.acc, fontWeight: 700 }}>{j.quoteNum || "No ID"}</div>
                 </div>
@@ -3469,7 +3475,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
             <div style={{ padding:"16px 20px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL }}>
               <div>
                 <div style={{ fontSize:10, fontWeight:800, color:C.acc, textTransform:"uppercase" }}>Job Profile Info</div>
-                <div style={{ fontSize:18, fontWeight:700, marginTop:2, color:C.acc }}>{mobileModalJob.quoteNum}</div>
+                <div style={{ fontSize:18, fontWeight:700, marginTop:2, color:C.acc }}>{mobileModalJob.jobNum ? `${mobileModalJob.jobNum} / ${mobileModalJob.quoteNum}` : mobileModalJob.quoteNum}</div>
               </div>
               <button onClick={() => setMobileModalJob(null)} style={{ background:"none", border:"none", fontSize:26, cursor:"pointer", color:C.txtS, padding:0, lineHeight:1 }}>×</button>
             </div>
@@ -7765,6 +7771,51 @@ function DatabaseBrowser({ token }) {
     setSortKey('name');
   }, [selectedTable, setSortKey]);
 
+  useEffect(() => {
+    setSortKey('name');
+  }, [selectedTable, setSortKey]);
+
+  const [checkedRows, setCheckedRows] = useState(new Set());
+  
+  useEffect(() => {
+    setCheckedRows(new Set());
+  }, [selectedTable, tableSearch, currentPage, data]);
+
+  const handleToggleRow = (id) => {
+    setCheckedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleAll = (e) => {
+    if (e.target.checked) setCheckedRows(new Set(paginatedData.filter(r => r.id).map(r => r.id)));
+    else setCheckedRows(new Set());
+  };
+
+  const deleteChecked = async () => {
+    if (checkedRows.size === 0) return;
+    if (!window.confirm(`Delete ${checkedRows.size} checked records from ${selectedTable}?`)) return;
+    try {
+      const ids = Array.from(checkedRows);
+      const res = await fetch(`/api/admin/tables/${selectedTable}/batch`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ ids })
+      });
+      if (!res.ok) {
+        const bd = await res.json();
+        throw new Error(bd.error || "Batch delete failed");
+      }
+      setData(prev => prev.filter(r => !checkedRows.has(r.id)));
+      setCheckedRows(new Set());
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
   const saveEdit = async (updatedData) => {
     if (!editingRow || !editingRow.id) return;
     setUpdating(true);
@@ -7792,6 +7843,59 @@ function DatabaseBrowser({ token }) {
     } finally {
       setUpdating(false);
     }
+  };
+
+  const exportCSV = () => {
+    if (!sortedItems || sortedItems.length === 0) return;
+    const csvContent = [
+      headers.join(","),
+      ...sortedItems.map(row => headers.map(h => {
+        let val = row[h] === null || row[h] === undefined ? "" : String(row[h]);
+        return `"${val.replace(/"/g, '""')}"`;
+      }).join(","))
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedTable}_export.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportJSON = () => {
+    if (!sortedItems || sortedItems.length === 0) return;
+    const blob = new Blob([JSON.stringify(sortedItems, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedTable}_export.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportExcel = () => {
+    if (!sortedItems || sortedItems.length === 0) return;
+    let tableHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8" /><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>${selectedTable}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>`;
+    tableHtml += `<thead><tr>`;
+    headers.forEach(h => { tableHtml += `<th>${h}</th>`; });
+    tableHtml += `</tr></thead><tbody>`;
+    sortedItems.forEach(row => {
+      tableHtml += `<tr>`;
+      headers.forEach(h => {
+        let val = row[h] === null || row[h] === undefined ? "" : String(row[h]);
+        tableHtml += `<td>${val.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`;
+      });
+      tableHtml += `</tr>`;
+    });
+    tableHtml += `</tbody></table></body></html>`;
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedTable}_export.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -7836,20 +7940,40 @@ function DatabaseBrowser({ token }) {
                     </div>
                   )}
                   {loading && <div style={{ fontSize:11, color:C.acc, fontWeight:700 }}>⏳ Loading records...</div>}
+                  <div style={{ display:"flex", gap:4 }}>
+                    <button 
+                      onClick={deleteChecked} 
+                      disabled={checkedRows.size === 0} 
+                      style={{ ...mkBtn("red"), padding:"4px 8px", fontSize:11, opacity: checkedRows.size === 0 ? 0.4 : 1 }}
+                    >
+                      🗑️ Delete Checked
+                    </button>
+                    <button onClick={exportExcel} style={{ ...mkBtn("ghost"), padding:"4px 8px", fontSize:11, border:`1px solid ${C.bdr}` }} disabled={!sortedItems.length}>📁 Excel</button>
+                    <button onClick={exportCSV} style={{ ...mkBtn("ghost"), padding:"4px 8px", fontSize:11, border:`1px solid ${C.bdr}` }} disabled={!sortedItems.length}>📄 CSV</button>
+                    <button onClick={exportJSON} style={{ ...mkBtn("ghost"), padding:"4px 8px", fontSize:11, border:`1px solid ${C.bdr}` }} disabled={!sortedItems.length}>{`{}`} JSON</button>
+                  </div>
                 </div>
               </div>
-              <div style={{ overflowX:"auto", borderRadius:6, border:`1px solid ${C.bdr}`, background:C.sur, width:"100%", maxWidth:"100%" }}>
+              <div style={{ overflowX:"auto", overflowY:"auto", maxHeight:"calc(100vh - 280px)", borderRadius:6, border:`1px solid ${C.bdr}`, background:C.sur, width:"100%", maxWidth:"100%" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
                   <thead style={{ position:"sticky", top:0, zIndex:10 }}>
                     <tr style={{ background:C.bg }}>
-                      <th style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}`, position:"sticky", left:0, background:C.bg, zIndex:11, boxShadow:"2px 0 5px rgba(0,0,0,0.05)" }}>Actions</th>
+                      <th style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}`, position:"sticky", left:0, background:C.bg, zIndex:11, boxShadow:"2px 0 5px rgba(0,0,0,0.05)", width: 40 }}>
+                        <input type="checkbox" onChange={handleToggleAll} checked={paginatedData.length > 0 && paginatedData.filter(r => r.id).length > 0 && paginatedData.filter(r => r.id).every(r => checkedRows.has(r.id))} style={{ cursor:"pointer" }} />
+                      </th>
+                      <th style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}`, position:"sticky", left:40, background:C.bg, zIndex:11, boxShadow:"2px 0 5px rgba(0,0,0,0.05)" }}>Actions</th>
                       {headers.map(h=><SortTh key={h} style={{ ...thS, padding:"10px 12px", borderBottom:`2px solid ${C.bdrM}` }} label={h} sortKey={h} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />)}
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedData.length > 0 ? paginatedData.map((row, i) => (
                       <tr key={i} style={{ borderBottom:`1px solid ${C.bdr}`, background:i%2===0?C.sur:"#fbfbfb" }}>
-                        <td style={{ ...tdS, padding:"8px 12px", position:"sticky", left:0, background:i%2===0?C.sur:"#fbfbfb", zIndex:1, boxShadow:"2px 0 5px rgba(0,0,0,0.05)", borderRight:`1px solid ${C.bdr}` }}>
+                        <td style={{ ...tdS, padding:"8px 12px", position:"sticky", left:0, background:i%2===0?C.sur:"#fbfbfb", zIndex:1, boxShadow:"2px 0 5px rgba(0,0,0,0.05)", borderRight:`1px solid ${C.bdr}`, width: 40 }}>
+                          {row.id ? (
+                            <input type="checkbox" checked={checkedRows.has(row.id)} onChange={() => handleToggleRow(row.id)} style={{ cursor:"pointer" }} />
+                          ) : null}
+                        </td>
+                        <td style={{ ...tdS, padding:"8px 12px", position:"sticky", left:40, background:i%2===0?C.sur:"#fbfbfb", zIndex:1, boxShadow:"2px 0 5px rgba(0,0,0,0.05)", borderRight:`1px solid ${C.bdr}` }}>
                           <button 
                              style={{ ...mkBtn("blue"), padding:"2px 8px", fontSize:10, fontWeight:700 }} 
                              onClick={() => setEditingRow(row)}
@@ -8002,7 +8126,7 @@ function DatabaseBrowser({ token }) {
   );
 }
 
-function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInfo }) {
+function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, setCompanyInfo }) {
   const users = appUsers;
   const setUsers = setAppUsers;
   const currentUserId = (() => {
@@ -8030,6 +8154,7 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
   const [formErr, setFormErr] = useState("");
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
+  const [newTaskAssignedTo, setNewTaskAssignedTo] = useState("");
   const [phiConfig, setPhiConfig] = useState({
     win_base: 30, vol_base: 10, margin_base: 28, stale_pct_base: 15, response_days_base: 4,
     win_ind: 30, vol_ind: 30, margin_ind: 28, stale_pct_ind: 20, response_days_ind: 5,
@@ -8104,12 +8229,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
       const res = await fetch("/api/admin/tasks", {
         method: "POST",
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ text: newTask, subnotes: [] })
+        body: JSON.stringify({ text: newTask, subnotes: [], assigned_to: newTaskAssignedTo || profileUser?.id })
       });
       if (!res.ok) throw new Error("Add task failed");
-      const saved = await res.json();
-      setTasks([saved, ...tasks]);
-      setNewTask("");
+      window.location.reload();
     } catch (err) { alert(err.message); }
   };
 
@@ -8121,6 +8244,17 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
         body: JSON.stringify({ done: !done })
       });
       setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    } catch (err) { console.error(err); }
+  };
+
+  const changeTaskAssignee = async (id, newAssignee) => {
+    try {
+      await fetch(`/api/admin/tasks/${id}`, {
+        method: "PATCH",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ assigned_to: newAssignee })
+      });
+      window.location.reload();
     } catch (err) { console.error(err); }
   };
 
@@ -8589,6 +8723,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
             <AccordionCard title="Admin Tasks & Todos">
               <form onSubmit={addTask} style={{ display:"flex", gap:8, marginBottom:16 }}>
                 <input style={{ ...inp, flex:1 }} value={newTask} onChange={e=>setNewTask(e.target.value)} placeholder="Master task name..." />
+                <select style={sel} value={newTaskAssignedTo || profileUser?.id} onChange={e=>setNewTaskAssignedTo(e.target.value)}>
+                    <option value={profileUser?.id}>Self</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.username}</option>)}
+                </select>
                 <button type="submit" style={{ ...mkBtn("blue"), padding:"0 16px" }}>Add Task</button>
               </form>
               <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:400, overflowY:"auto" }}>
@@ -8598,6 +8736,10 @@ function AdminPage({ token, appUsers=[], setAppUsers, companyInfo, setCompanyInf
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: t.subnotes?.length ? 8 : 0 }}>
                       <input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id, t.done)} style={{ cursor:"pointer", width:16, height:16 }} />
                       <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+                      <select style={{ ...sel, width:120, padding:"4px", fontSize: 11 }} value={t.assigned_to || ""} onChange={(e) => changeTaskAssignee(t.id, e.target.value)}>
+                         <option value="">Unassigned</option>
+                         {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.username}</option>)}
+                      </select>
                       <button onClick={() => { const n = prompt("Enter subnote/detail:"); if(n) addSubnote(t.id, n); }} style={{ background:"none", border:"none", color:C.blue, fontSize:11, cursor:"pointer", fontWeight:700 }}>+ Detail</button>
                       <button onClick={() => delTask(t.id)} style={{ padding:0, border:"none", background:"transparent", color:C.red, cursor:"pointer", fontSize:12 }}>✕</button>
                     </div>
@@ -9038,6 +9180,46 @@ export default function App() {
       .catch(() => {});
   }, [token]);
 
+  const [myTasks, setMyTasks] = useState([]);
+  const [newMyTask, setNewMyTask] = useState("");
+  const [newMyTaskAssignedTo, setNewMyTaskAssignedTo] = useState("");
+
+  const addUserTask = async (e) => {
+    e.preventDefault();
+    if (!newMyTask.trim()) return;
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ text: newMyTask, subnotes: [], assigned_to: newMyTaskAssignedTo || profileUser?.id })
+      });
+      if (!res.ok) {
+        const bd = await res.json();
+        throw new Error(bd.error || "Add task failed");
+      }
+      window.location.reload();
+    } catch (err) { alert(err.message); }
+  };
+
+  useEffect(() => {
+    if (!token) { setMyTasks([]); return; }
+    fetch("/api/tasks/my", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => { setMyTasks(Array.isArray(d) ? d : []); })
+      .catch(() => {});
+  }, [token]);
+
+  const toggleMyTask = async (id, done) => {
+    try {
+      await fetch(`/api/tasks/my/${id}`, {
+        method: "PATCH",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ done: !done })
+      });
+      setMyTasks(myTasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    } catch (err) { console.error(err); }
+  };
+
   // Reset filters when navigating to the main customers list (from another tab or detail view)
   useEffect(() => {
     if (view === "customers" && !selC) {
@@ -9407,7 +9589,7 @@ export default function App() {
   if (view==="admin") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
-      <AdminPage token={token} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo}/>
+      <AdminPage token={token} profileUser={profileUser} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo}/>
       <Footer />
     </div>
   );
@@ -9486,6 +9668,39 @@ export default function App() {
             Sec={Sec}
           />
         )}
+        <Card style={{ marginBottom: 16, padding: 16, border: `1.5px solid ${C.bdr}`, borderRadius: 12 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.acc, marginBottom: 12 }}>✅ My Assigned Tasks</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:400, overflowY:"auto", padding:"10px 0" }}>
+            <form onSubmit={addUserTask} style={{ display:"flex", gap:8, marginBottom:8 }}>
+              <input style={{ ...inp, flex:1 }} value={newMyTask} onChange={e=>setNewMyTask(e.target.value)} placeholder="Add a new task..." />
+              <select style={sel} value={newMyTaskAssignedTo || profileUser?.id || ""} onChange={e=>setNewMyTaskAssignedTo(e.target.value)}>
+                  <option value={profileUser?.id || ""}>Self</option>
+                  {(profileUser?.role === 'admin' ? appUsers : appUsers.filter(u => u.role === profileUser?.role)).filter(u => u.id !== profileUser?.id).map(u => <option key={u.id} value={u.id}>{u.first_name || u.username}</option>)}
+              </select>
+              <button type="submit" style={{ ...mkBtn("blue"), padding:"0 16px" }}>Add Task</button>
+            </form>
+            {myTasks.length === 0 && <div style={{ textAlign:"center", padding:10, color:C.txtS, fontSize:13 }}>No tasks assigned to you.</div>}
+            {myTasks.map(t => (
+              <div key={t.id} style={{ background:t.done ? C.bg : "transparent", padding:12, borderRadius:8, border:`1px solid ${C.bdr}` }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: t.subnotes?.length ? 8 : 0 }}>
+                  <input type="checkbox" checked={t.done} onChange={() => toggleMyTask(t.id, t.done)} style={{ cursor:"pointer", width:16, height:16 }} />
+                  <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+                </div>
+                {t.subnotes && t.subnotes.length > 0 && (
+                  <div style={{ paddingLeft:26, display:"flex", flexDirection:"column", gap:4 }}>
+                    {t.subnotes.map((sub, idx) => (
+                      <div key={idx} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:C.txtM }}>
+                        <span style={{ color:C.acc }}>•</span>
+                        <span style={{ flex:1 }}>{sub}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+
         <AccordionCard 
           title="📊 Performance Metrics" 
           isOpen={dashAcc==="metrics"} 
@@ -9529,6 +9744,8 @@ export default function App() {
         >
           <RecentQuotesCard jobs={jobs} openEdit={openEdit} setView={setView} onBack={() => setDashAcc("metrics")}/>
         </AccordionCard>
+
+
       </div>
       <Footer />
     </div>
