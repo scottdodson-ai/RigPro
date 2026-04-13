@@ -87,6 +87,12 @@ const CustomerCRMBoard = (props) => {
     setCustView(v);
   };
 
+  useEffect(() => {
+    if (!selC && sortedCustomers.length > 0) {
+      setSelC(sortedCustomers[0].name);
+    }
+  }, [selC, sortedCustomers, setSelC]);
+
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {adjModal && <SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
@@ -99,7 +105,7 @@ const CustomerCRMBoard = (props) => {
       {showCustModal ? (
         <CustomerModal custName={showCustModal} jobs={jobs.filter(q=>q.customer_name===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)}/>
       ) : (
-      <div style={{ padding:"14px", maxWidth:1280, margin:"0 auto", width:"100%" }}>
+      <div className="crm-main-container" style={{ padding:"14px", maxWidth: 1600, margin:"0 auto", width:"100%" }}>
         
         {/* CRM CONTROLS PANEL (STICKY) */}
         <div style={{ position:"sticky", top:0, zIndex:10, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
@@ -127,91 +133,74 @@ const CustomerCRMBoard = (props) => {
           </div>
         </div>
 
-        {/* VIEW MODE RENDERER */}
-        <div ref={gridRef} style={{ marginTop: 20, overflowY:"auto", padding:"10px 10px 30px 10px" }}>
-          {custView === "list" ? (
-            <div className="app-table-wrap">
-              <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                <thead>
-                  <tr>
-                    <SortTh style={thS} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                    <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                    <th className="mobile-hidden" style={{ ...thS, textAlign:"center" }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
+        {/* VIEW MODE RENDERER: SPLIT SCREEN */}
+        <div ref={gridRef} className="app-split-layout" style={{ display:"grid", gridTemplateColumns:"420px 1fr", gap:30, marginTop: 15, alignItems:"flex-start" }}>
+          
+          {/* LEFT: LIST VIEW */}
+          <div style={{ background:"#fff", border:`1px solid ${C.bdrL}`, borderRadius:20, overflow:"hidden", display:"flex", flexDirection:"column", height:"calc(100vh - 160px)" }}>
+            <div style={{ overflowY:"auto", flex:1, padding:15 }}>
+              {custView === "list" ? (
+                <div className="app-table-wrap">
+                  <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                    <thead>
+                      <tr>
+                        <SortTh style={thS} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedCustomers.map(c => {
+                        const custJobs = c.quotes || []; 
+                        const isSel = selC === c.name;
+                        return (
+                          <tr key={c.name} style={{ background: isSel ? C.accL : "transparent", cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelC(c.name); }}>
+                            <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12 }}>
+                              <span className="mobile-hidden" style={{ color:C.txtS, fontSize:12, marginRight:8 }}>cust_no {c.id}</span>
+                              {c.name}
+                            </td>
+                            <td className="mobile-hidden" style={{ ...tdS, textAlign:"center", fontWeight:700, fontSize:14 }}>{custJobs.length}</td>
+                          </tr>
+                        );
+                      })}
+                      {sortedCustomers.length === 0 && (
+                        <tr>
+                          <td colSpan={2} style={{ padding:40, textAlign:"center", color:C.txtM, fontSize:14 }}>No customers found.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:15 }}>
                   {sortedCustomers.map(c => {
                     const custJobs = c.quotes || []; 
                     const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
                     const isSel = selC === c.name;
                     return (
-                      <tr key={c.name} style={{ background: isSel ? C.accL : "transparent", cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ 
-                        if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
-                        setSelC(c.name); 
-                      }}>
-                        <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt }}>
-                          <span className="mobile-hidden" style={{ color:C.txtS, fontSize:12, marginRight:8 }}>cust_no {c.id}</span>
-                          {c.name}
-                        </td>
-                        <td className="mobile-hidden" style={{ ...tdS, textAlign:"center", fontWeight:700, fontSize:14 }}>{custJobs.length}</td>
-                        <td className="mobile-hidden" style={{ ...tdS, textAlign:"center" }}>
-                          <button style={{ ...mkBtn("outline"), padding:"6px 12px", fontSize:12 }}>View Profile</button>
-                        </td>
-                      </tr>
+                      <Card key={c.name} style={{ cursor:"pointer", padding:20, borderRadius:16, transition:"0.2s", background: isSel ? "#fff" : "#fafafa", border: isSel ? `2px solid ${C.acc}` : `1px solid ${C.bdr}` }} onClick={()=>{ setSelC(c.name); }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                          <div style={{ fontWeight:900, fontSize:16, color: isSel ? C.acc : C.txt }}>
+                            {c.name}
+                            <span style={{ display:"block", color:C.txtS, fontSize:11, marginTop:2, fontWeight:700 }}>cust_no {c.id}</span>
+                          </div>
+                          {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>CUSTOMER</span>}
+                        </div>
+                        <div style={{ fontSize:18, fontWeight:900, color:C.acc, marginBottom:10 }}>{fmt(tot)}</div>
+                        <div style={{ display:"flex", gap:15, borderTop:`1px solid ${C.bdr}`, paddingTop:10 }}>
+                          <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>MASTER JOBS</div><div style={{fontSize:14, fontWeight:800}}>{custJobs.length}</div></div>
+                        </div>
+                      </Card>
                     );
                   })}
-                  {sortedCustomers.length === 0 && (
-                    <tr>
-                      <td colSpan={5} style={{ padding:40, textAlign:"center", color:C.txtM, fontSize:14 }}>
-                        No customers found matching your criteria.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
-          ) : (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))", gap:25 }}>
-              {sortedCustomers.map(c => {
-                const custJobs = c.quotes || []; 
-                const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
-                return (
-                  <Card key={c.name} style={{ cursor:"pointer", padding:25, borderRadius:20, transition:"0.2s", border: selC === c.name ? `2.5px solid ${C.acc}` : `1px solid ${C.bdrL}` }} onClick={()=>{ 
-                    if (gridRef.current) setGridScroll(gridRef.current.scrollTop);
-                    setSelC(c.name); 
-                  }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                      <div style={{ fontWeight:900, fontSize:17 }}>
-                        <span className="mobile-hidden" style={{ color:C.txtS, fontSize:14, marginRight:6 }}>cust_no {c.id}</span>
-                        {c.name}
-                      </div>
-                      {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:800 }}>CUSTOMER</span>}
-                    </div>
-                    <div style={{ fontSize:22, fontWeight:900, color:C.acc, marginBottom:15 }}>{fmt(tot)}</div>
-                    <div style={{ display:"flex", gap:20, borderTop:`1px solid ${C.bdrL}`, paddingTop:15 }}>
-                      <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>MASTER JOBS</div><div style={{fontSize:15, fontWeight:800}}>{custJobs.length}</div></div>
-                      <div><div style={{fontSize:9, fontWeight:900, color:C.txtS}}>TOTAL BILLINGS</div><div style={{fontSize:15, fontWeight:800, color:C.grn}}>{fmt(tot)}</div></div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
+          </div>
 
-        {/* PROFILE MODAL OVERLAY */}
-        {selC && (
-          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:800, overflowY:"auto", padding:"20px 16px", display:"flex", justifyContent:"center", alignItems:"flex-start" }}>
-            <div style={{ background:"#fff", width:"100%", maxWidth:1200, borderRadius:12, boxShadow:"0 20px 50px rgba(0,0,0,0.3)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
-               {/* Modal Header */}
-               <div style={{ background:C.bg, padding:"14px 20px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10 }}>
-                 <button onClick={()=>setSelC(null)} style={{ ...mkBtn("outline"), padding:"6px 14px", fontSize:12, borderColor:C.bdr, color:C.txtM, background:"#fff", fontWeight:700 }}>← Back to Customers</button>
-
-                 <button onClick={()=>setSelC(null)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS, lineHeight:1, padding:"0 4px" }}>×</button>
-               </div>
-
-               {/* Modal Content */}
-               <div style={{ flex:1, overflowY:"auto", padding:"40px 20px", background:"#fff" }}>
+          {/* RIGHT: DETAILS VIEW */}
+          <div style={{ background:"#fff", borderRadius:20, boxShadow:"0 5px 25px rgba(0,0,0,0.03)", border:`1px solid ${C.bdrL}`, height:"calc(100vh - 160px)", overflowY:"auto" }}>
+            {selC ? (
+               <div style={{ flex:1, padding:"30px 40px", background:"#fff" }}>
                  <div style={{ maxWidth:950, margin:"0 auto" }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
                     <div style={{ display:"flex", gap:15, alignItems:"flex-start", justifyContent:"flex-end" }}>
@@ -335,9 +324,14 @@ const CustomerCRMBoard = (props) => {
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+               <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", height:"100%", color:C.txtM, fontSize:15, flexDirection:"column", gap:10, padding:40, textAlign:"center" }}>
+                 <div style={{ fontSize:40 }}>👤</div>
+                 No customer selected.<br/>Select an account from the left list to view their executive dossier!
+               </div>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="mobile-only-return-btn" style={{ marginTop: 40, textAlign: "center" }}>
           <button style={{ ...mkBtn("outline"), padding: "18px 40px", fontSize: 18, width: "100%", maxWidth: 450, margin: "0 auto", background: "#fff", borderRadius:18, fontWeight:800, boxShadow:"0 5px 15px rgba(0,0,0,0.05)" }} onClick={() => setView("dash")}>← Return to Executive Dashboard</button>
@@ -346,7 +340,8 @@ const CustomerCRMBoard = (props) => {
           @media (min-width: 951px) {
             .mobile-only-return-btn { display: none !important; }
           }
-          @media (max-width: 950px) {
+          @media (max-width: 1050px) {
+            .app-split-layout { grid-template-columns: 1fr !important; }
             .mobile-hidden { display: none !important; }
             .edit-profile-btn { padding: 10px 16px !important; font-size: 13px !important; border-radius: 10px !important; }
           }

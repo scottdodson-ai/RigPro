@@ -3,6 +3,7 @@ import CustomerCRMBoard from "./CustomerCRMBoard";
 import VectorSearchPanel from "./VectorSearchPanel";
 import RigPro3ExecutiveDashboard from "./RigPro3ExecutiveDashboard";
 import RigPro3FinanceDashboard from "./RigPro3FinanceDashboard";
+import LeadsBoard from "./LeadsBoard";
 const InvestorDashboard = () => <div style={{padding:40,color:"#fff",textAlign:"center",fontSize:18}}>Investor Dashboard — coming soon.</div>;
 
 
@@ -652,7 +653,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
   const comp = compStr ? JSON.parse(compStr) : { name: "Shoemaker Rigging & Transport LLC", logoSrc: null };
 
   const TABS = token ? [
-    ["dash","Dashboard"], ["customers", customerCount !== undefined ? `Customers (${customerCount})` : "Customers"], ["quotes", quoteCount !== undefined ? `Quotes (${quoteCount})` : "Quotes"],
+    ["dash","Dashboard"], ["leads", "Leads"], ["customers", customerCount !== undefined ? `Customers (${customerCount})` : "Customers"], ["quotes", quoteCount !== undefined ? `Quotes (${quoteCount})` : "Quotes"],
     ["jobs", jobCount !== undefined ? `Job List (${jobCount})` : "Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
@@ -800,9 +801,15 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
           boxShadow: "0 1px 4px rgba(0,0,0,.06)",
         }}
       >
+        {/* Header Extras Row */}
+        {extra && (
+          <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:10, flexWrap:"wrap", paddingBottom:4 }}>
+            {extra}
+          </div>
+        )}
+
         {/* Desktop actions row: right-aligned above menu */}
         <div className="desktop-nav desktop-actions-row" style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:4 }}>
-          {extra}
           {token && profileUser && (
             <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", display:"inline-flex", alignItems:"center", gap:6, borderRadius:20 }} onClick={() => setProfileOpen(true)}>
               <div style={{ width:20, height:20, background:C.accL, borderRadius:"50%", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", border:`1px solid ${C.bdr}` }}>
@@ -979,6 +986,23 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
               </div>
               {profileErr && <div style={{ fontSize:12, color:C.red, fontWeight:700 }}>⚠ {profileErr}</div>}
               <div className="app-modal-actions" style={{ display:"flex", justifyContent:"flex-end", gap:10, marginTop:4 }}>
+                <button type="button" style={{ ...mkBtn("white"), padding:"8px 14px", marginRight:"auto" }} onClick={async () => {
+                  if (!profileForm.email) {
+                    alert("Please enter an email address first.");
+                    return;
+                  }
+                  try {
+                    const res = await fetch("/api/forgot-password", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email: profileForm.email })
+                    });
+                    if (!res.ok) throw new Error("Failed to send reset link");
+                    alert("A password reset link has been sent to your email.");
+                  } catch (e) {
+                    alert(e.message);
+                  }
+                }}>Send Reset Email</button>
                 <button type="button" style={{ ...mkBtn("ghost"), padding:"8px 14px" }} onClick={() => setProfileOpen(false)}>Cancel</button>
                 <button type="submit" style={{ ...mkBtn("primary"), padding:"8px 16px" }} disabled={profileSaving}>{profileSaving ? "Saving..." : "Save"}</button>
               </div>
@@ -3585,7 +3609,7 @@ function MarkDeadModal({ itemType, itemLabel, onConfirm, onClose }) {
   );
 }
 
-function ActionBtns({ onFromReq, onNew }) {
+function ActionBtns({ onFromReq, onNew, onNewLead }) {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
@@ -3605,6 +3629,7 @@ function ActionBtns({ onFromReq, onNew }) {
   const s = compact ? { fontSize:10, padding:"5px 8px", gap:3 } : {};
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+      <button style={{ ...mkBtn("green"), ...s }} onClick={onNewLead}>+ New Lead</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onFromReq}>Pending Requests</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Quote</button>
     </div>
@@ -3615,12 +3640,24 @@ function ActionBtns({ onFromReq, onNew }) {
 function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData, jobs=[], profileUser, role, reqs=[] }) {
   const blank = useMemo(() => {
     let estimator = "";
-    if (profileUser && role !== "admin") {
+    if (profileUser && profileUser.role === "estimator") {
       estimator = profileUser.username;
     }
-    return { id:uid(), rn:nextRN(reqs), company:"", requester:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:estimator };
+    return { id:uid(), rn:nextRN(reqs), company:"", requester:"", reqFirst:"", reqLast:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:estimator };
   }, [profileUser, role]);
-  const [f, setF] = useState(init || blank);
+  
+  const [f, setF] = useState(() => {
+    let base = { ...(init || blank) };
+    if (base.requester && (!base.reqFirst && !base.reqLast)) {
+      const p = base.requester.trim().split(' ');
+      base.reqFirst = p[0] || "";
+      base.reqLast = p.slice(1).join(' ') || "";
+    } else if (!base.reqFirst) {
+      base.reqFirst = "";
+      base.reqLast = "";
+    }
+    return base;
+  });
   const [isListening, setIsListening] = useState(false);
 
   const toggleDictation = () => {
@@ -3717,15 +3754,42 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
   const prevCompany = useRef(f.company);
   useEffect(() => {
     if(f.company !== prevCompany.current && !init) {
-      setF(x=>({...x, requester:"", phone:"", email:"", jobSite:""}));
+      const data = custData[f.company];
+      if (data) {
+        const primCon = (data.contacts && data.contacts.length > 0) ? (data.contacts.find(c => c.primary) || data.contacts[0]) : null;
+        const primLoc = (data.locations && data.locations.length > 0) ? (data.locations.find(c => c.primary) || data.locations[0]) : null;
+        
+        setF(x => {
+          let updates = { ...x, jobSite: "" };
+          if (primCon) {
+            const p = (primCon.name || "").trim().split(' ');
+            updates.reqFirst = p[0] || "";
+            updates.reqLast = p.slice(1).join(' ') || "";
+            updates.requester = primCon.name || "";
+            updates.phone = primCon.phone || "";
+            updates.email = primCon.email || "";
+          } else {
+            updates.reqFirst = ""; updates.reqLast = ""; updates.requester = ""; updates.phone = ""; updates.email = "";
+          }
+          if (primLoc) {
+            updates.jobSite = primLoc.address || primLoc.name || "";
+          }
+          return updates;
+        });
+      } else {
+        setF(x=>({...x, requester:"", reqFirst:"", reqLast:"", phone:"", email:"", jobSite:""}));
+      }
     }
     prevCompany.current = f.company;
-  }, [f.company]);
+  }, [f.company, custData, init]);
 
   // Prefill from contact selection
   function applyContact(con) {
+    const p = (con.name || "").trim().split(' ');
     setF(x=>({
       ...x,
+      reqFirst: p[0] || x.reqFirst,
+      reqLast: p.slice(1).join(' ') || x.reqLast,
       requester: con.name  || x.requester,
       phone:     con.phone || x.phone,
       email:     con.email || x.email,
@@ -3751,13 +3815,26 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
     onSave(f);
   }
 
+  const companyOk = !!(f.company && f.company.trim());
+  const requesterOk = !!(f.reqFirst && f.reqFirst.trim() && f.reqLast && f.reqLast.trim());
+  const hasPhone = !!(f.phone && f.phone.replace(/\D/g, "").length >= 10);
+  const hasEmail = !!(f.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email));
+  const phoneFormatOk = !f.phone || f.phone.replace(/\D/g, "").length >= 10;
+  const emailFormatOk = !f.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email);
+  const contactOk = (hasPhone || hasEmail) && phoneFormatOk && emailFormatOk;
+  
+  const wordCount = (f.desc || "").trim().split(/\s+/).filter(w=>w.length>0).length;
+  const descOk = wordCount >= 5;
+
+  const canSave = companyOk && requesterOk && contactOk && descOk;
+
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.35)", zIndex:300, display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"20px 12px", overflowY:"auto" }}>
       <div style={{ background:C.sur, borderRadius:10, padding:20, width:"100%", maxWidth:580, boxShadow:"0 8px 28px rgba(0,0,0,.18)" }}>
 
         {/* Header */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-          <div><div style={{ fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:1 }}>Quote Request</div><div style={{ fontSize:17, fontWeight:700 }}>{f.rn}</div></div>
+          <div><div style={{ fontSize:11, color:C.txtS, textTransform:"uppercase", letterSpacing:1 }}>New Lead / RFQ</div><div style={{ fontSize:17, fontWeight:700 }}>{f.rn}</div></div>
           <button className="app-modal-close" onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtS }}>×</button>
         </div>
 
@@ -3808,19 +3885,32 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
             </div>
           )}
 
-          {/* Requester / Phone */}
-          <div>
-            <Lbl c="REQUESTER *"/>
-            <input 
-              style={inp} 
-              value={f.requester} 
-              placeholder="Full name" 
-              onChange={e => {
-                let val = e.target.value;
-                val = val.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
-                u("requester", val);
-              }}
-            />
+          {/* Requester -> First and Last */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            <div>
+              <Lbl c="FIRST NAME *"/>
+              <input 
+                style={inp} 
+                value={f.reqFirst||""} 
+                placeholder="First name" 
+                onChange={e => {
+                  let val = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1);
+                  setF(p => ({ ...p, reqFirst: val, requester: (val + " " + (p.reqLast||"")).trim() }));
+                }}
+              />
+            </div>
+            <div>
+              <Lbl c="LAST NAME *"/>
+              <input 
+                style={inp} 
+                value={f.reqLast||""} 
+                placeholder="Last name" 
+                onChange={e => {
+                  let val = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1);
+                  setF(p => ({ ...p, reqLast: val, requester: ((p.reqFirst||"") + " " + val).trim() }));
+                }}
+              />
+            </div>
           </div>
           <div>
             <Lbl c="PHONE"/>
@@ -3836,6 +3926,9 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
                 u("phone", fmt);
               }}
             />
+            {canSave && !f.phone && (
+              <div style={{ fontSize: 10, color: C.acc, marginTop: 4 }}>Ask for contact phone number</div>
+            )}
           </div>
           <div style={{ gridColumn:"1/-1" }}><div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <Lbl c="EMAIL"/>
@@ -3848,7 +3941,11 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
               style={{ ...inp, border: f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email) ? '1px solid #e74c3c' : inp.border }} 
               value={f.email} 
               placeholder="email@company.com" 
-              onChange={e => u("email", e.target.value.replace(/[^a-zA-Z0-9@.\-_+]/g, "").toLowerCase())}/></div>
+              onChange={e => u("email", e.target.value.replace(/[^a-zA-Z0-9@.\-_+]/g, "").toLowerCase())}/>
+            {canSave && !f.email && (
+              <div style={{ fontSize: 10, color: C.acc, marginTop: 4 }}>Ask for contact email address</div>
+            )}
+          </div>
           <div style={{ gridColumn:"1/-1" }}>
             <Lbl c="JOB SITE ADDRESS"/>
             {(() => {
@@ -3927,6 +4024,9 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
                </button>
             </div>
             <textarea style={{ ...inp, height:80, resize:"vertical" }} spellCheck={true} autoCapitalize="sentences" autoCorrect="on" value={f.desc} onChange={e=>u("desc",e.target.value)} onBlur={handleDescBlur} placeholder="Enter description... (Auto-corrects on blur)"/>
+            {!descOk && (
+              <div style={{ fontSize: 10, color: C.acc, marginTop: 4 }}>A description is required. Be as complete as possible.</div>
+            )}
           </div>
 
           <div><Lbl c="STATUS"/><select style={{ ...sel, width:"100%" }} value={f.status} onChange={e=>u("status",e.target.value)}>{["New","In Progress","Quoted","Dead"].map(x=><option key={x}>{x}</option>)}</select></div>
@@ -3943,27 +4043,12 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
 
         <div style={{ display:"flex", gap:8, marginTop:18, justifyContent:"flex-end" }}>
           <button style={mkBtn("ghost")} onClick={onClose}>Cancel</button>
-          {(() => {
-            const companyOk = !!(f.company && f.company.trim());
-            const requesterOk = !!(f.requester && f.requester.trim());
-            const phoneOk = !!(f.phone && f.phone.replace(/\D/g, "").length >= 10);
-            const addressOk = !!(
-              (f.jobSite && f.jobSite.trim().length >= 10) ||
-              (f.jobSiteAddress1?.trim() && f.jobSiteCity?.trim() && f.jobSiteState?.trim() && f.jobSiteZip?.trim())
-            );
-            const estimatorOk = !!f.salesAssoc;
-            const emailOk = !f.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email);
-            const canSave = companyOk && requesterOk && phoneOk && addressOk && estimatorOk && emailOk;
-            
-            return (
-              <button 
-                style={{ ...mkBtn("primary"), opacity: canSave ? 1 : 0.5, cursor: canSave ? 'pointer' : 'not-allowed' }} 
-                onClick={handleSave} 
-                disabled={!canSave}>
-                {isNewCompany ? "Save RFQ & Add Customer" : "Save RFQ"}
-              </button>
-            );
-          })()}
+          <button 
+            style={{ ...mkBtn("primary"), opacity: canSave ? 1 : 0.5, cursor: canSave ? 'pointer' : 'not-allowed' }} 
+            onClick={handleSave} 
+            disabled={!canSave}>
+            {isNewCompany ? "Save New Lead & Add Customer" : "Save New Lead"}
+          </button>
         </div>
       </div>
     </div>
@@ -7435,7 +7520,7 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
 
 
 // ── LOGIN FORM ───────────────────────────────────────────────────────────────
-function LoginForm({ setToken, setRole, onBack }) {
+function LoginForm({ setToken, setRole, onBack, onForgotPassword }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -7493,7 +7578,107 @@ function LoginForm({ setToken, setRole, onBack }) {
           />
         </div>
         <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"12px", fontSize:14 }}>Login</button>
-        <button type="button" onClick={onBack} style={{ ...mkBtn("ghost"), width:"100%", justifyContent:"center", padding:"10px", marginTop:10, fontSize:14 }}>Cancel</button>
+        <button type="button" onClick={onForgotPassword} style={{ ...mkBtn("white"), border:"none", width:"100%", justifyContent:"center", padding:"10px", marginTop:5, fontSize:13, color:C.blue }}>Forgot Password?</button>
+        <button type="button" onClick={onBack} style={{ ...mkBtn("ghost"), width:"100%", justifyContent:"center", padding:"10px", marginTop:5, fontSize:14 }}>Cancel</button>
+      </form>
+    </div>
+  );
+}
+
+// ── FORGOT PASSWORD FORM ───────────────────────────────────────────────────────
+function ForgotPasswordForm({ onBack }) {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    setError("");
+    try {
+      const res = await fetch("/api/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setMessage(data.message || "Reset link sent!");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:C.sur, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <form onSubmit={handleSubmit} style={{ background:"#fff", border:`1px solid ${C.bdr}`, borderRadius:10, padding:30, width:"100%", maxWidth:400, boxShadow:"0 10px 30px rgba(0,0,0,.1)" }}>
+        <div style={{ textAlign:"center", marginBottom:20 }}>
+          <div style={{ fontSize:24, fontWeight:800, color:C.acc, letterSpacing:"-1px" }}>Reset Password</div>
+        </div>
+        {message && <div style={{ background:C.grnB, color:C.grn, padding:10, borderRadius:5, marginBottom:15, fontSize:13 }}>{message}</div>}
+        {error && <div style={{ background:C.redB, color:C.red, padding:10, borderRadius:5, marginBottom:15, fontSize:13 }}>{error}</div>}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:C.txtM, marginBottom:6 }}>EMAIL ADDRESS</div>
+          <input type="email" style={{ ...inp, padding:"10px 12px", fontSize:14 }} value={email} onChange={e=>setEmail(e.target.value)} required />
+        </div>
+        <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"12px", fontSize:14 }}>Send Reset Link</button>
+        <button type="button" onClick={onBack} style={{ ...mkBtn("ghost"), width:"100%", justifyContent:"center", padding:"10px", marginTop:10, fontSize:14 }}>Back to Login</button>
+      </form>
+    </div>
+  );
+}
+
+// ── RESET PASSWORD FORM ────────────────────────────────────────────────────────
+function ResetPasswordForm({ onBack }) {
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const searchParams = new URLSearchParams(window.location.search);
+  const token = searchParams.get("resetToken");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    setError("");
+    try {
+      const res = await fetch("/api/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, newPassword: password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setMessage(data.message || "Password reset successfully!");
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        onBack();
+      }, 2000);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  if (!token) {
+    return <div style={{ padding:20, textAlign:"center" }}>Invalid or missing token. <button onClick={onBack} style={{...mkBtn("ghost"), marginLeft:10}}>Back to Login</button></div>;
+  }
+
+  return (
+    <div style={{ minHeight:"100vh", background:C.sur, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <form onSubmit={handleSubmit} style={{ background:"#fff", border:`1px solid ${C.bdr}`, borderRadius:10, padding:30, width:"100%", maxWidth:400, boxShadow:"0 10px 30px rgba(0,0,0,.1)" }}>
+        <div style={{ textAlign:"center", marginBottom:20 }}>
+          <div style={{ fontSize:24, fontWeight:800, color:C.acc, letterSpacing:"-1px" }}>Set New Password</div>
+        </div>
+        {message && <div style={{ background:C.grnB, color:C.grn, padding:10, borderRadius:5, marginBottom:15, fontSize:13 }}>{message}</div>}
+        {error && <div style={{ background:C.redB, color:C.red, padding:10, borderRadius:5, marginBottom:15, fontSize:13 }}>{error}</div>}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:C.txtM, marginBottom:6 }}>NEW PASSWORD</div>
+          <input type="password" style={{ ...inp, padding:"10px 12px", fontSize:14 }} value={password} onChange={e=>setPassword(e.target.value)} required />
+        </div>
+        <button type="submit" style={{ ...mkBtn("primary"), width:"100%", justifyContent:"center", padding:"12px", fontSize:14 }}>Reset Password</button>
+        <button type="button" onClick={() => {
+           window.history.replaceState({}, document.title, window.location.pathname);
+           onBack();
+        }} style={{ ...mkBtn("ghost"), width:"100%", justifyContent:"center", padding:"10px", marginTop:10, fontSize:14 }}>Back to Login</button>
       </form>
     </div>
   );
@@ -9074,6 +9259,10 @@ export default function App() {
   const [role,       setRole]       = useState(localStorage.getItem("role") || "user");
   
   const [viewState, setViewState] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("resetToken")) {
+      return "reset-password";
+    }
     const hash = window.location.hash.replace('#', '');
     if (hash) return hash;
     return localStorage.getItem("token") ? "dash" : "landing";
@@ -9113,6 +9302,7 @@ export default function App() {
   const [appUsers,   setAppUsers]   = useState([]);
   const [jobs,       setJobs]       = useState([]);
   const [reqs,       setReqs]       = useState(SAMPLE_REQS);
+  const [leads,      setLeads]      = useState([]);
   const [dbStatus,   setDbStatus]   = useState("Local Mode");
   const [active,     setActive]     = useState(null);
   const [globalSelectedQuote, setGlobalSelectedQuote] = useState(null);
@@ -9257,6 +9447,7 @@ export default function App() {
         if (data.jobs && data.jobs.length > 0) {
           setJobs(data.jobs);
           if (data.rfqs) setReqs(data.rfqs);
+          if (data.leads) setLeads(data.leads);
           if (data.customers) setCustData(data.customers);
           setDbStatus("MySQL Live");
         } else if (role === "admin") {
@@ -9490,7 +9681,7 @@ export default function App() {
 
   const cv      = active ? calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate) : null;
   const pendN   = notifs.filter(n=>n.status==="Pending").length;
-  const actBtns = <ActionBtns onFromReq={()=>setView("rfqs")} onNew={()=>openNew()}/>;
+  const actBtns = <ActionBtns onFromReq={()=>setView("rfqs")} onNew={()=>openNew()} onNewLead={() => { setEditR(null); setShowRM(true); }}/>;
 
   const NotifPanel = () => (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.3)", zIndex:400, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
@@ -9523,7 +9714,7 @@ export default function App() {
 
   // Authentication Guard
   useEffect(() => {
-    if (view!=="landing" && view!=="login" && !token) {
+    if (view!=="landing" && view!=="login" && view!=="forgot-password" && view!=="reset-password" && !token) {
       setView("login");
     }
   }, [view, token]);
@@ -9577,7 +9768,29 @@ export default function App() {
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
         <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} />
+          <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} onForgotPassword={() => setView("forgot-password")} />
+        </div>
+      </div>
+    );
+  }
+
+  if (view==="forgot-password") {
+    return (
+      <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
+        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <ForgotPasswordForm onBack={() => setView("login")} />
+        </div>
+      </div>
+    );
+  }
+
+  if (view==="reset-password") {
+    return (
+      <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
+        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <ResetPasswordForm onBack={() => setView("login")} />
         </div>
         <Footer />
       </div>
@@ -9640,22 +9853,9 @@ export default function App() {
       }/>
       <div className="app-page-container" style={{ maxWidth:1160 }}>
         <style>{`
-          .desktop-act-btns { display: block; }
           .mobile-act-btns { display: none; }
-          @media (max-width: 767px) {
-            .desktop-act-btns { display: none !important; }
-            .mobile-act-btns { display: flex !important; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
-            .mobile-act-btns > div { width: 100%; display: flex; flex-direction: column; gap: 8px; }
-            .mobile-act-btns button { width: 100%; justify-content: center; padding: 12px 14px !important; font-size: 15px !important; }
-          }
-          @media (min-width: 768px) and (max-width: 1024px) {
-            .desktop-act-btns { display: none !important; }
-            .mobile-act-btns { display: flex !important; margin-bottom: 12px; }
-            .mobile-act-btns > div { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
-            .mobile-act-btns button { flex: 1 1 calc(50% - 8px); min-width: 190px; justify-content: center; }
-          }
         `}</style>
-        <div className="mobile-act-btns">{actBtns}</div>
+        <div className="mobile-act-btns"></div>
         {SHOW_SEMANTIC_SEARCH && (
           <VectorSearchPanel
             token={token}
@@ -9668,46 +9868,19 @@ export default function App() {
             Sec={Sec}
           />
         )}
-        <Card style={{ marginBottom: 16, padding: 16, border: `1.5px solid ${C.bdr}`, borderRadius: 12 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.acc, marginBottom: 12 }}>✅ My Assigned Tasks</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:400, overflowY:"auto", padding:"10px 0" }}>
-            <form onSubmit={addUserTask} style={{ display:"flex", gap:8, marginBottom:8 }}>
-              <input style={{ ...inp, flex:1 }} value={newMyTask} onChange={e=>setNewMyTask(e.target.value)} placeholder="Add a new task..." />
-              <select style={sel} value={newMyTaskAssignedTo || profileUser?.id || ""} onChange={e=>setNewMyTaskAssignedTo(e.target.value)}>
-                  <option value={profileUser?.id || ""}>Self</option>
-                  {(profileUser?.role === 'admin' ? appUsers : appUsers.filter(u => u.role === profileUser?.role)).filter(u => u.id !== profileUser?.id).map(u => <option key={u.id} value={u.id}>{u.first_name || u.username}</option>)}
-              </select>
-              <button type="submit" style={{ ...mkBtn("blue"), padding:"0 16px" }}>Add Task</button>
-            </form>
-            {myTasks.length === 0 && <div style={{ textAlign:"center", padding:10, color:C.txtS, fontSize:13 }}>No tasks assigned to you.</div>}
-            {myTasks.map(t => (
-              <div key={t.id} style={{ background:t.done ? C.bg : "transparent", padding:12, borderRadius:8, border:`1px solid ${C.bdr}` }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: t.subnotes?.length ? 8 : 0 }}>
-                  <input type="checkbox" checked={t.done} onChange={() => toggleMyTask(t.id, t.done)} style={{ cursor:"pointer", width:16, height:16 }} />
-                  <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
-                </div>
-                {t.subnotes && t.subnotes.length > 0 && (
-                  <div style={{ paddingLeft:26, display:"flex", flexDirection:"column", gap:4 }}>
-                    {t.subnotes.map((sub, idx) => (
-                      <div key={idx} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:C.txtM }}>
-                        <span style={{ color:C.acc }}>•</span>
-                        <span style={{ flex:1 }}>{sub}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
 
-        <AccordionCard 
-          title="📊 Performance Metrics" 
-          isOpen={dashAcc==="metrics"} 
-          onToggle={open => setDashAcc(open ? "metrics" : null)}
-        >
-          <DashboardMetrics jobs={jobs} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
-        </AccordionCard>
+
+        <div style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:10, overflow:"hidden", marginBottom:20, boxShadow:"0 4px 20px rgba(0,0,0,0.04)" }}>
+          <div style={{ padding:"14px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", background:C.accL, borderBottom:`1px solid ${C.bdr}` }}>
+            <div style={{ fontWeight:800, fontSize:14, color:C.acc, display:"flex", alignItems:"center", gap:10, letterSpacing:0.5, textTransform:"uppercase" }}>
+               📊 Performance Metrics
+            </div>
+            <div style={{ fontSize:10, color:C.acc, fontWeight:700, opacity:0.6 }}>ALWAYS ACTIVE</div>
+          </div>
+          <div style={{ padding:20 }}>
+            <DashboardMetrics jobs={jobs} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id=>{ setDashReportId(id); setView("reports"); }}/>
+          </div>
+        </div>
 
         <AccordionCard 
           title="📈 Sales Analytics" 
@@ -9745,6 +9918,41 @@ export default function App() {
           <RecentQuotesCard jobs={jobs} openEdit={openEdit} setView={setView} onBack={() => setDashAcc("metrics")}/>
         </AccordionCard>
 
+        <AccordionCard 
+          title="✅ My Assigned Tasks" 
+          isOpen={dashAcc==="tasks"} 
+          onToggle={open => setDashAcc(open ? "tasks" : null)}
+        >
+          <div style={{ display:"flex", flexDirection:"column", gap:12, maxHeight:400, overflowY:"auto", padding:"10px 0" }}>
+            <form onSubmit={addUserTask} style={{ display:"flex", gap:8, marginBottom:8 }}>
+              <input style={{ ...inp, flex:1 }} value={newMyTask} onChange={e=>setNewMyTask(e.target.value)} placeholder="Add a new task..." />
+              <select style={sel} value={newMyTaskAssignedTo || profileUser?.id || ""} onChange={e=>setNewMyTaskAssignedTo(e.target.value)}>
+                  <option value={profileUser?.id || ""}>Self</option>
+                  {(profileUser?.role === 'admin' ? appUsers : appUsers.filter(u => u.role === profileUser?.role)).filter(u => u.id !== profileUser?.id).map(u => <option key={u.id} value={u.id}>{u.first_name || u.username}</option>)}
+              </select>
+              <button type="submit" style={{ ...mkBtn("blue"), padding:"0 16px" }}>Add Task</button>
+            </form>
+            {myTasks.length === 0 && <div style={{ textAlign:"center", padding:10, color:C.txtS, fontSize:13 }}>No tasks assigned to you.</div>}
+            {myTasks.map(t => (
+              <div key={t.id} style={{ background:t.done ? C.bg : "transparent", padding:12, borderRadius:8, border:`1px solid ${C.bdr}` }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: t.subnotes?.length ? 8 : 0 }}>
+                  <input type="checkbox" checked={t.done} onChange={() => toggleMyTask(t.id, t.done)} style={{ cursor:"pointer", width:16, height:16 }} />
+                  <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+                </div>
+                {t.subnotes && t.subnotes.length > 0 && (
+                  <div style={{ paddingLeft:26, display:"flex", flexDirection:"column", gap:4 }}>
+                    {t.subnotes.map((sub, idx) => (
+                      <div key={idx} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, color:C.txtM }}>
+                        <span style={{ color:C.acc }}>•</span>
+                        <span style={{ flex:1 }}>{sub}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </AccordionCard>
 
       </div>
       <Footer />
@@ -9794,6 +10002,18 @@ export default function App() {
       </div>
       <Footer />
     </div>
+  );
+
+  // ── LEADS ──────────────────────────────────────────────────────────────
+  if (view==="leads") return (
+    <LeadsBoard 
+      {...{
+        C, fmt, mkBtn, Badge, Sec, Lbl, Card, thS, tdS, inp, sel, actBtns,
+        view, setView, token, setToken, role, setRole,
+        customers, custData, setCustData,
+        leads, reqs, jobs, Header, appUsers
+      }}
+    />
   );
 
   // ── QUOTES ─────────────────────────────────────────────────────────────

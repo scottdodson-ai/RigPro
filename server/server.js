@@ -9,6 +9,8 @@ import path from 'path';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -111,6 +113,8 @@ async function ensureUserProfileColumns() {
     { name: 'is_disabled', def: 'TINYINT(1) NOT NULL DEFAULT 0' },
     { name: 'avatar',      def: 'LONGTEXT' },
     { name: 'user_number', def: 'INT UNIQUE' },
+    { name: 'reset_token', def: 'VARCHAR(255) DEFAULT NULL' },
+    { name: 'reset_token_expires', def: 'DATETIME DEFAULT NULL' },
   ];
   for (const { name, def } of columnsToAdd) {
     const [rows] = await db.query(
@@ -215,6 +219,110 @@ app.post('/api/login', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// FORGOT PASSWORD ENDPOINT
+app.post('/api/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  try {
+    await ensureUserProfileColumns();
+    const [rows] = await db.query('SELECT id, email, first_name FROM users WHERE email = ? LIMIT 1', [email]);
+    if (!rows.length) {
+      return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+    }
+    const user = rows[0];
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
+
+    await db.query('UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?', [resetToken, resetTokenExpires, user.id]);
+
+    const resetUrl = `${req.headers.origin || 'http://localhost:5173'}/?resetToken=${resetToken}`;
+
+    if (process.env.SMTP_HOST) {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT || 587,
+        auth: process.env.SMTP_USER ? {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        } : undefined
+      });
+
+      const mailOptions = {
+        from: '"RigPro" <noreply@rigpro.com>',
+        to: user.email,
+        subject: 'Password Reset Request',
+        text: `You requested a password reset. Click the link to reset your password: ${resetUrl}\nIf you did not request this, please ignore this email.`
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Password reset email sent to ${user.email}`);
+      } catch (mailErr) {
+        console.error('Failed to send email via SMTP:', mailErr.message);
+        console.log(`Reset URL (Fallback): ${resetUrl}`);
+      }
+    } else {
+      // In dev mode without an SMTP provider, auto-generate a test account
+      try {
+        const testAccount = await nodemailer.createTestAccount();
+        const transporter = nodemailer.createTransport({
+          host: "smtp.ethereal.email",
+          port: 587,
+          secure: false,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+        });
+        
+        const mailOptions = {
+          from: '"RigPro" <noreply@rigpro.com>',
+          to: user.email,
+          subject: 'Password Reset Request',
+          text: `You requested a password reset. Click the link to reset your password: ${resetUrl}\nIf you did not request this, please ignore this email.`
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`\n=========================================`);
+        console.log(`[DEV MODE] Virtual Email Dispatched to: ${user.email}`);
+        console.log(`View the actual email here: ${nodemailer.getTestMessageUrl(info)}`);
+        console.log(`=========================================\n`);
+      } catch (err) {
+        console.error('Ethereal generation failed:', err.message);
+        console.log(`\n=========================================\n[DEV MODE] Password Reset Requested for ${user.email}\nReset URL: ${resetUrl}\n=========================================\n`);
+      }
+    }
+
+    res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// RESET PASSWORD ENDPOINT
+app.post('/api/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password required' });
+
+  try {
+    await ensureUserProfileColumns();
+    const [rows] = await db.query('SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW() LIMIT 1', [token]);
+    if (!rows.length) return res.status(400).json({ error: 'Invalid or expired token' });
+
+    const user = rows[0];
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?', [passwordHash, user.id]);
+
+    res.json({ message: 'Password has been reset successfully. You can now login.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 // Middleware to verify token
 const authenticateToken = (req, res, next) => {
@@ -375,6 +483,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const users = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, user_number, created_at FROM users');
     const estimators = await safeQuery('SELECT * FROM estimators');
     const status = await safeQuery('SELECT * FROM status ORDER BY sort_order ASC');
+    const leads = await safeQuery('SELECT l.*, c.name AS company_name FROM leads l LEFT JOIN customers c ON l.customer_number = c.id ORDER BY l.id DESC');
 
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
@@ -414,6 +523,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       customers: custData,
       jobs,
       rfqs,
+      leads,
       users,
       estimators,
       status
@@ -423,7 +533,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     // If the tables don't exist yet (e.g. after a failed restore wipe), return empty data
     // so the frontend can automatically trigger the DB re-initialization routine.
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ labor: [], equipment: [], customers: {}, jobs: [], rfqs: [], users: [], estimators: [], status: [] });
+      return res.json({ labor: [], equipment: [], customers: {}, jobs: [], rfqs: [], leads: [], users: [], estimators: [], status: [] });
     }
     res.status(500).json({ error: 'Failed to fetch data', details: error.message });
   }
@@ -688,7 +798,7 @@ app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, a
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads'];
   const table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
@@ -707,7 +817,7 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
 
 // UPDATE RECORD IN TABLE (Admin Only)
 app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads'];
   const table = req.params.table;
   const id = req.params.id;
   const data = req.body;
@@ -731,7 +841,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, as
 
 // BATCH DELETE RECORDS IN TABLE (Admin Only)
 app.delete('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads'];
   const table = req.params.table;
   const { ids } = req.body;
 
@@ -1527,6 +1637,51 @@ app.post('/api/search/vector', authenticateToken, async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
+const ensureLeadsTable = async () => {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      description TEXT,
+      create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      customer_number INT,
+      status_number INT DEFAULT 1,
+      first_name VARCHAR(100) DEFAULT '',
+      last_name VARCHAR(100) DEFAULT '',
+      street1 VARCHAR(255) DEFAULT '',
+      city VARCHAR(100) DEFAULT '',
+      state VARCHAR(50) DEFAULT '',
+      zip VARCHAR(20) DEFAULT '',
+      estimator_id VARCHAR(100) DEFAULT ''
+    )
+  `);
+};
+
+const ensureRfqsTable = async () => {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS rfqs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      rfq_number VARCHAR(50) UNIQUE,
+      customer_id INT,
+      requester VARCHAR(100),
+      email VARCHAR(100),
+      phone VARCHAR(50),
+      job_site VARCHAR(255),
+      job_site_address1 VARCHAR(255),
+      job_site_city VARCHAR(100),
+      job_site_state VARCHAR(50),
+      job_site_zip VARCHAR(20),
+      description TEXT,
+      notes TEXT,
+      date DATE,
+      status VARCHAR(50),
+      sales_assoc VARCHAR(100),
+      active TINYINT(1) DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+};
+
 // Ensure admin account exists and has known password (dev/seed behavior).
 const initAdmin = async () => {
   try {
@@ -1543,6 +1698,8 @@ const initAdmin = async () => {
 
     await ensureUserProfileColumns();
     await ensureCompanyInfoTable();
+    await ensureRfqsTable();
+    await ensureLeadsTable();
     const hash = await bcrypt.hash('pass', 10);
     await db.query(
       `INSERT INTO users (first_name, last_name, username, email, cell_phone, password_hash, role)
@@ -1625,12 +1782,21 @@ app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
       if (existingByRn.length > 0) targetId = existingByRn[0].id;
     }
 
-    const { rn, company, requester, email, phone, jobSite, jobSiteAddress1, jobSiteCity, jobSiteState, jobSiteZip, desc, notes, date, status, salesAssoc } = rfq;
+    const { rn, company, requester, reqFirst, reqLast, email, phone, jobSite, jobSiteAddress1, jobSiteCity, jobSiteState, jobSiteZip, desc, notes, date, status, salesAssoc } = rfq;
     
     let custId = null;
     if (company) {
       const [exCust] = await connection.query('SELECT id FROM customers WHERE name = ?', [company]);
-      if (exCust.length > 0) custId = exCust[0].id;
+      if (exCust.length > 0) {
+        custId = exCust[0].id;
+      } else {
+        const [insertRes] = await connection.query('INSERT INTO customers (name) VALUES (?)', [company.trim()]);
+        custId = insertRes.insertId;
+        // Optionally insert the requester into customer_contacts if available
+        if (requester) {
+          await connection.query('INSERT INTO customer_contacts (customer_id, name, email, phone, is_primary) VALUES (?, ?, ?, ?, 1)', [custId, requester.trim(), email||'', phone||'']);
+        }
+      }
     }
 
     let cleanDate = null;
@@ -1664,6 +1830,12 @@ app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
           (rfq_number, customer_id, requester, email, phone, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, notes, date, status, sales_assoc, active) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', activeFlag]
+      );
+      
+      // Mirror minimal data into newly requested 'leads' table with strict status_number 1 constraint
+      await connection.query(
+        'INSERT INTO leads (description, customer_number, status_number, first_name, last_name, street1, city, state, zip, estimator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [desc || '', custId || null, 1, reqFirst || '', reqLast || '', jobSiteAddress1 || '', jobSiteCity || '', jobSiteState || '', jobSiteZip || '', salesAssoc || '']
       );
     }
 
