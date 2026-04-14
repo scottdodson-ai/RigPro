@@ -806,7 +806,7 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
   try {
     const [idColumn] = await db.query(`SHOW COLUMNS FROM ${table} LIKE 'id'`);
     const query = idColumn.length
-      ? `SELECT * FROM \`${table}\` ORDER BY id DESC`
+      ? `SELECT * FROM \`${table}\` ORDER BY id ASC`
       : `SELECT * FROM \`${table}\``;
     const [rows] = await db.query(query);
     res.json(rows);
@@ -842,6 +842,9 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, as
 
     const values = keys.map(k => {
       let val = data[k];
+      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(val)) {
+        val = new Date(val).toISOString().slice(0, 19).replace('T', ' ');
+      }
       if (typeof val === 'object' && val !== null) {
         return JSON.stringify(val);
       }
@@ -1374,7 +1377,13 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
 
 app.get('/api/tasks/my', authenticateToken, async (req, res) => {
   try {
-    const [tasks] = await db.query('SELECT a.*, u.first_name as creator_first_name, u.username as creator_username FROM admin_tasks a LEFT JOIN users u ON a.created_by = u.id WHERE a.assigned_to = ? ORDER BY a.created_at DESC', [req.user.userId]);
+    let queryArgs = [req.user.userId];
+    let queryStr = 'SELECT a.*, u.first_name as creator_first_name, u.username as creator_username FROM admin_tasks a LEFT JOIN users u ON a.created_by = u.id WHERE a.assigned_to = ? ORDER BY a.created_at DESC';
+    if (req.user.role === 'admin') {
+      queryStr = 'SELECT a.*, u.first_name as creator_first_name, u.username as creator_username FROM admin_tasks a LEFT JOIN users u ON a.created_by = u.id ORDER BY a.created_at DESC';
+      queryArgs = [];
+    }
+    const [tasks] = await db.query(queryStr, queryArgs);
     res.json(tasks.map(t => {
       let subnotes = [];
       if (typeof t.subnotes === 'string' && t.subnotes.trim() !== '') {
@@ -1398,10 +1407,16 @@ app.patch('/api/tasks/my/:id', authenticateToken, async (req, res) => {
     if (done !== undefined) { fields.push('done = ?'); values.push(done); }
     if (text !== undefined) { fields.push('text = ?'); values.push(text); }
     if (subnotes !== undefined) { fields.push('subnotes = ?'); values.push(JSON.stringify(subnotes)); }
-    values.push(req.params.id, req.user.userId);
-
+    
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
-    await db.query(`UPDATE admin_tasks SET ${fields.join(', ')} WHERE id = ? AND assigned_to = ?`, values);
+    
+    values.push(req.params.id);
+    if (req.user.role === 'admin') {
+      await db.query(`UPDATE admin_tasks SET ${fields.join(', ')} WHERE id = ?`, values);
+    } else {
+      values.push(req.user.userId);
+      await db.query(`UPDATE admin_tasks SET ${fields.join(', ')} WHERE id = ? AND assigned_to = ?`, values);
+    }
     res.json({ message: 'Task updated' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update task' });

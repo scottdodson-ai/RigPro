@@ -7943,7 +7943,7 @@ function DatabaseBrowser({ token }) {
           return String(val).toLowerCase().includes(searchTerm);
         })
       );
-  const { sortedItems, requestSort, sortKey, sortDir, setSortKey } = useTableSort(filteredData, 'name');
+  const { sortedItems, requestSort, sortKey, sortDir, setSortKey } = useTableSort(filteredData, 'id');
 
   const totalPages = Math.ceil(sortedItems.length / pageSize);
   const paginatedData = sortedItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -7953,11 +7953,7 @@ function DatabaseBrowser({ token }) {
   }, [tableSearch]);
 
   useEffect(() => {
-    setSortKey('name');
-  }, [selectedTable, setSortKey]);
-
-  useEffect(() => {
-    setSortKey('name');
+    setSortKey('id');
   }, [selectedTable, setSortKey]);
 
   const [checkedRows, setCheckedRows] = useState(new Set());
@@ -8936,7 +8932,7 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
                       <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>
                         {t.text}
                         <span style={{ display:'block', fontSize:10, color:C.txtM, textDecoration: 'none', fontWeight:'normal' }}>
-                          Created by: {t.creator_first_name || t.creator_username || 'System'}
+                          Created by: {t.creator_username || 'System'}
                         </span>
                       </span>
                       <select style={{ ...sel, width:120, padding:"4px", fontSize: 11 }} value={t.assigned_to || ""} onChange={(e) => changeTaskAssignee(t.id, e.target.value)}>
@@ -9989,7 +9985,7 @@ export default function App() {
                   <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>
                     {t.text}
                     <span style={{ display:'block', fontSize:10, color:C.txtM, textDecoration: 'none', fontWeight:'normal' }}>
-                      Created by: {t.creator_first_name || t.creator_username || 'System'}
+                      Created by: {t.creator_username || 'System'}
                     </span>
                   </span>
                   <button onClick={() => editMyTaskText(t.id, t.text)} style={{ background:"none", border:"none", color:C.acc, fontSize:11, cursor:"pointer", fontWeight:700 }}>Edit</button>
