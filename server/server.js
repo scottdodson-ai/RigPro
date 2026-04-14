@@ -509,7 +509,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
           zip: s.zip,
           notes: s.notes || ''
         })),
-        contacts: contacts.filter(con => con.customer_id === c.id).map(con => ({
+        contacts: contacts.filter(con => String(con.customer_id) === String(c.id) || String(con.customer_id) === String(c.customer_num)).map(con => ({
           ...con,
           mobile: con.mobile || "",
           primary: !!con.is_primary
@@ -890,6 +890,9 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, as
       }
       if (typeof val === 'object' && val !== null) {
         return JSON.stringify(val);
+      }
+      if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update')) {
+        return null;
       }
       if (table === 'admin_tasks' && k === 'subnotes' && val === '') {
         return '[]';

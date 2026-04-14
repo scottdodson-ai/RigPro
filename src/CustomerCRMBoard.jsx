@@ -41,7 +41,7 @@ const CustomerCRMBoard = (props) => {
   const { 
     C, fmt, mkBtn, Badge, Sec, Lbl, Card, thS, tdS, inp, sel,
     view, setView, token, setToken, role, setRole, actBtns,
-    customers, custData, setCustData, CUSTOMERS,
+    customers, custData, setCustData, CUSTOMERS, leads,
     selC, setSelC, custView, setCustView, search, setSearch, wonOnly, setWonOnly, custFilter, setCustFilter,
     jobs, reqs, jobFolders, 
     showCustModal, setShowCustModal, adjModal, setAdjModal, showSearchModal, setShowSearchModal,
@@ -101,7 +101,7 @@ const CustomerCRMBoard = (props) => {
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>props.setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Quote"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.qn+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") props.setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else props.setQuotes(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)} />}
       
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
+      <Header leadCount={leads ? leads.length : 0} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       
       {showCustModal ? (
         <CustomerModal custName={showCustModal} jobs={jobs.filter(q=>q.customer_name===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)}/>
@@ -112,7 +112,11 @@ const CustomerCRMBoard = (props) => {
         <div style={{ position:"sticky", top:0, zIndex:10, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, flexWrap:"wrap", maxWidth:1280, margin:"0 auto" }}>
             <div style={{ flex:1 }}>
-               <Lbl c="CUSTOMER DIRECT SEARCH"/><input style={{ ...inp, width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px", boxSizing:"border-box" }} placeholder="Search for a customer name..." value={search} onChange={e=>setSearch(e.target.value)}/>
+               <Lbl c="CUSTOMER DIRECT SEARCH"/>
+               <div style={{position:"relative"}}>
+                 <input style={{ ...inp, width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px", paddingRight: 35, boxSizing:"border-box" }} placeholder="Search for a customer name..." value={search} onChange={e=>setSearch(e.target.value)}/>
+                 {search && <span onClick={() => setSearch("")} style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
+               </div>
             </div>
             <div style={{ display:"flex", flexDirection:"column" }}>
               <Lbl c="VIEW MODE" />
@@ -135,7 +139,7 @@ const CustomerCRMBoard = (props) => {
         </div>
 
         {/* VIEW MODE RENDERER: SPLIT SCREEN OR FULL GRID */}
-        <div ref={gridRef} className={custView === "list" ? "app-split-layout" : ""} style={{ display: custView === "list" ? "grid" : "block", gridTemplateColumns: custView === "list" ? "420px 1fr" : "none", gap:30, marginTop: 15, alignItems:"flex-start" }}>
+        <div ref={gridRef} className={custView === "list" ? "app-split-layout" : ""} style={{ display: custView === "list" ? "grid" : "block", gridTemplateColumns: custView === "list" ? "650px 1fr" : "none", gap:30, marginTop: 15, alignItems:"flex-start" }}>
           
           {/* LEFT: LIST VIEW / CARDS */}
           {(!selC || custView === "list") && (
@@ -146,26 +150,33 @@ const CustomerCRMBoard = (props) => {
                   <table style={{ width:"100%", borderCollapse:"collapse" }}>
                     <thead>
                       <tr>
-                        <SortTh style={thS} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "30%" }} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "25%" }} label="Email" sortKey={(c) => (custData[c.name]?.contacts||[])[0]?.email||""} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "25%" }} label="Phone" sortKey={(c) => (custData[c.name]?.contacts||[])[0]?.mobile||""} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center", width: "20%" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                       </tr>
                     </thead>
                     <tbody>
                       {sortedCustomers.map(c => {
+                        const custContacts = custData[c.name]?.contacts || [];
+                        const emailsMatch = Array.from(new Set(custContacts.map(con => con.email).filter(Boolean))).join(', ');
+                        const phonesMatch = Array.from(new Set(custContacts.map(con => con.phone || con.mobile).filter(Boolean))).join(', ');
                         const custJobs = c.quotes || []; 
                         const isSel = selC === c.name;
                         return (
                           <tr key={c.name} style={{ background: isSel ? C.accL : "transparent", cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelC(c.name); }}>
-                            <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12 }}>
+                            <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 140, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.name}>
                               {c.name}
                             </td>
+                            <td style={{ ...tdS, color:C.txtS, fontSize:12, maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={emailsMatch || ""}>{emailsMatch || "—"}</td>
+                            <td style={{ ...tdS, color:C.txtS, fontSize:12, maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={phonesMatch || ""}>{phonesMatch || "—"}</td>
                             <td className="mobile-hidden" style={{ ...tdS, textAlign:"center", fontWeight:700, fontSize:14 }}>{custJobs.length}</td>
                           </tr>
                         );
                       })}
                       {sortedCustomers.length === 0 && (
                         <tr>
-                          <td colSpan={2} style={{ padding:40, textAlign:"center", color:C.txtM, fontSize:14 }}>No customers found.</td>
+                          <td colSpan={4} style={{ padding:40, textAlign:"center", color:C.txtM, fontSize:14 }}>No customers found.</td>
                         </tr>
                       )}
                     </tbody>
@@ -254,12 +265,16 @@ const CustomerCRMBoard = (props) => {
                       <div>
                         <Sec c="Master Billing Address"/>
                         <div style={{ background:C.bg, padding:30, borderRadius:20, marginTop:15, fontSize:15, fontWeight:600, color:C.txt, lineHeight:1.7, border:`1px solid ${C.bdrL}`, boxShadow:"inset 0 2px 4px rgba(0,0,0,0.02)" }}>
-                          <div style={{display:"flex", flexDirection:"column", gap:8}}>
-                            <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{currentSelectionData?.address1 || "—"}</span></div>
-                            <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>City:</span><span>{currentSelectionData?.city || "—"}</span></div>
-                            <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>State:</span><span>{currentSelectionData?.state || "—"}</span></div>
-                            <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{currentSelectionData?.zip || "—"}</span></div>
-                          </div>
+                          {!currentSelectionData?.address1 && !currentSelectionData?.city && !currentSelectionData?.state && !currentSelectionData?.zip ? (
+                            <div style={{ color:C.txtS, fontStyle:"italic" }}>No address entered</div>
+                          ) : (
+                            <div style={{display:"flex", flexDirection:"column", gap:8}}>
+                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{currentSelectionData?.address1 || "—"}</span></div>
+                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>City:</span><span>{currentSelectionData?.city || "—"}</span></div>
+                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>State:</span><span>{currentSelectionData?.state || "—"}</span></div>
+                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{currentSelectionData?.zip || "—"}</span></div>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div>

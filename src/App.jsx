@@ -803,7 +803,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
       >
         {/* Header Extras Row */}
         {extra && (
-          <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:10, flexWrap:"wrap", paddingBottom:4 }}>
+          <div className="desktop-nav" style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:10, flexWrap:"wrap", paddingBottom:4 }}>
             {extra}
           </div>
         )}
@@ -2994,13 +2994,16 @@ function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQu
       <div style={{ width:400, flexShrink:0, borderRight:`1px solid ${C.bdr}`, background:C.sur, display:"flex", flexDirection:"column" }}>
         <div style={{ padding:"20px 20px 16px", borderBottom:`1px solid ${C.bdr}` }}>
           <h2 style={{ fontSize:20, fontWeight:800, margin:"0 0 12px 0", color:C.txt }}>Project Quotes</h2>
-          <input 
-            type="text" 
-            placeholder="Search quotes..." 
-            value={filter} 
-            onChange={e=>setFilter(e.target.value)}
-            style={{ ...inp, width:"100%", padding:"10px 14px", borderRadius:8 }}
-          />
+          <div style={{ position:"relative", width:"100%" }}>
+            <input 
+              type="text" 
+              placeholder="Search quotes..." 
+              value={filter} 
+              onChange={e=>setFilter(e.target.value)}
+              style={{ ...inp, width:"100%", padding:"10px 14px", paddingRight: 35, borderRadius:8, boxSizing:"border-box" }}
+            />
+            {filter && <span onClick={() => setFilter("")} style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
+          </div>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"12px" }}>
           {filtered.map(q => {
@@ -3342,9 +3345,12 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
             onClick={()=>setShowCurrentYear(!showCurrentYear)}>
             {showCurrentYear ? "Showing Current Year" : "Show Current Year"}
           </button>
-          <input style={{ ...inp, width:280, fontSize:13, border:`2px solid ${C.acc}`, borderRadius:8 }}
-            placeholder="Search job #, customer, description, location…"
-            value={search} onChange={e=>setSearch(e.target.value)}/>
+          <div style={{ position:"relative" }}>
+            <input style={{ ...inp, width:280, fontSize:13, border:`2px solid ${C.acc}`, borderRadius:8, paddingRight: 30 }}
+              placeholder="Search job #, customer, description, location…"
+              value={search} onChange={e=>setSearch(e.target.value)}/>
+            {search && <span onClick={() => setSearch("")} style={{position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
+          </div>
         </div>
       </div>
 
@@ -3629,8 +3635,7 @@ function ActionBtns({ onFromReq, onNew, onNewLead }) {
   const s = compact ? { fontSize:10, padding:"5px 8px", gap:3 } : {};
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
-      <button style={{ ...mkBtn("green"), ...s }} onClick={onNewLead}>+ New Lead</button>
-      <button style={{ ...mkBtn("blue"), ...s }} onClick={onFromReq}>Open Leads</button>
+      <button style={{ ...mkBtn("green"), ...s }} onClick={onNewLead}>Open Leads</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Quote</button>
     </div>
   );
@@ -5740,13 +5745,14 @@ function LaborRatesPage({ customerRates, setCustomerRates, role, baseLabor, setB
       )}
 
       <div style={{ position: "relative", marginBottom: 16 }}>
-         <span style={{ position: "absolute", left: 14, top: 11, color: C.txtS }}>🔍</span>
+         <span style={{ position: "absolute", left: 14, top: "50%", transform:"translateY(-50%)", color: C.txtS }}>🔍</span>
          <input 
-            style={{ ...inp, padding: "11px 14px 11px 38px", border: `1px solid ${C.bdrM}`, borderRadius: 8 }} 
+            style={{ ...inp, padding: "11px 40px 11px 38px", border: `1px solid ${C.bdrM}`, borderRadius: 8 }} 
             placeholder="Search customers..." 
             value={search} 
             onChange={e => setSearch(e.target.value)}
          />
+         {search && <span onClick={() => setSearch("")} style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
       </div>
 
       {clientsWithRates.map(c => {
@@ -6335,9 +6341,12 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
           {tab==="jobs" && (
             <div>
               <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap", alignItems:"center" }}>
-                <input style={{ ...inp2, flex:1, minWidth:200 }}
-                  placeholder="Search by location, contact, description, or quote #…"
-                  value={search} onChange={e=>setSearch(e.target.value)}/>
+                <div style={{ position:"relative", flex:1, minWidth:200 }}>
+                  <input style={{ ...inp2, width:"100%", boxSizing:"border-box", paddingRight:30 }}
+                    placeholder="Search by location, contact, description, or quote #…"
+                    value={search} onChange={e=>setSearch(e.target.value)}/>
+                  {search && <span onClick={() => setSearch("")} style={{position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
+                </div>
                 {locations.length > 0 && (
                   <div style={{ display:"flex",gap:5,flexWrap:"wrap" }}>
                     <button onClick={()=>setSelLoc("ALL")} style={{ background:selLoc==="ALL"?"#b86b0a":"#f5f6f8",color:selLoc==="ALL"?"#fff":"#4a5060",border:`1px solid ${selLoc==="ALL"?"transparent":"#e2e5ea"}`,borderRadius:5,padding:"4px 9px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>All</button>
@@ -8109,12 +8118,15 @@ function DatabaseBrowser({ token }) {
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                 <div style={{ fontWeight:800, fontSize:15, color:C.acc }}>Table: {selectedTable}</div>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  <input
-                    value={tableSearch}
-                    onChange={(e)=>setTableSearch(e.target.value)}
-                    placeholder="Search this table..."
-                    style={{ ...inp, width:220, fontSize:12, padding:"6px 10px" }}
-                  />
+                  <div style={{position:"relative"}}>
+                    <input
+                      value={tableSearch}
+                      onChange={(e)=>setTableSearch(e.target.value)}
+                      placeholder="Search this table..."
+                      style={{ ...inp, width:220, fontSize:12, padding:"6px 10px", paddingRight:25 }}
+                    />
+                    {tableSearch && <span onClick={() => setTableSearch("")} style={{position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:13, padding:5}}>✕</span>}
+                  </div>
                   {!loading && (
                     <div style={{ fontSize:11, color:C.txtS, fontWeight:700 }}>
                       {filteredData.length}/{data.length} rows
@@ -9733,7 +9745,11 @@ export default function App() {
 
   const cv      = active ? calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate) : null;
   const pendN   = notifs.filter(n=>n.status==="Pending").length;
-  const actBtns = <ActionBtns onFromReq={()=>setView("rfqs")} onNew={()=>openNew()} onNewLead={() => { setEditR(null); setShowRM(true); }}/>;
+  const actBtns = <ActionBtns 
+    onFromReq={()=>setView("rfqs")} 
+    onNew={()=>openNew()} 
+    onNewLead={() => setView("leads")}
+  />;
 
   const NotifPanel = () => (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.3)", zIndex:400, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
@@ -10025,7 +10041,7 @@ export default function App() {
       {...{
         C, fmt, mkBtn, Badge, Sec, Lbl, Card, thS, tdS, inp, sel, actBtns,
         view, setView, token, setToken, role, setRole,
-        customers, custData, setCustData, CUSTOMERS,
+        customers, custData, setCustData, CUSTOMERS, leads,
         selC, setSelC, custView, setCustView, search, setSearch, wonOnly, setWonOnly, custFilter, setCustFilter,
         jobs, reqs, jobFolders, showCustModal, setShowCustModal, adjModal, setAdjModal, showSearchModal, setShowSearchModal,
         showRM, setShowRM, setEditR, editR, saveReq, saveAdjustment, saveJobFolder,
@@ -10070,7 +10086,7 @@ export default function App() {
         C, fmt, mkBtn, Badge, Sec, Lbl, Card, thS, tdS, inp, sel, actBtns,
         view, setView, token, setToken, role, setRole,
         customers, custData, setCustData,
-        leads, reqs, jobs, Header, appUsers,
+        leads, setLeads, reqs, jobs, Header, appUsers, profileUser,
         statusList: statusList
       }}
     />
