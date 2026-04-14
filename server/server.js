@@ -184,7 +184,7 @@ app.post('/api/login', async (req, res) => {
 
   try {
     await ensureUserProfileColumns();
-    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, (SELECT JSON_ARRAYAGG(r.name) FROM user_roles ur JOIN role r ON ur.role_id = r.id WHERE ur.user_id = u.id) AS roles, u.is_disabled, u.avatar, u.password_hash, u.user_number FROM users u WHERE u.username = ?`, [normalizedUsername]);
+    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, COALESCE((SELECT JSON_ARRAY(r.name) FROM role r WHERE r.id = u.role), JSON_ARRAY()) AS roles, u.is_disabled, u.avatar, u.password_hash, u.user_number FROM users u WHERE u.username = ?`, [normalizedUsername]);
     const user = rows[0];
 
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
@@ -558,7 +558,7 @@ app.put('/api/me', authenticateToken, async (req, res) => {
   const { email, cell_phone, avatar, password, role } = req.body || {};
   try {
     await ensureUserProfileColumns();
-    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, (SELECT JSON_ARRAYAGG(r.name) FROM user_roles ur JOIN role r ON ur.role_id = r.id WHERE ur.user_id = u.id) AS roles, u.is_disabled, u.avatar FROM users u WHERE u.id = ? LIMIT 1`, [req.user.userId]);
+    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, COALESCE((SELECT JSON_ARRAY(r.name) FROM role r WHERE r.id = u.role), JSON_ARRAY()) AS roles, u.is_disabled, u.avatar FROM users u WHERE u.id = ? LIMIT 1`, [req.user.userId]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
     const existing = rows[0];
@@ -690,7 +690,7 @@ app.get('/api/admin/users', authenticateToken, authenticateAdmin, async (req, re
     const [users] = await db.query(`
       SELECT 
         u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, u.is_disabled, u.avatar, u.user_number, u.created_at,
-        (SELECT JSON_ARRAYAGG(r.name) FROM user_roles ur JOIN role r ON ur.role_id = r.id WHERE ur.user_id = u.id) AS roles
+        COALESCE((SELECT JSON_ARRAY(r.name) FROM role r WHERE r.id = u.role), JSON_ARRAY()) AS roles
       FROM users u
     `);
     
@@ -709,7 +709,7 @@ app.get('/api/admin/users', authenticateToken, authenticateAdmin, async (req, re
 
 // CREATE USER (Admin Only)
 app.post('/api/admin/users', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { first_name, last_name, username, email, cell_phone, avatar, password, roles, is_disabled } = req.body;
+  const { first_name, last_name, username, email, cell_phone, avatar, password, roles, role, is_disabled } = req.body;
   const normalizedUsername = normalizeUsername(username);
   if (!normalizedUsername || !password) return res.status(400).json({ error: 'Username and password required' });
   if (!isValidUsername(normalizedUsername)) {
@@ -724,18 +724,13 @@ app.post('/api/admin/users', authenticateToken, authenticateAdmin, async (req, r
 
     const passwordHash = await bcrypt.hash(password, 10);
      const [result] = await db.query(
-      'INSERT INTO users (first_name, last_name, username, email, cell_phone, avatar, password_hash, user_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, passwordHash, role || 'user', user_number]
+      'INSERT INTO users (first_name, last_name, username, email, cell_phone, avatar, password_hash, role, user_number) VALUES (?, ?, ?, ?, ?, ?, ?, (SELECT id FROM role WHERE name = ? LIMIT 1), ?)',
+      [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, passwordHash, (roles && roles[0]) || role || 'user', String(user_number)]
     );
     if (is_disabled) {
       await db.query('UPDATE users SET is_disabled = 1 WHERE id = ?', [result.insertId]);
-      if (r_roles.length > 0) {
-        for (const r of r_roles) {
-          await db.query('INSERT IGNORE INTO user_roles (user_id, role_id) SELECT ?, id FROM role WHERE name = ?', [result.insertId, r]);
-        }
-      }
     }
-    res.json({ id: result.insertId, first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', avatar: avatar || null, role: role || 'user', is_disabled: !!is_disabled, user_number });
+    res.json({ id: result.insertId, first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', avatar: avatar || null, role: (roles && roles[0]) || role || 'user', is_disabled: !!is_disabled, user_number });
   } catch (error) {
     console.error('[API] POST /api/admin/users error:', error);
     if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Username already exists' });
@@ -790,19 +785,14 @@ app.put('/api/admin/users/:id', authenticateToken, authenticateAdmin, async (req
       );
     }
 
-    if (roles && Array.isArray(roles)) {
-      await db.query('DELETE FROM user_roles WHERE user_id = ?', [userId]);
-      if (roles.length > 0) {
-        for (const r of roles) {
-          await db.query('INSERT IGNORE INTO user_roles (user_id, role_id) SELECT ?, id FROM role WHERE name = ? LIMIT 1', [userId, r]);
-        }
-      }
+    if (roles && Array.isArray(roles) && roles.length > 0) {
+      await db.query('UPDATE users SET role = (SELECT id FROM role WHERE name = ? LIMIT 1) WHERE id = ?', [roles[0], userId]);
     }
 
     const [updated] = await db.query(`
       SELECT 
         u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, u.is_disabled, u.avatar, u.user_number, u.created_at,
-        (SELECT JSON_ARRAYAGG(r.name) FROM user_roles ur JOIN role r ON ur.role_id = r.id WHERE ur.user_id = u.id) AS roles
+        COALESCE((SELECT JSON_ARRAY(r.name) FROM role r WHERE r.id = u.role), JSON_ARRAY()) AS roles
       FROM users u WHERE u.id = ?
     `, [userId]);
     
@@ -1872,7 +1862,7 @@ const initAdmin = async () => {
        ON DUPLICATE KEY UPDATE username = username`,
       ['Scott', 'Admin', 'scott', 'scott@shoemakerrigging.com', '', hash]
     );
-    await db.query(`INSERT IGNORE INTO user_roles (user_id, role_id) SELECT id, (SELECT id FROM role WHERE name = 'admin' LIMIT 1) FROM users WHERE username = 'scott'`);
+    await db.query(`UPDATE users SET role = (SELECT id FROM role WHERE name = 'admin' LIMIT 1) WHERE username = 'scott'`);
     console.log('Admin account (scott) ensured.');
   } catch (error) {
     console.error('Failed to initialize admin account', error);
