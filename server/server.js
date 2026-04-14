@@ -483,7 +483,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const users = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, user_number, created_at FROM users');
     const estimators = await safeQuery('SELECT * FROM estimators');
     const status = await safeQuery('SELECT * FROM status ORDER BY sort_order ASC');
-    const leads = await safeQuery('SELECT l.*, c.name AS company_name FROM leads l LEFT JOIN customers c ON l.customer_number = c.id ORDER BY l.id DESC');
+    const leads = await safeQuery('SELECT l.*, c.name AS company_name FROM leads l LEFT JOIN customers c ON l.customer_number = c.id WHERE l.status_number != 2 ORDER BY l.id DESC');
 
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
@@ -825,13 +825,92 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, as
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
 
   try {
+    let interceptLeadAsQuote = false;
+    let leadRow = null;
+
+    if (table === 'leads') {
+      const [old] = await db.query('SELECT * FROM leads WHERE id = ?', [id]);
+      if (old.length > 0 && old[0].status_number !== 2 && data.estimator_id) {
+         data.status_number = 2;
+         interceptLeadAsQuote = true;
+         leadRow = old[0];
+      }
+    }
+
     const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at');
     if (keys.length === 0) return res.json({ message: 'No change needed' });
 
-    const values = keys.map(k => (typeof data[k] === 'object' && data[k] !== null) ? JSON.stringify(data[k]) : data[k]);
+    const values = keys.map(k => {
+      let val = data[k];
+      if (typeof val === 'object' && val !== null) {
+        return JSON.stringify(val);
+      }
+      if (table === 'admin_tasks' && k === 'subnotes' && val === '') {
+        return '[]';
+      }
+      return val;
+    });
     const setClause = keys.map(k => `\`${k}\` = ?`).join(', ');
 
     const [result] = await db.query(`UPDATE \`${table}\` SET ${setClause} WHERE id = ?`, [...values, id]);
+
+    if (interceptLeadAsQuote && leadRow) {
+       let customerName = '';
+       if (leadRow.customer_number) {
+         const [custName] = await db.query('SELECT name FROM customers WHERE id = ?', [leadRow.customer_number]);
+         if (custName.length > 0) customerName = custName[0].name;
+       } else if (leadRow.first_name || leadRow.last_name) {
+         customerName = `${leadRow.first_name || ''} ${leadRow.last_name || ''}`.trim();
+       }
+
+       const year = String(new Date().getFullYear());
+       const [seqRows] = await db.query(
+         `SELECT MAX(CAST(SUBSTRING_INDEX(job_num, '-', -1) AS UNSIGNED)) AS max_seq FROM quotes WHERE job_num REGEXP ?`,
+         [`^J-${year}-[0-9]{3,}$`]
+       );
+       const nextSeq = Number(seqRows?.[0]?.max_seq || 0) + 1;
+       const resolvedJobNum = `J-${year}-${String(nextSeq).padStart(3, '0')}`;
+
+       const quoteDataStr = JSON.stringify({ 
+           targetId: null, qn: '', client: customerName, 
+           jobSiteAddress1: leadRow.street1 || '', jobSiteCity: leadRow.city || '', 
+           jobSiteState: leadRow.state || '', jobSiteZip: leadRow.zip || '', 
+           desc: leadRow.description || '', date: new Date().toISOString().split('T')[0], 
+           status: 'Draft', qtype: '', salesAssoc: data.estimator_id 
+       });
+
+       const rowValues = [
+         '', // quote_number
+         leadRow.customer_number || null,
+         customerName,
+         leadRow.street1 || '', // job_site
+         leadRow.street1 || '',
+         leadRow.city || '',
+         leadRow.state || '',
+         leadRow.zip || '',
+         leadRow.description || '',
+         new Date().toISOString().split('T')[0],
+         0, // status id
+         '', // quote_type
+         0, 0, 0, 0, 0, 0, 0,
+         data.estimator_id,
+         resolvedJobNum,
+         null, null,
+         0,
+         'Auto-created from lead',
+         quoteDataStr
+       ];
+
+       const [insertRes] = await db.query(
+         'INSERT INTO quotes (quote_number, customer_id, customer_name, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+         rowValues
+       );
+
+       await db.query('INSERT INTO Quote_Status_History (quote_id, status_name, changed_by, notes) VALUES (?, ?, ?, ?)', 
+         [insertRes.insertId, 'Draft', req.user ? req.user.userId : null, 'Created from lead assignment']
+       );
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.error(`[API] Table update error (${table}):`, error);
@@ -1205,10 +1284,19 @@ app.post('/api/admin/backups/delete', authenticateToken, authenticateAdmin, (req
 // ADMIN TASKS & TODOS
 app.get('/api/admin/tasks', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
-    const [tasks] = await db.query('SELECT * FROM admin_tasks ORDER BY created_at DESC');
-    res.json(tasks.map(t => ({ ...t, subnotes: typeof t.subnotes === 'string' ? JSON.parse(t.subnotes) : (t.subnotes || []) })));
+    const [tasks] = await db.query('SELECT a.*, u.first_name as creator_first_name, u.username as creator_username FROM admin_tasks a LEFT JOIN users u ON a.created_by = u.id ORDER BY a.created_at DESC');
+    res.json(tasks.map(t => {
+      let subnotes = [];
+      if (typeof t.subnotes === 'string' && t.subnotes.trim() !== '') {
+        try { subnotes = JSON.parse(t.subnotes); } catch(e) { subnotes = []; }
+      } else {
+        subnotes = t.subnotes || [];
+      }
+      return { ...t, subnotes };
+    }));
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch tasks' });
+    console.error('[API GET /api/admin/tasks error]', error);
+    res.status(500).json({ error: 'Failed to fetch tasks', details: error.message });
   }
 });
 
@@ -1219,8 +1307,8 @@ app.post('/api/admin/tasks', authenticateToken, authenticateAdmin, async (req, r
   try {
     // Default to the logged-in user if assigned_to is omitted
     const assignee = assigned_to || req.user.userId;
-    const [result] = await db.query('INSERT INTO admin_tasks (text, subnotes, assigned_to) VALUES (?, ?, ?)', [text, JSON.stringify(subnotes || []), assignee]);
-    res.json({ id: result.insertId, text, done: false, subnotes: subnotes || [], assigned_to: assignee });
+    const [result] = await db.query('INSERT INTO admin_tasks (text, subnotes, assigned_to, created_by) VALUES (?, ?, ?, ?)', [text, JSON.stringify(subnotes || []), assignee, req.user.userId]);
+    res.json({ id: result.insertId, text, done: false, subnotes: subnotes || [], assigned_to: assignee, created_by: req.user.userId });
   } catch (error) {
     console.error('[TASKS] Create error:', error);
     res.status(500).json({ error: 'Failed to create task: ' + error.message });
@@ -1276,8 +1364,8 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
       }
     }
 
-    const [result] = await db.query('INSERT INTO admin_tasks (text, subnotes, assigned_to) VALUES (?, ?, ?)', [text, JSON.stringify(subnotes || []), assignee]);
-    res.json({ id: result.insertId, text, done: false, subnotes: subnotes || [], assigned_to: assignee });
+    const [result] = await db.query('INSERT INTO admin_tasks (text, subnotes, assigned_to, created_by) VALUES (?, ?, ?, ?)', [text, JSON.stringify(subnotes || []), assignee, req.user.userId]);
+    res.json({ id: result.insertId, text, done: false, subnotes: subnotes || [], assigned_to: assignee, created_by: req.user.userId });
   } catch (error) {
     console.error('[TASKS] Create error:', error);
     res.status(500).json({ error: 'Failed to create task' });
@@ -1286,21 +1374,37 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
 
 app.get('/api/tasks/my', authenticateToken, async (req, res) => {
   try {
-    const [tasks] = await db.query('SELECT * FROM admin_tasks WHERE assigned_to = ? ORDER BY created_at DESC', [req.user.userId]);
-    res.json(tasks.map(t => ({ ...t, subnotes: typeof t.subnotes === 'string' ? JSON.parse(t.subnotes) : (t.subnotes || []) })));
+    const [tasks] = await db.query('SELECT a.*, u.first_name as creator_first_name, u.username as creator_username FROM admin_tasks a LEFT JOIN users u ON a.created_by = u.id WHERE a.assigned_to = ? ORDER BY a.created_at DESC', [req.user.userId]);
+    res.json(tasks.map(t => {
+      let subnotes = [];
+      if (typeof t.subnotes === 'string' && t.subnotes.trim() !== '') {
+        try { subnotes = JSON.parse(t.subnotes); } catch(e) { subnotes = []; }
+      } else {
+        subnotes = t.subnotes || [];
+      }
+      return { ...t, subnotes };
+    }));
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch my tasks' });
+    console.error('[API GET /api/tasks/my error]', error);
+    res.status(500).json({ error: 'Failed to fetch my tasks', details: error.message });
   }
 });
 
 app.patch('/api/tasks/my/:id', authenticateToken, async (req, res) => {
-  const { done } = req.body;
+  const { done, text, subnotes } = req.body;
   try {
-    if (done === undefined) return res.status(400).json({ error: 'Only done status can be updated' });
-    await db.query('UPDATE admin_tasks SET done = ? WHERE id = ? AND assigned_to = ?', [done, req.params.id, req.user.userId]);
-    res.json({ message: 'Task status updated' });
+    const fields = [];
+    const values = [];
+    if (done !== undefined) { fields.push('done = ?'); values.push(done); }
+    if (text !== undefined) { fields.push('text = ?'); values.push(text); }
+    if (subnotes !== undefined) { fields.push('subnotes = ?'); values.push(JSON.stringify(subnotes)); }
+    values.push(req.params.id, req.user.userId);
+
+    if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
+    await db.query(`UPDATE admin_tasks SET ${fields.join(', ')} WHERE id = ? AND assigned_to = ?`, values);
+    res.json({ message: 'Task updated' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update task status' });
+    res.status(500).json({ error: 'Failed to update task' });
   }
 });
 

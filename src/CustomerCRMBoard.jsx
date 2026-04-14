@@ -84,14 +84,15 @@ const CustomerCRMBoard = (props) => {
   }, [custView]);
 
   const toggleView = (v) => {
+    if (v === "card") setSelC(null);
     setCustView(v);
   };
 
   useEffect(() => {
-    if (!selC && sortedCustomers.length > 0) {
+    if (!selC && sortedCustomers.length > 0 && custView === "list") {
       setSelC(sortedCustomers[0].name);
     }
-  }, [selC, sortedCustomers, setSelC]);
+  }, [selC, sortedCustomers, setSelC, custView]);
 
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
@@ -133,12 +134,13 @@ const CustomerCRMBoard = (props) => {
           </div>
         </div>
 
-        {/* VIEW MODE RENDERER: SPLIT SCREEN */}
-        <div ref={gridRef} className="app-split-layout" style={{ display:"grid", gridTemplateColumns:"420px 1fr", gap:30, marginTop: 15, alignItems:"flex-start" }}>
+        {/* VIEW MODE RENDERER: SPLIT SCREEN OR FULL GRID */}
+        <div ref={gridRef} className={custView === "list" ? "app-split-layout" : ""} style={{ display: custView === "list" ? "grid" : "block", gridTemplateColumns: custView === "list" ? "420px 1fr" : "none", gap:30, marginTop: 15, alignItems:"flex-start" }}>
           
-          {/* LEFT: LIST VIEW */}
-          <div style={{ background:"#fff", border:`1px solid ${C.bdrL}`, borderRadius:20, overflow:"hidden", display:"flex", flexDirection:"column", height:"calc(100vh - 160px)" }}>
-            <div style={{ overflowY:"auto", flex:1, padding:15 }}>
+          {/* LEFT: LIST VIEW / CARDS */}
+          {(!selC || custView === "list") && (
+          <div style={{ background: custView === "list" ? "#fff" : "transparent", border: custView === "list" ? `1px solid ${C.bdrL}` : "none", borderRadius:20, overflow:"hidden", display:"flex", flexDirection:"column", height: custView === "list" ? "calc(100vh - 160px)" : "auto" }}>
+            <div style={{ overflowY:"auto", flex:1, padding: custView === "list" ? 15 : 0 }}>
               {custView === "list" ? (
                 <div className="app-table-wrap">
                   <table style={{ width:"100%", borderCollapse:"collapse" }}>
@@ -155,7 +157,6 @@ const CustomerCRMBoard = (props) => {
                         return (
                           <tr key={c.name} style={{ background: isSel ? C.accL : "transparent", cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelC(c.name); }}>
                             <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12 }}>
-                              <span className="mobile-hidden" style={{ color:C.txtS, fontSize:12, marginRight:8 }}>cust_no {c.id}</span>
                               {c.name}
                             </td>
                             <td className="mobile-hidden" style={{ ...tdS, textAlign:"center", fontWeight:700, fontSize:14 }}>{custJobs.length}</td>
@@ -171,17 +172,15 @@ const CustomerCRMBoard = (props) => {
                   </table>
                 </div>
               ) : (
-                <div style={{ display:"flex", flexDirection:"column", gap:15 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:15 }}>
                   {sortedCustomers.map(c => {
                     const custJobs = c.quotes || []; 
                     const tot = custJobs.reduce((s,q)=>s+(parseFloat(q.total_billings)||0),0);
-                    const isSel = selC === c.name;
                     return (
-                      <Card key={c.name} style={{ cursor:"pointer", padding:20, borderRadius:16, transition:"0.2s", background: isSel ? "#fff" : "#fafafa", border: isSel ? `2px solid ${C.acc}` : `1px solid ${C.bdr}` }} onClick={()=>{ setSelC(c.name); }}>
+                      <Card key={c.name} style={{ cursor:"pointer", padding:20, borderRadius:16, transition:"0.2s", background: "#fff", border: `1px solid ${C.bdr}` }} onClick={()=>{ setSelC(c.name); }}>
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                          <div style={{ fontWeight:900, fontSize:16, color: isSel ? C.acc : C.txt }}>
+                          <div style={{ fontWeight:900, fontSize:16, color: C.txt }}>
                             {c.name}
-                            <span style={{ display:"block", color:C.txtS, fontSize:11, marginTop:2, fontWeight:700 }}>cust_no {c.id}</span>
                           </div>
                           {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>CUSTOMER</span>}
                         </div>
@@ -196,11 +195,20 @@ const CustomerCRMBoard = (props) => {
               )}
             </div>
           </div>
+          )}
 
           {/* RIGHT: DETAILS VIEW */}
+          {(selC || custView === "list") && (
           <div style={{ background:"#fff", borderRadius:20, boxShadow:"0 5px 25px rgba(0,0,0,0.03)", border:`1px solid ${C.bdrL}`, height:"calc(100vh - 160px)", overflowY:"auto" }}>
             {selC ? (
                <div style={{ flex:1, padding:"30px 40px", background:"#fff" }}>
+                 {custView === "card" && (
+                   <div style={{ marginBottom: 20 }}>
+                     <button style={{ ...mkBtn("outline"), padding: "8px 16px", borderRadius: 8, fontSize: 13, borderColor: C.bdr, color: C.txtM, background: "#fff" }} onClick={() => setSelC(null)}>
+                       ← Back to Grid
+                     </button>
+                   </div>
+                 )}
                  <div style={{ maxWidth:950, margin:"0 auto" }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
                     <div style={{ display:"flex", gap:15, alignItems:"flex-start", justifyContent:"flex-end" }}>
@@ -331,6 +339,7 @@ const CustomerCRMBoard = (props) => {
                </div>
             )}
           </div>
+          )}
         </div>
 
         <div className="mobile-only-return-btn" style={{ marginTop: 40, textAlign: "center" }}>

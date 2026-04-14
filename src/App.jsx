@@ -643,7 +643,7 @@ function AutoInput({ val, on, list, ph }) {
 }
 
 // ── HEADER ────────────────────────────────────────────────────────────────────
-function Header({ view, setView, extra, crumb, role, token, setToken, setRole, profileUser, setProfileUser, customerCount, reqCount, quoteCount, jobCount }) {
+function Header({ view, setView, extra, crumb, role, token, setToken, setRole, profileUser, setProfileUser, customerCount, reqCount, quoteCount, jobCount, leadCount }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({ first_name:"", last_name:"", username:"", email:"", cell_phone:"", role:"user", password:"" });
@@ -653,7 +653,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
   const comp = compStr ? JSON.parse(compStr) : { name: "Shoemaker Rigging & Transport LLC", logoSrc: null };
 
   const TABS = token ? [
-    ["dash","Dashboard"], ["leads", "Leads"], ["customers", customerCount !== undefined ? `Customers (${customerCount})` : "Customers"], ["quotes", quoteCount !== undefined ? `Quotes (${quoteCount})` : "Quotes"],
+    ["dash","Dashboard"], ["leads", leadCount !== undefined ? `Leads (${leadCount})` : "Leads"], ["customers", customerCount !== undefined ? `Customers (${customerCount})` : "Customers"], ["quotes", quoteCount !== undefined ? `Quotes (${quoteCount})` : "Quotes"],
     ["jobs", jobCount !== undefined ? `Job List (${jobCount})` : "Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
@@ -2005,7 +2005,7 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           {onBack && (
-            <button style={{ ...mkBtn("outline"), fontSize:12, padding:"6px 10px", borderColor:C.bdr, color:C.txtM, background:"#fff" }} onClick={onBack}>← Back to Home</button>
+            <button style={{ ...mkBtn("outline"), fontSize:12, padding:"6px 10px", borderColor:C.bdr, color:C.txtM, background:"#fff" }} onClick={onBack}>← Back</button>
           )}
           <div>
             <div style={{ fontSize:20, fontWeight:700 }}>Reports</div>
@@ -2882,7 +2882,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14, flexWrap:"wrap", gap:10 }}>
         <div>
           <div style={{ fontSize:20, fontWeight:700, display:"flex", alignItems:"center", gap:10 }}>
-            Quote Requests
+            Leads
             <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px", borderRadius:6, fontWeight:700 }} onClick={() => { setEditR(null); setShowRM(true); }}>+ New Quote</button>
           </div>
           <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>
@@ -3630,7 +3630,7 @@ function ActionBtns({ onFromReq, onNew, onNewLead }) {
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
       <button style={{ ...mkBtn("green"), ...s }} onClick={onNewLead}>+ New Lead</button>
-      <button style={{ ...mkBtn("blue"), ...s }} onClick={onFromReq}>Pending Requests</button>
+      <button style={{ ...mkBtn("blue"), ...s }} onClick={onFromReq}>Open Leads</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Quote</button>
     </div>
   );
@@ -6777,7 +6777,7 @@ function SalesmanCharts({ jobs, reqs, onBack }) {
       {detail && <ChartDetailModal chart={detail} onClose={()=>setDetail(null)}/>}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:10, marginBottom:12 }}>
         <ChartCard
-          title="Pending Requests by Sales Associate"
+          title="Open Leads by Sales Associate"
           data={pendingData}
           total={pendingReqs.length}
           onClickChart={d=>setDetail({...d,showAmt:true})}
@@ -8454,6 +8454,19 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
     } catch (err) { console.error(err); }
   };
 
+  const editTaskText = async (id, currentText) => {
+    const newText = window.prompt("Edit task:", currentText);
+    if (!newText || newText === currentText) return;
+    try {
+      await fetch(`/api/admin/tasks/${id}`, {
+        method: "PATCH",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ text: newText })
+      });
+      setTasks(tasks.map(t => t.id === id ? { ...t, text: newText } : t));
+    } catch (err) { console.error(err); }
+  };
+
   const addSubnote = async (id, note) => {
     if (!note.trim()) return;
     const task = tasks.find(t => t.id === id);
@@ -8920,12 +8933,18 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
                   <div key={t.id} style={{ background:t.done ? C.bg : "transparent", padding:12, borderRadius:8, border:`1px solid ${C.bdr}` }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: t.subnotes?.length ? 8 : 0 }}>
                       <input type="checkbox" checked={t.done} onChange={() => toggleTask(t.id, t.done)} style={{ cursor:"pointer", width:16, height:16 }} />
-                      <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+                      <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>
+                        {t.text}
+                        <span style={{ display:'block', fontSize:10, color:C.txtM, textDecoration: 'none', fontWeight:'normal' }}>
+                          Created by: {t.creator_first_name || t.creator_username || 'System'}
+                        </span>
+                      </span>
                       <select style={{ ...sel, width:120, padding:"4px", fontSize: 11 }} value={t.assigned_to || ""} onChange={(e) => changeTaskAssignee(t.id, e.target.value)}>
                          <option value="">Unassigned</option>
                          {users.map(u => <option key={u.id} value={u.id}>{u.first_name || u.username}</option>)}
                       </select>
-                      <button onClick={() => { const n = prompt("Enter subnote/detail:"); if(n) addSubnote(t.id, n); }} style={{ background:"none", border:"none", color:C.blue, fontSize:11, cursor:"pointer", fontWeight:700 }}>+ Detail</button>
+                      <button onClick={() => editTaskText(t.id, t.text)} style={{ background:"none", border:"none", color:C.acc, fontSize:11, cursor:"pointer", fontWeight:700 }}>Edit</button>
+                      <button onClick={() => { const n = prompt("Enter comment or replied question:"); if(n) addSubnote(t.id, `[${profileUser?.first_name || profileUser?.username || 'User'}]: ${n}`); }} style={{ background:"none", border:"none", color:C.blue, fontSize:11, cursor:"pointer", fontWeight:700 }}>+ Reply</button>
                       <button onClick={() => delTask(t.id)} style={{ padding:0, border:"none", background:"transparent", color:C.red, cursor:"pointer", fontSize:12 }}>✕</button>
                     </div>
                     {t.subnotes && t.subnotes.length > 0 && (
@@ -9303,6 +9322,7 @@ export default function App() {
   const [jobs,       setJobs]       = useState([]);
   const [reqs,       setReqs]       = useState(SAMPLE_REQS);
   const [leads,      setLeads]      = useState([]);
+  const [statusList, setStatusList] = useState([]);
   const [dbStatus,   setDbStatus]   = useState("Local Mode");
   const [active,     setActive]     = useState(null);
   const [globalSelectedQuote, setGlobalSelectedQuote] = useState(null);
@@ -9410,6 +9430,34 @@ export default function App() {
     } catch (err) { console.error(err); }
   };
 
+  const editMyTaskText = async (id, currentText) => {
+    const newText = window.prompt("Edit task:", currentText);
+    if (!newText || newText === currentText) return;
+    try {
+      await fetch(`/api/tasks/my/${id}`, {
+        method: "PATCH",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ text: newText })
+      });
+      setMyTasks(myTasks.map(t => t.id === id ? { ...t, text: newText } : t));
+    } catch (err) { console.error(err); }
+  };
+
+  const addMySubnote = async (id, note) => {
+    if (!note.trim()) return;
+    const task = myTasks.find(t => t.id === id);
+    if (!task) return;
+    const newSubnotes = [...task.subnotes, note];
+    try {
+      await fetch(`/api/tasks/my/${id}`, {
+        method: "PATCH",
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ subnotes: newSubnotes })
+      });
+      setMyTasks(myTasks.map(t => t.id === id ? { ...t, subnotes: newSubnotes } : t));
+    } catch (err) { console.error(err); }
+  };
+
   // Reset filters when navigating to the main customers list (from another tab or detail view)
   useEffect(() => {
     if (view === "customers" && !selC) {
@@ -9448,6 +9496,7 @@ export default function App() {
           setJobs(data.jobs);
           if (data.rfqs) setReqs(data.rfqs);
           if (data.leads) setLeads(data.leads);
+          if (data.status) setStatusList(data.status);
           if (data.customers) setCustData(data.customers);
           setDbStatus("MySQL Live");
         } else if (role === "admin") {
@@ -9744,7 +9793,7 @@ export default function App() {
   // ── LANDING PAGE ───────────────────────────────────────────────────────────
   if (view==="landing") return (
     <div style={{ minHeight:"100vh", background:C.sur, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", display:"flex", flexDirection:"column" }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:"6rem", fontWeight:800, color:C.acc, letterSpacing:"-2px", lineHeight:1, marginBottom:10 }}>RigPro</div>
@@ -9766,7 +9815,7 @@ export default function App() {
     }
     return (
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
-        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} onForgotPassword={() => setView("forgot-password")} />
         </div>
@@ -9777,7 +9826,7 @@ export default function App() {
   if (view==="forgot-password") {
     return (
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
-        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <ForgotPasswordForm onBack={() => setView("login")} />
         </div>
@@ -9788,7 +9837,7 @@ export default function App() {
   if (view==="reset-password") {
     return (
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
-        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <ResetPasswordForm onBack={() => setView("login")} />
         </div>
@@ -9801,7 +9850,7 @@ export default function App() {
   if (view==="admin" && role!=="admin") return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
   if (view==="admin") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <AdminPage token={token} profileUser={profileUser} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo}/>
       <Footer />
     </div>
@@ -9842,7 +9891,7 @@ export default function App() {
         onClose={()=>setDeadModal(null)}
       />}
       {showNotifs && <NotifPanel/>}
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
           <button style={{ ...mkBtn("ghost"), padding:"5px 9px", position:"relative" }} onClick={()=>setShowNotifs(true)}>
             🔔
@@ -9891,7 +9940,7 @@ export default function App() {
         </AccordionCard>
 
         <AccordionCard 
-          title="📝 Quote Requests" 
+          title="📝 Leads" 
           isOpen={dashAcc==="rfqs"} 
           onToggle={open => setDashAcc(open ? "rfqs" : null)}
         >
@@ -9937,7 +9986,14 @@ export default function App() {
               <div key={t.id} style={{ background:t.done ? C.bg : "transparent", padding:12, borderRadius:8, border:`1px solid ${C.bdr}` }}>
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: t.subnotes?.length ? 8 : 0 }}>
                   <input type="checkbox" checked={t.done} onChange={() => toggleMyTask(t.id, t.done)} style={{ cursor:"pointer", width:16, height:16 }} />
-                  <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+                  <span style={{ flex:1, fontSize:14, fontWeight:600, color: t.done ? C.txtS : C.txt, textDecoration: t.done ? "line-through" : "none" }}>
+                    {t.text}
+                    <span style={{ display:'block', fontSize:10, color:C.txtM, textDecoration: 'none', fontWeight:'normal' }}>
+                      Created by: {t.creator_first_name || t.creator_username || 'System'}
+                    </span>
+                  </span>
+                  <button onClick={() => editMyTaskText(t.id, t.text)} style={{ background:"none", border:"none", color:C.acc, fontSize:11, cursor:"pointer", fontWeight:700 }}>Edit</button>
+                  <button onClick={() => { const n = prompt("Enter comment or replied question:"); if(n) addMySubnote(t.id, `[${profileUser?.first_name || profileUser?.username || 'User'}]: ${n}`); }} style={{ background:"none", border:"none", color:C.blue, fontSize:11, cursor:"pointer", fontWeight:700 }}>+ Reply</button>
                 </div>
                 {t.subnotes && t.subnotes.length > 0 && (
                   <div style={{ paddingLeft:26, display:"flex", flexDirection:"column", gap:4 }}>
@@ -9996,7 +10052,7 @@ export default function App() {
         }}
         onClose={()=>setDeadModal(null)}
       />}
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <div className="app-page-container" style={{ maxWidth:1160 }}>
         <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal} deleteRfq={deleteRfq} reopenRfq={reopenRfq} persistReq={persistReq} />
       </div>
@@ -10011,7 +10067,8 @@ export default function App() {
         C, fmt, mkBtn, Badge, Sec, Lbl, Card, thS, tdS, inp, sel, actBtns,
         view, setView, token, setToken, role, setRole,
         customers, custData, setCustData,
-        leads, reqs, jobs, Header, appUsers
+        leads, reqs, jobs, Header, appUsers,
+        statusList: statusList
       }}
     />
   );
@@ -10019,7 +10076,7 @@ export default function App() {
   // ── QUOTES ─────────────────────────────────────────────────────────────
   if (view==="quotes") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <QuotesPageView jobs={jobs} setJobs={setJobs} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} role={role} />
     </div>
   );
@@ -10027,7 +10084,7 @@ export default function App() {
   // ── EQUIPMENT RATES ────────────────────────────────────────────────────────
   if (view==="equipment") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv} role={role}/>
       <Footer />
     </div>
@@ -10036,7 +10093,7 @@ export default function App() {
   // ── LABOR RATES ────────────────────────────────────────────────────────────
   if (view==="labor") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates} role={role} baseLabor={baseLabor} setBaseLabor={setBaseLabor}/>
       <Footer />
     </div>
@@ -10046,7 +10103,7 @@ export default function App() {
   // ── MASTER JOB LIST ──────────────────────────────────────────────────────────
   if (view==="jobs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Job"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
       <MasterJobList
@@ -10109,7 +10166,7 @@ export default function App() {
 
   if (view==="calendar") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <CalendarPage jobs={jobs} setJobs={setJobs} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
       <Footer />
     </div>
@@ -10118,7 +10175,7 @@ export default function App() {
   // ── REPORTS ───────────────────────────────────────────────────────────────
   if (view==="reports") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14, overflowX:"auto" }}>
-      <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <ReportsPage
         jobs={jobs}
         reqs={reqs}
@@ -10130,7 +10187,7 @@ export default function App() {
         onOpenQuote={q=>{ openEdit(q); setView("editor"); }}
         onOpenJobFolder={r=>setShowJFM(r)}
         onClearInitialReport={()=>setTimeout(()=>setDashReportId(null),100)}
-        onBack={()=>{ setDashReportId(null); setView("dash"); }}
+        onBack={()=>{ setDashReportId(null); goBack(); }}
       />
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
@@ -10315,7 +10372,7 @@ export default function App() {
         {deadModal && <MarkDeadModal itemType="Quote" itemLabel={active.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d=>{ u("discounts",[...(active.discounts||[]),d]); setShowDiscModal(false); }} onClose={()=>setShowDiscModal(false)}/>}
         {showCustDoc && <CustomerDocModal quote={{...active, total:cv.total}} onClose={()=>setShowCustDoc(false)}/>}
-        <Header customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
           <div style={{ display:"flex", gap:5 }}>
             <button style={mkBtn("ghost")} onClick={goBack}>Cancel</button>
             {!active.locked && <button style={mkBtn("primary")} onClick={()=>saveQuote()}>Save Quote</button>}
@@ -10325,7 +10382,7 @@ export default function App() {
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", marginBottom:16, gap:12 }}>
             <button style={{ ...mkBtn("outline"), padding:"6px 12px", fontSize:12, borderColor:C.bdr, color:C.txtM, background:"#fff" }} onClick={goBack}>← Back</button>
             <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-              {active.fromReqId    && <div style={{ background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.blue }}>Pre-filled from a Quote Request.</div>}
+              {active.fromReqId    && <div style={{ background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.blue }}>Pre-filled from a Lead.</div>}
               {active.isChangeOrder && <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"6px 12px", fontSize:12, color:"#6d28d9" }}>Change Order — linked to original won quote.</div>}
               {active.isHistorical && <div style={{ background:C.accL, border:`1px solid ${C.accB}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.acc, fontWeight:700 }}>HISTORICAL ESTIMATE — Metrics manually established.</div>}
               {active.locked       && <div style={{ background:C.yelB, border:`1px solid ${C.yelBdr}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.yel }}>This quote is locked. View only.</div>}
