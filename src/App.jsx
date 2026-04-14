@@ -657,7 +657,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
     ["jobs", jobCount !== undefined ? `Job List (${jobCount})` : "Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
-  if (token && role === "admin") TABS.push(["admin", "Admin Portal"]);
+  if (token && (role || []).includes('admin')) TABS.push(["admin", "Admin Portal"]);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 801px)");
@@ -704,7 +704,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
         avatar: profileForm.avatar || null,
         password: profileForm.password || undefined,
       };
-      if (profileUser?.role === "admin") payload.role = profileForm.role;
+      if ((profileUser?.roles || []).includes('admin')) payload.role = profileForm.role;
 
       const res = await fetch("/api/me", {
         method: "PUT",
@@ -725,8 +725,8 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
         role: data.role || "user",
         password: ""
       });
-      localStorage.setItem("role", data.role || "user");
-      if (setRole) setRole(data.role || "user");
+      localStorage.setItem("role", JSON.stringify(data.roles || []));
+      if (setRole) setRole(data.roles || []);
       setProfileOpen(false);
     } catch (err) {
       setProfileErr(err.message);
@@ -956,7 +956,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
               </div>
               <div>
                 <Lbl c="ROLE"/>
-                <select style={{ ...sel, width:"100%", ...(profileUser.role !== "admin" ? { background:C.bg, color:C.txtS } : {}) }} value={profileForm.role} disabled={profileUser.role !== "admin"} onChange={(e)=>setProfileForm(p=>({ ...p, role:e.target.value }))}>
+                <select style={{ ...sel, width:"100%", ...(!(profileUser?.roles || []).includes('admin') ? { background:C.bg, color:C.txtS } : {}) }} value={profileForm.role} disabled={!(profileUser?.roles || []).includes('admin')} onChange={(e)=>setProfileForm(p=>({ ...p, role:e.target.value }))}>
                   <option value="estimator">Estimator</option>
                   <option value="manager">Manager</option>
                   <option value="admin">Administrator</option>
@@ -3101,7 +3101,7 @@ function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setSelectedQuote,
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:4 }}>
             <div style={{ fontSize:11, fontWeight:800, color:C.acc, textTransform:"uppercase" }}>Quote Recipient</div>
             <Badge status={quote.status || 'Draft'} />
-            {role === 'admin' && (
+            {(role || []).includes('admin') && (
               <select 
                 value={quote.status || 'Draft'} 
                 onChange={async (e) => {
@@ -5367,7 +5367,7 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
             Edit equipment details · Set daily rate overrides · Add new pieces of equipment
           </div>
         </div>
-        {role === "admin" && (
+        {(role || []).includes('admin') && (
           <button style={{ ...mkBtn("primary"), fontSize:12 }} onClick={() => { setShowAdd(!showAdd); setAddError(""); }}>
             {showAdd ? " Cancel" : "+ Add Equipment"}
           </button>
@@ -5437,7 +5437,7 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
             <table style={{ width:"100%", borderCollapse:"collapse", minWidth:640 }}>
               <thead>
                 <tr>
-                  {["Code","Category","Equipment Name","Capacity","Daily Rate", (role === "admin" ? "Daily Cost" : null), "Override Rate","Override Note",""].filter(Boolean).map(h => (
+                  {["Code","Category","Equipment Name","Capacity","Daily Rate", ((role || []).includes('admin') ? "Daily Cost" : null), "Override Rate","Override Note",""].filter(Boolean).map(h => (
                     <th key={h} style={thS}>{h}</th>
                   ))}
                 </tr>
@@ -5509,7 +5509,7 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
                       <td style={{ ...tdS, color:ov?C.txtS:C.txt, textDecoration:ov?"line-through":"none", fontSize:13 }}>
                         ${Number(e.daily_rate).toLocaleString()}/day
                       </td>
-                      {role === "admin" && (
+                      {(role || []).includes('admin') && (
                         <td style={{ ...tdS, color:C.txtS, fontSize:13 }}>
                           ${Number(e.daily_cost || (e.daily_rate * 0.6)).toLocaleString()}
                         </td>
@@ -5540,9 +5540,9 @@ function EquipmentPage({ equipment, setEquipment, eqCats, eqMap, eqOv, setEqOv, 
                           </div>
                         ) : (
                           <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-                            {role === "admin" && <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 8px" }} onClick={() => startEdit(e)}>✏ Edit</button>}
+                            {(role || []).includes('admin') && <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"3px 8px" }} onClick={() => startEdit(e)}>✏ Edit</button>}
                             <button style={{ ...mkBtn("outline"), fontSize:11, padding:"3px 8px" }} onClick={() => startOv(e.code)}>Override</button>
-                            {role === "admin" && (
+                            {(role || []).includes('admin') && (
                               <>
                                 {ov && <button style={{ ...mkBtn("danger"), fontSize:11, padding:"3px 8px" }} onClick={() => clearOv(e.code)}>Reset</button>}
                                 <button style={{ ...mkBtn("danger"),  fontSize:11, padding:"3px 8px" }} onClick={() => deleteEquip(e.code)}>Delete</button>
@@ -5607,7 +5607,7 @@ function LaborRatesPage({ customerRates, setCustomerRates, role, baseLabor, setB
     c.toLowerCase().includes(search.toLowerCase())
   );
 
-  const isAd = role === "admin";
+  const isAd = (role || []).includes('admin');
   const fS = { background: "#fff", border: `1px solid ${C.bdrM}`, borderRadius: 5, color: C.txt, 
                fontFamily: "inherit", fontSize: 13, padding: "5px 10px", width: "100%", 
                boxSizing: "border-box", outline: "none", textAlign: "right" };
@@ -5760,7 +5760,7 @@ function LaborRatesPage({ customerRates, setCustomerRates, role, baseLabor, setB
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }} onClick={e => e.stopPropagation()}>
                      <span style={{ border: `1px solid ${C.grnBdr}`, background: C.grnB, color: C.grn, padding: "2px 10px", borderRadius: 4, fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>Active</span>
-                     {role === "admin" && <button style={{ background: C.redB, border: `1px solid ${C.redBdr}`, color: C.red, borderRadius: 5, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, fontWeight: 700 }} onClick={() => clear(c)}></button>}
+                     {(role || []).includes('admin') && <button style={{ background: C.redB, border: `1px solid ${C.redBdr}`, color: C.red, borderRadius: 5, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, fontWeight: 700 }} onClick={() => clear(c)}></button>}
                   </div>
                </div>
                {isExpanded && (
@@ -7536,9 +7536,9 @@ function LoginForm({ setToken, setRole, onBack, onForgotPassword }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login Failed");
       localStorage.setItem("token", data.token);
-      localStorage.setItem("role", data.user.role);
+      localStorage.setItem("role", JSON.stringify(data.user.roles || []));
       setToken(data.token);
-      setRole(data.user.role);
+      setRole(data.user.roles || []);
     } catch (err) {
       setError(err.message);
     }
@@ -9071,11 +9071,17 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
                 </div>
                 <div>
                   <Lbl c="ROLE"/>
-                  <select style={{ ...sel, width:"100%" }} value={newUser.role} onChange={e=>setNewUser(p=>({...p,role:e.target.value}))}>
-                    <option value="estimator">Estimator</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Administrator</option>
-                  </select>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+    {['estimator', 'manager', 'admin', 'quote_reviewer', 'office'].map(r => (
+      <label key={r} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <input type="checkbox" checked={(newUser.roles || []).includes(r)} onChange={e => {
+          const next = e.target.checked ? [...(newUser.roles||[]), r] : (newUser.roles||[]).filter(x=>x!==r);
+          setNewUser(p => ({...p, roles: next}));
+        }} />
+        {r}
+      </label>
+    ))}
+  </div>
                 </div>
                 <div>
                   <Lbl c="PROFILE PICTURE (OPTIONAL)"/>
@@ -9271,7 +9277,7 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [token,      setToken]      = useState(localStorage.getItem("token") || "");
-  const [role,       setRole]       = useState(localStorage.getItem("role") || "user");
+  const [role,       setRole]       = useState(() => { try { return JSON.parse(localStorage.getItem("role")) || []; } catch(e) { return []; } });
   
   const [viewState, setViewState] = useState(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -9495,7 +9501,7 @@ export default function App() {
           if (data.status) setStatusList(data.status);
           if (data.customers) setCustData(data.customers);
           setDbStatus("MySQL Live");
-        } else if (role === "admin") {
+        } else if ((role || []).includes('admin')) {
           // Automatic system prompting to migrate data if DB is empty
           console.log("[System Prompt] Migrating local data to MySQL...");
           setDbStatus("Initializing MySQL...");
@@ -9843,7 +9849,7 @@ export default function App() {
   }
 
   // ── ADMIN ──────────────────────────────────────────────────────────────────
-  if (view==="admin" && role!=="admin") return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
+  if (view==="admin" && !(role || []).includes('admin')) return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
   if (view==="admin") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
@@ -9973,7 +9979,7 @@ export default function App() {
               <input style={{ ...inp, flex:1 }} value={newMyTask} onChange={e=>setNewMyTask(e.target.value)} placeholder="Add a new task..." />
               <select style={sel} value={newMyTaskAssignedTo || profileUser?.id || ""} onChange={e=>setNewMyTaskAssignedTo(e.target.value)}>
                   <option value={profileUser?.id || ""}>Self</option>
-                  {(profileUser?.role === 'admin' ? appUsers : appUsers.filter(u => u.role === profileUser?.role)).filter(u => u.id !== profileUser?.id).map(u => <option key={u.id} value={u.id}>{u.first_name || u.username}</option>)}
+                  {((profileUser?.roles || []).includes('admin') ? appUsers : appUsers.filter(u => (u.roles || []).some(r => (profileUser?.roles || []).includes(r)))).filter(u => u.id !== profileUser?.id).map(u => <option key={u.id} value={u.id}>{u.first_name || u.username}</option>)}
               </select>
               <button type="submit" style={{ ...mkBtn("blue"), padding:"0 16px" }}>Add Task</button>
             </form>

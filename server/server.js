@@ -184,7 +184,7 @@ app.post('/api/login', async (req, res) => {
 
   try {
     await ensureUserProfileColumns();
-    const [rows] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar, password_hash, user_number FROM users WHERE username = ?', [normalizedUsername]);
+    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, (SELECT JSON_ARRAYAGG(r.name) FROM user_roles ur JOIN role r ON ur.role_id = r.id WHERE ur.user_id = u.id) AS roles, u.is_disabled, u.avatar, u.password_hash, u.user_number FROM users u WHERE u.username = ?`, [normalizedUsername]);
     const user = rows[0];
 
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
@@ -201,13 +201,13 @@ app.post('/api/login', async (req, res) => {
       userAgent: req.headers['user-agent']
     });
 
-    const token = jwt.sign({ userId: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+    const token = jwt.sign({ userId: user.id, username: user.username, roles: typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || []) }, JWT_SECRET, { expiresIn: '8h' });
     res.json({ token, user: {
       id: user.id,
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       username: user.username,
-      role: user.role,
+      roles: typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || []),
       email: user.email || '',
       cell_phone: user.cell_phone || '',
       avatar: user.avatar || null,
@@ -544,7 +544,7 @@ app.get('/api/me', authenticateToken, async (req, res) => {
   try {
     await ensureUserProfileColumns();
     const [rows] = await db.query(
-      'SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar, user_number FROM users WHERE id = ? LIMIT 1',
+      'SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, r.name AS role, u.is_disabled, u.avatar, u.user_number FROM users u LEFT JOIN role r ON u.role = r.id WHERE u.id = ? LIMIT 1',
       [req.user.userId]
     );
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
@@ -558,28 +558,28 @@ app.put('/api/me', authenticateToken, async (req, res) => {
   const { email, cell_phone, avatar, password, role } = req.body || {};
   try {
     await ensureUserProfileColumns();
-    const [rows] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar FROM users WHERE id = ? LIMIT 1', [req.user.userId]);
+    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, (SELECT JSON_ARRAYAGG(r.name) FROM user_roles ur JOIN role r ON ur.role_id = r.id WHERE ur.user_id = u.id) AS roles, u.is_disabled, u.avatar FROM users u WHERE u.id = ? LIMIT 1`, [req.user.userId]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
     const existing = rows[0];
     const nextAvatar = typeof avatar !== 'undefined' ? avatar : existing.avatar;
-    const nextRole = req.user.role === 'admin' && role ? role : existing.role;
+    const nextRole = ((req.user.roles || []).includes('admin') || req.user.role === 'admin' || String(req.user.role) === '1') && role ? role : existing.role;
 
     if (password) {
       const passwordHash = await bcrypt.hash(password, 10);
       await db.query(
-        'UPDATE users SET email = ?, cell_phone = ?, avatar = ?, role = ?, password_hash = ? WHERE id = ?',
+        'UPDATE users SET email = ?, cell_phone = ?, avatar = ?, role = (SELECT id FROM role WHERE name = ? LIMIT 1), password_hash = ? WHERE id = ?',
         [email ?? existing.email, cell_phone ?? existing.cell_phone, nextAvatar, nextRole, passwordHash, req.user.userId]
       );
     } else {
       await db.query(
-        'UPDATE users SET email = ?, cell_phone = ?, avatar = ?, role = ? WHERE id = ?',
+        'UPDATE users SET email = ?, cell_phone = ?, avatar = ?, role = (SELECT id FROM role WHERE name = ? LIMIT 1) WHERE id = ?',
         [email ?? existing.email, cell_phone ?? existing.cell_phone, nextAvatar, nextRole, req.user.userId]
       );
     }
 
     const [updatedRows] = await db.query(
-      'SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar, user_number FROM users WHERE id = ? LIMIT 1',
+      'SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, r.name AS role, u.is_disabled, u.avatar, u.user_number FROM users u LEFT JOIN role r ON u.role = r.id WHERE u.id = ? LIMIT 1',
       [req.user.userId]
     );
     res.json(updatedRows[0]);
@@ -607,7 +607,11 @@ app.post('/api/logout', authenticateToken, async (req, res) => {
 
 // USER MANAGEMENT ENDPOINTS (Admin Only)
 const authenticateAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+  const r = req.user.roles || [];
+  const legacyRole = req.user.role;
+  if (!r.includes('admin') && !r.includes('1') && legacyRole !== 'admin' && String(legacyRole) !== '1') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
   next();
 };
 
@@ -683,7 +687,7 @@ app.get('/api/admin/tables', authenticateToken, authenticateAdmin, async (req, r
 app.get('/api/admin/users', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
     await ensureUserProfileColumns();
-    const [users] = await db.query('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, avatar, user_number, created_at FROM users');
+    const [users] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, r.name AS role, u.is_disabled, u.avatar, u.user_number, u.created_at FROM users u LEFT JOIN role r ON u.role = r.id`);
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch users' });
@@ -707,11 +711,16 @@ app.post('/api/admin/users', authenticateToken, authenticateAdmin, async (req, r
 
     const passwordHash = await bcrypt.hash(password, 10);
      const [result] = await db.query(
-      'INSERT INTO users (first_name, last_name, username, email, cell_phone, avatar, password_hash, role, user_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO users (first_name, last_name, username, email, cell_phone, avatar, password_hash, user_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, passwordHash, role || 'user', user_number]
     );
     if (is_disabled) {
       await db.query('UPDATE users SET is_disabled = 1 WHERE id = ?', [result.insertId]);
+      if (r_roles.length > 0) {
+        for (const r of r_roles) {
+          await db.query('INSERT IGNORE INTO user_roles (user_id, role_id) SELECT ?, id FROM role WHERE name = ?', [result.insertId, r]);
+        }
+      }
     }
     res.json({ id: result.insertId, first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', avatar: avatar || null, role: role || 'user', is_disabled: !!is_disabled, user_number });
   } catch (error) {
@@ -759,13 +768,13 @@ app.put('/api/admin/users/:id', authenticateToken, authenticateAdmin, async (req
       // Update with new password
       const passwordHash = await bcrypt.hash(password, 10);
       await db.query(
-        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, avatar = ?, password_hash = ?, role = ?, is_disabled = ? WHERE id = ?',
+        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, avatar = ?, password_hash = ?, is_disabled = ? WHERE id = ?',
         [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, passwordHash, role, nextDisabled, userId]
       );
     } else {
       // Update without changing password
       await db.query(
-        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, avatar = ?, role = ?, is_disabled = ? WHERE id = ?',
+        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, cell_phone = ?, avatar = ?, is_disabled = ? WHERE id = ?',
         [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, role, nextDisabled, userId]
       );
     }
@@ -798,7 +807,7 @@ app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, a
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role'];
   const table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
@@ -817,7 +826,7 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
 
 // UPDATE RECORD IN TABLE (Admin Only)
 app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role'];
   const table = req.params.table;
   const id = req.params.id;
   const data = req.body;
@@ -923,7 +932,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, as
 
 // BATCH DELETE RECORDS IN TABLE (Admin Only)
 app.delete('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role'];
   const table = req.params.table;
   const { ids } = req.body;
 
@@ -1355,7 +1364,7 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
     let assignee = req.user.userId;
     
     if (assigned_to && assigned_to !== req.user.userId) {
-      if (req.user.role === 'admin') {
+      if (((req.user.roles || []).includes('admin') || req.user.role === 'admin' || String(req.user.role) === '1')) {
          assignee = assigned_to;
       } else {
          const [target] = await db.query('SELECT role FROM users WHERE id = ?', [assigned_to]);
@@ -1379,7 +1388,7 @@ app.get('/api/tasks/my', authenticateToken, async (req, res) => {
   try {
     let queryArgs = [req.user.userId];
     let queryStr = 'SELECT a.*, u.first_name as creator_first_name, u.username as creator_username FROM admin_tasks a LEFT JOIN users u ON a.created_by = u.id WHERE a.assigned_to = ? ORDER BY a.created_at DESC';
-    if (req.user.role === 'admin') {
+    if (((req.user.roles || []).includes('admin') || req.user.role === 'admin' || String(req.user.role) === '1')) {
       queryStr = 'SELECT a.*, u.first_name as creator_first_name, u.username as creator_username FROM admin_tasks a LEFT JOIN users u ON a.created_by = u.id ORDER BY a.created_at DESC';
       queryArgs = [];
     }
@@ -1411,7 +1420,7 @@ app.patch('/api/tasks/my/:id', authenticateToken, async (req, res) => {
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
     
     values.push(req.params.id);
-    if (req.user.role === 'admin') {
+    if (((req.user.roles || []).includes('admin') || req.user.role === 'admin' || String(req.user.role) === '1')) {
       await db.query(`UPDATE admin_tasks SET ${fields.join(', ')} WHERE id = ?`, values);
     } else {
       values.push(req.user.userId);
@@ -1821,11 +1830,12 @@ const initAdmin = async () => {
     await ensureLeadsTable();
     const hash = await bcrypt.hash('pass', 10);
     await db.query(
-      `INSERT INTO users (first_name, last_name, username, email, cell_phone, password_hash, role)
-       VALUES (?, ?, ?, ?, ?, ?, 'admin')
-       ON DUPLICATE KEY UPDATE role = 'admin'`,
+      `INSERT INTO users (first_name, last_name, username, email, cell_phone, password_hash)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE username = username`,
       ['Scott', 'Admin', 'scott', 'scott@shoemakerrigging.com', '', hash]
     );
+    await db.query(`INSERT IGNORE INTO user_roles (user_id, role_id) SELECT id, (SELECT id FROM role WHERE name = 'admin' LIMIT 1) FROM users WHERE username = 'scott'`);
     console.log('Admin account (scott) ensured.');
   } catch (error) {
     console.error('Failed to initialize admin account', error);
