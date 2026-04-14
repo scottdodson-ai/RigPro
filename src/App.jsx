@@ -657,7 +657,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
     ["jobs", jobCount !== undefined ? `Job List (${jobCount})` : "Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
-  if (token && (role || []).includes('admin')) TABS.push(["admin", "Admin Portal"]);
+  if (token && (Array.isArray(role) ? role : [role]).includes('admin')) TABS.push(["admin", "Admin Portal"]);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 801px)");
@@ -3645,7 +3645,7 @@ function ActionBtns({ onFromReq, onNew, onNewLead }) {
 function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData, jobs=[], profileUser, role, reqs=[] }) {
   const blank = useMemo(() => {
     let estimator = "";
-    if (profileUser && profileUser.role === "estimator") {
+    if (profileUser && (profileUser.roles || [profileUser.role]).includes("estimator")) {
       estimator = profileUser.username;
     }
     return { id:uid(), rn:nextRN(reqs), company:"", requester:"", reqFirst:"", reqLast:"", email:"", phone:"", jobSite:"", desc:"", notes:"", date:today(), status:"New", salesAssoc:estimator };
@@ -9514,7 +9514,7 @@ export default function App() {
           if (data.status) setStatusList(data.status);
           if (data.customers) setCustData(data.customers);
           setDbStatus("MySQL Live");
-        } else if ((role || []).includes('admin')) {
+        } else if ((Array.isArray(role) ? role : [role]).includes('admin')) {
           // Automatic system prompting to migrate data if DB is empty
           console.log("[System Prompt] Migrating local data to MySQL...");
           setDbStatus("Initializing MySQL...");
@@ -9866,7 +9866,7 @@ export default function App() {
   }
 
   // ── ADMIN ──────────────────────────────────────────────────────────────────
-  if (view==="admin" && !(role || []).includes('admin')) return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
+  if (view==="admin" && !(Array.isArray(role) ? role : [role]).includes('admin')) return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
   if (view==="admin") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />

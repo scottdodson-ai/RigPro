@@ -45,7 +45,7 @@ const LeadsBoard = (props) => {
   const handleAssign = async (usernameTarget) => {
     try {
       const payload = { estimator_id: usernameTarget };
-      const res = await fetch(`/api/admin/tables/leads/${selLead.id}`, {
+      const res = await fetch(`${fmt.api || "/api"}/admin/tables/leads/${selLead.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(payload)
@@ -235,7 +235,7 @@ const LeadsBoard = (props) => {
                            <option key={u.id} value={u.username}>{u.first_name} {u.last_name||""}</option>
                          ))}
                        </select>
-                       {amIEstimator && selLead.estimator_id !== profileUser.username && (
+                       {amIEstimator && selLead.estimator_id !== (profileUser ? profileUser.username : null) && (
                          <button 
                            onClick={() => handleAssign(profileUser.username)}
                            style={{ background:C.blu, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontWeight:800, cursor:"pointer", fontSize:12, boxShadow:"0 2px 4px rgba(59,130,246,0.2)" }}
@@ -249,7 +249,6 @@ const LeadsBoard = (props) => {
                       <div style={{ fontSize:44, fontWeight:900, color:C.txt, letterSpacing:"-1px", lineHeight:1 }}>{selLead.company_name || `Lead #${selLead.id}`}</div>
                       <div style={{ display:"flex", gap:20, marginTop:18 }}>
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>Contact: {selLead.first_name || selLead.last_name ? `${selLead.first_name||""} ${selLead.last_name||""}` : 'N/A'}</div>
-                        <div style={{ fontSize:13, color:C.ora, fontWeight:800, background:"#fff7ed", padding:"5px 12px", borderRadius:8 }}>STATUS: {formatStatusName(selLead.status_number)}</div>
                       </div>
                     </div>
                   </div>

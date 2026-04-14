@@ -184,7 +184,7 @@ app.post('/api/login', async (req, res) => {
 
   try {
     await ensureUserProfileColumns();
-    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, COALESCE((SELECT JSON_ARRAY(r.name) FROM role r WHERE r.id = u.role), JSON_ARRAY()) AS roles, u.is_disabled, u.avatar, u.password_hash, u.user_number FROM users u WHERE u.username = ?`, [normalizedUsername]);
+    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, COALESCE(u.roles, JSON_ARRAY()) AS roles, u.is_disabled, u.avatar, u.password_hash, u.user_number FROM users u WHERE u.username = ?`, [normalizedUsername]);
     const user = rows[0];
 
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
@@ -331,19 +331,24 @@ const authenticateToken = (req, res, next) => {
   
   if (!token) return res.status(401).json({ error: 'Authentication required' });
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid or expired token' });
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+      if (err) return res.status(403).json({ error: 'Invalid or expired token' });
 
-    db.query('SELECT id, role, is_disabled FROM users WHERE id = ? LIMIT 1', [user.userId])
-      .then(([rows]) => {
-        if (!rows.length) return res.status(401).json({ error: 'User not found' });
-        if (Number(rows[0].is_disabled) === 1) return res.status(403).json({ error: 'Account is disabled' });
-
-        req.user = { ...user, role: rows[0].role };
-        next();
-      })
-      .catch(() => res.status(500).json({ error: 'Authentication check failed' }));
-  });
+      db.query('SELECT id, roles, is_disabled FROM users WHERE id = ? LIMIT 1', [decoded.userId])
+        .then(([rows]) => {
+          if (!rows.length || rows[0].is_disabled) return res.status(403).json({ error: 'User is disabled or not found' });
+          let roles = rows[0].roles;
+          if (typeof roles === 'string') {
+            try { roles = JSON.parse(roles); } catch(e) { roles = []; }
+          }
+          req.user = { ...decoded, roles: Array.isArray(roles) ? roles : [] };
+          next();
+        })
+        .catch((err) => {
+          console.error('[AUTH] authenticateToken error:', err);
+          res.status(500).json({ error: 'Authentication check failed' });
+        });
+    });
 };
 
 // GET BASE DATA (Protected)
@@ -480,10 +485,17 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       jobSiteZip: r.job_site_zip || '',
       jobSite: r.job_site || ''
     }));
-    const users = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, role, is_disabled, user_number, created_at FROM users');
+    const rawUsers = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, roles, is_disabled, user_number, created_at FROM users');
+    const users = rawUsers.map(u => {
+      let r = u.roles;
+      if (typeof r === 'string') { try { r = JSON.parse(r); } catch(e) { r = []; } }
+      const rolesArray = Array.isArray(r) ? r : [];
+      return { ...u, roles: rolesArray, role: rolesArray[0] || 'user' };
+    });
     const estimators = await safeQuery('SELECT * FROM estimators');
     const status = await safeQuery('SELECT * FROM status ORDER BY sort_order ASC');
-    const leads = await safeQuery('SELECT l.*, c.name AS company_name FROM leads l LEFT JOIN customers c ON l.customer_number = c.id WHERE l.status_number != 2 ORDER BY l.id DESC');
+    const leadsRaw = await safeQuery('SELECT l.*, c.name AS company_name FROM leads l LEFT JOIN customers c ON l.customer_number = c.id WHERE l.status_number != 2 ORDER BY l.id DESC');
+    const leads = leadsRaw.map(l => ({ ...l, status_number: Number(l.status_number) }));
 
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
@@ -544,12 +556,17 @@ app.get('/api/me', authenticateToken, async (req, res) => {
   try {
     await ensureUserProfileColumns();
     const [rows] = await db.query(
-      'SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, r.name AS role, u.is_disabled, u.avatar, u.user_number FROM users u LEFT JOIN role r ON u.role = r.id WHERE u.id = ? LIMIT 1',
+      'SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, u.roles, u.is_disabled, u.avatar, u.user_number FROM users u WHERE u.id = ? LIMIT 1',
       [req.user.userId]
     );
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
-    res.json(rows[0]);
+    const user = rows[0];
+    if (typeof user.roles === 'string') {
+      try { user.roles = JSON.parse(user.roles); } catch(e) { user.roles = []; }
+    }
+    res.json(user);
   } catch (error) {
+    console.error('[API] GET /api/me error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
@@ -558,28 +575,27 @@ app.put('/api/me', authenticateToken, async (req, res) => {
   const { email, cell_phone, avatar, password, role } = req.body || {};
   try {
     await ensureUserProfileColumns();
-    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, COALESCE((SELECT JSON_ARRAY(r.name) FROM role r WHERE r.id = u.role), JSON_ARRAY()) AS roles, u.is_disabled, u.avatar FROM users u WHERE u.id = ? LIMIT 1`, [req.user.userId]);
+    const [rows] = await db.query(`SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, COALESCE(u.roles, JSON_ARRAY()) AS roles, u.is_disabled, u.avatar FROM users u WHERE u.id = ? LIMIT 1`, [req.user.userId]);
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
     const existing = rows[0];
     const nextAvatar = typeof avatar !== 'undefined' ? avatar : existing.avatar;
-    const nextRole = ((req.user.roles || []).includes('admin') || req.user.role === 'admin' || String(req.user.role) === '1') && role ? role : existing.role;
 
     if (password) {
       const passwordHash = await bcrypt.hash(password, 10);
       await db.query(
-        'UPDATE users SET email = ?, cell_phone = ?, avatar = ?, role = (SELECT id FROM role WHERE name = ? LIMIT 1), password_hash = ? WHERE id = ?',
-        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextAvatar, nextRole, passwordHash, req.user.userId]
+        'UPDATE users SET email = ?, cell_phone = ?, avatar = ?, password_hash = ? WHERE id = ?',
+        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextAvatar, passwordHash, req.user.userId]
       );
     } else {
       await db.query(
-        'UPDATE users SET email = ?, cell_phone = ?, avatar = ?, role = (SELECT id FROM role WHERE name = ? LIMIT 1) WHERE id = ?',
-        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextAvatar, nextRole, req.user.userId]
+        'UPDATE users SET email = ?, cell_phone = ?, avatar = ? WHERE id = ?',
+        [email ?? existing.email, cell_phone ?? existing.cell_phone, nextAvatar, req.user.userId]
       );
     }
 
     const [updatedRows] = await db.query(
-      'SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, r.name AS role, u.is_disabled, u.avatar, u.user_number FROM users u LEFT JOIN role r ON u.role = r.id WHERE u.id = ? LIMIT 1',
+      'SELECT u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, COALESCE(u.roles, JSON_ARRAY()) AS roles, u.is_disabled, u.avatar, u.user_number FROM users u WHERE u.id = ? LIMIT 1',
       [req.user.userId]
     );
     res.json(updatedRows[0]);
@@ -608,8 +624,8 @@ app.post('/api/logout', authenticateToken, async (req, res) => {
 // USER MANAGEMENT ENDPOINTS (Admin Only)
 const authenticateAdmin = (req, res, next) => {
   const r = req.user.roles || [];
-  const legacyRole = req.user.role;
-  if (!r.includes('admin') && !r.includes('1') && legacyRole !== 'admin' && String(legacyRole) !== '1') {
+  if (!r.includes('admin') && !r.includes('1')) {
+    console.log('[AUTH] Denying admin access. Roles:', r, 'User:', req.user.username);
     return res.status(403).json({ error: 'Admin access required' });
   }
   next();
@@ -617,7 +633,7 @@ const authenticateAdmin = (req, res, next) => {
 
 app.get('/api/users', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT id, username, role, created_at FROM users');
+    const [rows] = await db.query('SELECT id, username, roles, created_at FROM users');
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch users' });
@@ -625,9 +641,9 @@ app.get('/api/users', authenticateToken, authenticateAdmin, async (req, res) => 
 });
 
 app.put('/api/users/:id', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { role } = req.body;
+  const { role, roles } = req.body;
   try {
-    await db.query('UPDATE users SET role = ? WHERE id = ?', [role, req.params.id]);
+    await db.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify(roles || [role]), req.params.id]);
     res.json({ message: 'User updated' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update user' });
@@ -635,11 +651,12 @@ app.put('/api/users/:id', authenticateToken, authenticateAdmin, async (req, res)
 });
 
 app.post('/api/users', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { username, password, role } = req.body;
-  if (!username || !password || !role) return res.status(400).json({ error: 'Username, password, and role required' });
+  const { username, password, role, roles } = req.body;
+  if (!username || !password || (!role && !roles)) return res.status(400).json({ error: 'Username, password, and role required' });
+
   try {
     const password_hash = await bcrypt.hash(password, 10);
-    await db.query('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)', [username, password_hash, role]);
+    await db.query('INSERT INTO users (username, password_hash, roles) VALUES (?, ?, ?)', [username, password_hash, JSON.stringify(roles || [role])]);
     res.status(201).json({ message: 'User created' });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Username already exists' });
@@ -690,16 +707,16 @@ app.get('/api/admin/users', authenticateToken, authenticateAdmin, async (req, re
     const [users] = await db.query(`
       SELECT 
         u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, u.is_disabled, u.avatar, u.user_number, u.created_at,
-        COALESCE((SELECT JSON_ARRAY(r.name) FROM role r WHERE r.id = u.role), JSON_ARRAY()) AS roles
+        COALESCE(u.roles, JSON_ARRAY()) AS roles
       FROM users u
     `);
     
-    // Parse roles string array if returned as string from JSON_ARRAYAGG
-    const parsedUsers = users.map(user => ({
-      ...user,
-      roles: typeof user.roles === 'string' ? JSON.parse(user.roles || '[]') : (user.roles || []),
-      role: (typeof user.roles === 'string' ? JSON.parse(user.roles || '[]') : (user.roles || []))[0] || null
-    }));
+    const parsedUsers = users.map(user => {
+      let r = user.roles;
+      if (typeof r === 'string') { try { r = JSON.parse(r); } catch(e) { r = []; } }
+      const rolesArray = Array.isArray(r) ? r : [];
+      return { ...user, roles: rolesArray, role: rolesArray[0] || 'user' };
+    });
     
     res.json(parsedUsers);
   } catch (error) {
@@ -724,13 +741,13 @@ app.post('/api/admin/users', authenticateToken, authenticateAdmin, async (req, r
 
     const passwordHash = await bcrypt.hash(password, 10);
      const [result] = await db.query(
-      'INSERT INTO users (first_name, last_name, username, email, cell_phone, avatar, password_hash, role, user_number) VALUES (?, ?, ?, ?, ?, ?, ?, (SELECT id FROM role WHERE name = ? LIMIT 1), ?)',
-      [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, passwordHash, (roles && roles[0]) || role || 'user', String(user_number)]
+      'INSERT INTO users (first_name, last_name, username, email, cell_phone, avatar, password_hash, roles, user_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [first_name || '', last_name || '', normalizedUsername, email || '', cell_phone || '', avatar || null, passwordHash, JSON.stringify(roles && roles.length > 0 ? roles : (role ? [role] : ['user'])), String(user_number)]
     );
     if (is_disabled) {
       await db.query('UPDATE users SET is_disabled = 1 WHERE id = ?', [result.insertId]);
     }
-    res.json({ id: result.insertId, first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', avatar: avatar || null, role: (roles && roles[0]) || role || 'user', is_disabled: !!is_disabled, user_number });
+    res.json({ id: result.insertId, first_name: first_name || '', last_name: last_name || '', username: normalizedUsername, email: email || '', cell_phone: cell_phone || '', avatar: avatar || null, roles: (roles && roles.length > 0 ? roles : (role ? [role] : ['user'])), is_disabled: !!is_disabled, user_number });
   } catch (error) {
     console.error('[API] POST /api/admin/users error:', error);
     if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Username already exists' });
@@ -785,20 +802,19 @@ app.put('/api/admin/users/:id', authenticateToken, authenticateAdmin, async (req
       );
     }
 
-    if (roles && Array.isArray(roles) && roles.length > 0) {
-      await db.query('UPDATE users SET role = (SELECT id FROM role WHERE name = ? LIMIT 1) WHERE id = ?', [roles[0], userId]);
+    if (roles && Array.isArray(roles)) {
+      await db.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify(roles), userId]);
     }
 
     const [updated] = await db.query(`
       SELECT 
         u.id, u.first_name, u.last_name, u.username, u.email, u.cell_phone, u.is_disabled, u.avatar, u.user_number, u.created_at,
-        COALESCE((SELECT JSON_ARRAY(r.name) FROM role r WHERE r.id = u.role), JSON_ARRAY()) AS roles
+        COALESCE(u.roles, JSON_ARRAY()) AS roles
       FROM users u WHERE u.id = ?
     `, [userId]);
     
     if (updated[0]) {
       updated[0].roles = typeof updated[0].roles === 'string' ? JSON.parse(updated[0].roles || '[]') : (updated[0].roles || []);
-      updated[0].role = updated[0].roles[0] || null;
       updated[0].is_disabled = Number(updated[0].is_disabled) === 1;
     }
     
@@ -848,8 +864,15 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
   }
 });
 
-// UPDATE RECORD IN TABLE (Admin Only)
-app.put('/api/admin/tables/:table/:id', authenticateToken, authenticateAdmin, async (req, res) => {
+// UPDATE RECORD IN TABLE (Admin or Estimator for leads)
+app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
+  const table = req.params.table;
+  const roles = req.user.roles || [];
+  if (table === 'leads' && roles.includes('estimator')) {
+    return next();
+  }
+  authenticateAdmin(req, res, next);
+}, async (req, res) => {
   const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role'];
   const table = req.params.table;
   const id = req.params.id;
@@ -1391,14 +1414,18 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
     let assignee = req.user.userId;
     
     if (assigned_to && assigned_to !== req.user.userId) {
-      if (((req.user.roles || []).includes('admin') || req.user.role === 'admin' || String(req.user.role) === '1')) {
+      if (((req.user.roles || []).includes('admin') || String(req.user.roles || '').includes('1'))) {
          assignee = assigned_to;
       } else {
-         const [target] = await db.query('SELECT role FROM users WHERE id = ?', [assigned_to]);
-         if (target.length > 0 && target[0].role === req.user.role) {
-            assignee = assigned_to;
-         } else {
-            return res.status(403).json({ error: 'You can only assign tasks to users with the same role.' });
+         const [target] = await db.query('SELECT roles FROM users WHERE id = ?', [assigned_to]);
+         if (target.length > 0 && typeof target[0].roles !== 'undefined') {
+            const tr = typeof target[0].roles === 'string' ? JSON.parse(target[0].roles) : (target[0].roles || []);
+            const ur = req.user.roles || [];
+            if (tr.some(r => ur.includes(r))) {
+              // Same role
+            } else {
+               return res.status(403).json({ error: 'You can only assign tasks to users with the same role.' });
+            }
          }
       }
     }
@@ -1415,7 +1442,7 @@ app.get('/api/tasks/my', authenticateToken, async (req, res) => {
   try {
     let queryArgs = [req.user.userId];
     let queryStr = 'SELECT a.*, u.first_name as creator_first_name, u.username as creator_username FROM admin_tasks a LEFT JOIN users u ON a.created_by = u.id WHERE a.assigned_to = ? ORDER BY a.created_at DESC';
-    if (((req.user.roles || []).includes('admin') || req.user.role === 'admin' || String(req.user.role) === '1')) {
+    if ((req.user.roles || []).includes('admin')) {
       queryStr = 'SELECT a.*, u.first_name as creator_first_name, u.username as creator_username FROM admin_tasks a LEFT JOIN users u ON a.created_by = u.id ORDER BY a.created_at DESC';
       queryArgs = [];
     }
@@ -1447,7 +1474,7 @@ app.patch('/api/tasks/my/:id', authenticateToken, async (req, res) => {
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
     
     values.push(req.params.id);
-    if (((req.user.roles || []).includes('admin') || req.user.role === 'admin' || String(req.user.role) === '1')) {
+    if ((req.user.roles || []).includes('admin')) {
       await db.query(`UPDATE admin_tasks SET ${fields.join(', ')} WHERE id = ?`, values);
     } else {
       values.push(req.user.userId);
@@ -1862,7 +1889,7 @@ const initAdmin = async () => {
        ON DUPLICATE KEY UPDATE username = username`,
       ['Scott', 'Admin', 'scott', 'scott@shoemakerrigging.com', '', hash]
     );
-    await db.query(`UPDATE users SET role = (SELECT id FROM role WHERE name = 'admin' LIMIT 1) WHERE username = 'scott'`);
+    await db.query(`UPDATE users SET roles = JSON_ARRAY('admin') WHERE username = 'scott'`);
     console.log('Admin account (scott) ensured.');
   } catch (error) {
     console.error('Failed to initialize admin account', error);
