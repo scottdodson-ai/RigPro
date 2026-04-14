@@ -8535,7 +8535,7 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
         username: normalizedUsername,
         email: editingUser.email || "",
         cell_phone: editingUser.cell_phone || "",
-        role: editingUser.role,
+        roles: editingUser.roles || [],
         avatar: editingUser.avatar || null
       };
       if (editingUser.password) updateData.password = editingUser.password;
@@ -8784,24 +8784,13 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
                                         <div style={{ fontSize:11, color:C.txtS }}>@{u.username}</div>
                                         {u.email && <a href={`mailto:${u.email}`} style={{ fontSize:11, color:C.blue, textDecoration:"none", display:"block" }} onClick={e=>e.stopPropagation()}>{u.email}</a>}
                                         {u.cell_phone && <div style={{ fontSize:11, color:C.txtM }}>{u.cell_phone}</div>}
-                        <div style={{ display:"flex", gap:4, marginTop:2 }}>
-                          {u.role==="admin" && <span style={{ background:C.redB, color:C.red, border:`1px solid ${C.redBdr}`, borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700 }}>ADMIN</span>}
-                          {u.role==="manager" && <span style={{ background:C.bluB, color:C.blue, border:`1px solid ${C.bluBdr}`, borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700 }}>MANAGER</span>}
-                          {u.role==="estimator" && <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700 }}>ESTIMATOR</span>}
-                          {u.role==="user" && <span style={{ background:C.bg, color:C.txtS, border:`1px solid ${C.bdr}`, borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700 }}>USER</span>}
+                        <div style={{ display:"flex", gap:4, marginTop:2, flexWrap: "wrap", textTransform: "uppercase" }}>
+                          {(u.roles || []).map(r => <span key={r} style={{ background:C.bg, color:C.txtS, border:`1px solid ${C.bdr}`, borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700 }}>{r}</span>)}
                         </div>
                       </div>
                     </div>
                     <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", justifyContent:"flex-end", gap:6, marginLeft:"auto" }}>
-                      <select
-                        style={{ ...sel, padding:"2px 4px", fontSize:11, minWidth:108 }}
-                        value={u.role}
-                        onChange={(e) => updateUserRole(u.id, e.target.value)}
-                      >
-                        <option value="estimator">Estimator</option>
-                        <option value="manager">Manager</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                      <span style={{ fontSize:10, color:C.txtS, marginRight:6, fontWeight:600 }}>Assigned Roles: {(u.roles || []).join(", ") || "None"}</span>
                       <button style={{ ...mkBtn("blue"), padding:"4px 8px", fontSize:10 }} onClick={() => setEditingUser({ ...u, password: "" })}>Edit</button>
                       <button
                         style={{ ...mkBtn(u.is_disabled ? "won" : "danger"), padding:"4px 8px", fontSize:10, opacity: Number(u.id) === currentUserId ? 0.4 : 1 }}
@@ -9151,11 +9140,17 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
                 </div>
                 <div>
                   <Lbl c="ROLE"/>
-                  <select style={{ ...sel, width:"100%" }} value={editingUser.role} onChange={e=>setEditingUser({...editingUser, role:e.target.value})}>
-                    <option value="estimator">Estimator</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Administrator</option>
-                  </select>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {['estimator', 'manager', 'admin', 'quote_reviewer', 'office', 'user'].map(r => (
+                      <label key={r} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <input type="checkbox" checked={(editingUser.roles || []).includes(r)} onChange={e => {
+                          const next = e.target.checked ? [...(editingUser.roles||[]), r] : (editingUser.roles||[]).filter(x=>x!==r);
+                          setEditingUser({...editingUser, roles: next});
+                        }} />
+                        {r}
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <Lbl c="PROFILE PICTURE"/>
@@ -9409,7 +9404,13 @@ export default function App() {
         const bd = await res.json();
         throw new Error(bd.error || "Add task failed");
       }
-      window.location.reload();
+      const d = await res.json();
+      setNewMyTask("");
+      // Fetch updated tasks gracefully without reloading
+      await fetch("/api/tasks/my", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : [])
+        .then(d => { setMyTasks(Array.isArray(d) ? d : []); })
+        .catch(() => {});
     } catch (err) { alert(err.message); }
   };
 
@@ -9970,7 +9971,7 @@ export default function App() {
         </AccordionCard>
 
         <AccordionCard 
-          title="✅ My Assigned Tasks" 
+          title="✅ My Tasks" 
           isOpen={dashAcc==="tasks"} 
           onToggle={open => setDashAcc(open ? "tasks" : null)}
         >
