@@ -32,7 +32,7 @@ function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, c
 }
 
 const LeadsBoard = (props) => {
-  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec } = props;
+  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead } = props;
   const [search, setSearch] = useState("");
   const [leadView, setLeadView] = useState("list");
   const [selLead, setSelLead] = useState(null);
@@ -64,6 +64,7 @@ const LeadsBoard = (props) => {
       alert("Error assigning lead: " + e.message);
     }
   };
+
 
   const toggleView = (v) => {
     if (v === "card") setSelLead(null);
@@ -146,8 +147,55 @@ const LeadsBoard = (props) => {
                 </button>
               </div>
             </div>
+            <div style={{ display:"flex", flexDirection:"column" }}>
+               <div style={{fontSize:11, fontWeight:800, color:C.txtS, marginBottom:6, letterSpacing:0.8, opacity:0}}>ACTION</div>
+               <button 
+                  onClick={() => setShowAddModal(true)}
+                  style={{ background:C.acc, color:"#fff", border:"none", borderRadius:10, padding:"10px 20px", fontSize:14, fontWeight:800, cursor:"pointer", boxShadow:"0 4px 12px rgba(14,165,233,0.3)", height:42 }}
+               >
+                 + ADD NEW LEAD
+               </button>
+            </div>
           </div>
         </div>
+
+        {showAddModal && (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:24, backdropFilter:"blur(4px)" }}>
+            <div style={{ background:"#fff", width:"100%", maxWidth:500, borderRadius:20, padding:32, boxShadow:"0 20px 50px rgba(0,0,0,0.2)" }}>
+               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+                 <div style={{ fontSize:22, fontWeight:900, color:C.acc }}>Record New Incoming Lead</div>
+                 <button onClick={() => setShowAddModal(false)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:"#aaa" }}>×</button>
+               </div>
+               <form onSubmit={handleCreateLead} style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                    <div>
+                      <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>FIRST NAME</div>
+                      <input name="first_name" style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} required />
+                    </div>
+                    <div>
+                      <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>LAST NAME</div>
+                      <input name="last_name" style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} required />
+                    </div>
+                 </div>
+                 <div>
+                    <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>COMPANY NAME</div>
+                    <input name="company_name" style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} placeholder="Leave blank if unknown" />
+                 </div>
+                 <div>
+                    <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>PROJECT DESCRIPTION</div>
+                    <textarea name="description" style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14, minHeight:100, fontFamily:"inherit" }} required placeholder="Brief summary of requirements..." />
+                 </div>
+                 <button 
+                   type="submit" 
+                   disabled={isSaving}
+                   style={{ background:C.acc, color:"#fff", border:"none", borderRadius:10, padding:"14px", fontSize:15, fontWeight:800, cursor:"pointer", marginTop:10 }}
+                 >
+                   {isSaving ? "CREATING..." : "SUBMIT NEW LEAD"}
+                 </button>
+               </form>
+            </div>
+          </div>
+        )}
 
         {/* DATA TABLE */}
         {/* VIEW MODE RENDERER: SPLIT SCREEN OR FULL GRID */}
@@ -247,6 +295,11 @@ const LeadsBoard = (props) => {
                       <div style={{ fontSize:44, fontWeight:900, color:C.txt, letterSpacing:"-1px", lineHeight:1 }}>{selLead.company_name || `Lead #${selLead.id}`}</div>
                       <div style={{ display:"flex", gap:20, marginTop:18 }}>
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>Contact: {selLead.first_name || selLead.last_name ? `${selLead.first_name||""} ${selLead.last_name||""}` : 'N/A'}</div>
+                        {(selLead.contact_phone || selLead.contact_email) && (
+                          <div style={{ fontSize:13, color:C.acc, fontWeight:800, background:C.accL, padding:"5px 12px", borderRadius:8 }}>
+                            {selLead.contact_phone} {selLead.contact_email ? `| ${selLead.contact_email}` : ''}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -260,10 +313,10 @@ const LeadsBoard = (props) => {
                             <div style={{ color:C.txtS, fontStyle:"italic" }}>No address entered</div>
                           ) : (
                             <div style={{display:"flex", flexDirection:"column", gap:8}}>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{selLead.address1 || "—"}</span></div>
+                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{selLead.street || "—"}</span></div>
                               <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>City:</span><span>{selLead.city || "—"}</span></div>
                               <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>State:</span><span>{selLead.state || "—"}</span></div>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{selLead.zip || "—"}</span></div>
+                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{selLead.zipcode || "—"}</span></div>
                             </div>
                           )}
                         </div>
@@ -291,7 +344,18 @@ const LeadsBoard = (props) => {
                                     <div><span style={{ color:C.txtS, fontWeight:700, marginRight:8 }}>DIRECT:</span> {con.phone || con.mobile || "—"}</div>
                                  </div>
                               </div>
-                            )) : <div style={{ padding:30, textAlign:"center", background:C.bg, borderRadius:20, color:C.txtS, fontSize:13 }}>No active contact records for this company.</div>;
+                            )) : (
+                              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                                {selLead.contact_email && <div style={{ padding:25, border:`1px solid ${C.bdr}`, borderRadius:18, background:"#fff" }}>
+                                  <div style={{ fontSize:18, fontWeight:900, color:C.txt, marginBottom:10 }}>{selLead.first_name} {selLead.last_name}</div>
+                                  <div style={{ fontSize:13, display:"flex", flexDirection:"column", gap:6 }}>
+                                    <div style={{ color:C.acc, fontWeight:800 }}>{selLead.contact_email.toLowerCase()}</div>
+                                    <div><span style={{ color:C.txtS, fontWeight:700, marginRight:8 }}>DIRECT:</span> {selLead.contact_phone || "—"}</div>
+                                  </div>
+                                </div>}
+                                <div style={{ padding:30, textAlign:"center", background:C.bg, borderRadius:20, color:C.txtS, fontSize:13 }}>No other active contact records for this company.</div>
+                              </div>
+                            );
                           })()}
                         </div>
                       </div>

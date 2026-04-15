@@ -53,6 +53,8 @@ const CustomerCRMBoard = (props) => {
 
   const [gridScroll, setGridScroll] = useState(0);
   const [showSummaryBoard, setShowSummaryBoard] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const gridRef = useRef(null);
 
   // Modals...
@@ -86,6 +88,51 @@ const CustomerCRMBoard = (props) => {
   const toggleView = (v) => {
     if (v === "card") setSelC(null);
     setCustView(v);
+  };
+
+  const handleCreateCustomer = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    const formData = new FormData(e.target);
+    const name = formData.get("name");
+    
+    // Minimal customer record for the 'customers' table
+    const payload = {
+      name,
+      address1: formData.get("address1") || "",
+      city: formData.get("city") || "",
+      state: formData.get("state") || "",
+      zip: formData.get("zip") || "",
+      website: formData.get("website") || "",
+      industry: formData.get("industry") || "Industrial",
+      isProspect: 1
+    };
+
+    try {
+      const res = await fetch(`${fmt.api || "/api"}/admin/tables/customers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("Failed to create customer");
+      
+      const created = await res.json();
+      
+      // Update parent state
+      if (setCustData) {
+        setCustData(prev => ({ 
+          ...prev, 
+          [name]: { ...payload, contacts: [], locations: [], notes: "", quotes: [] } 
+        }));
+      }
+      
+      setShowAddModal(false);
+      setSelC(name);
+    } catch (e) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -135,8 +182,60 @@ const CustomerCRMBoard = (props) => {
                 </button>
               </div>
             </div>
+            <div style={{ display:"flex", flexDirection:"column" }}>
+               <Lbl c="ACTION" style={{opacity:0}}/>
+               <button 
+                  onClick={() => setShowAddModal(true)}
+                  style={{ background:C.acc, color:"#fff", border:"none", borderRadius:10, padding:"10px 20px", fontSize:13, fontWeight:800, cursor:"pointer", boxShadow:"0 4px 12px rgba(14,165,233,0.3)", height:42 }}
+               >
+                 + ADD NEW CUSTOMER
+               </button>
+            </div>
           </div>
         </div>
+
+        {showAddModal && (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:24, backdropFilter:"blur(4px)" }}>
+            <Card style={{ width:"100%", maxWidth:500, padding:32, boxShadow:"0 20px 50px rgba(0,0,0,0.2)" }}>
+               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+                 <div style={{ fontSize:22, fontWeight:900, color:C.acc }}>Register New Customer Account</div>
+                 <button onClick={() => setShowAddModal(false)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:"#aaa" }}>×</button>
+               </div>
+               <form onSubmit={handleCreateCustomer} style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                 <div>
+                    <Lbl c="LEGAL COMPANY NAME" />
+                    <input name="name" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} required placeholder="e.g. Acme Corp Industries" />
+                 </div>
+                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                    <div>
+                      <Lbl c="WEBSITE" />
+                      <input name="website" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="www.example.com" />
+                    </div>
+                    <div>
+                      <Lbl c="INDUSTRY" />
+                      <input name="industry" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="e.g. Construction" />
+                    </div>
+                 </div>
+                 <div>
+                    <Lbl c="HEADQUARTERS ADDRESS" />
+                    <input name="address1" style={{ ...inp, width:"100%", padding:"10px", fontSize:14, marginBottom:8 }} placeholder="Street Address" />
+                    <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:10 }}>
+                      <input name="city" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="City" />
+                      <input name="state" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="ST" />
+                      <input name="zip" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="ZIP" />
+                    </div>
+                 </div>
+                 <button 
+                   type="submit" 
+                   disabled={isSaving}
+                   style={{ ...mkBtn("primary"), width:"100%", padding:"14px", fontSize:15, fontWeight:800, marginTop:10 }}
+                 >
+                   {isSaving ? "REGISTERING..." : "CREATE CUSTOMER ACCOUNT"}
+                 </button>
+               </form>
+            </Card>
+          </div>
+        )}
 
         {/* VIEW MODE RENDERER: SPLIT SCREEN OR FULL GRID */}
         <div ref={gridRef} className={custView === "list" ? "app-split-layout" : ""} style={{ display: custView === "list" ? "grid" : "block", gridTemplateColumns: custView === "list" ? "650px 1fr" : "none", gap:30, marginTop: 15, alignItems:"flex-start" }}>

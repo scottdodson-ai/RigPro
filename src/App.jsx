@@ -424,10 +424,10 @@ function blankQuote(jobs=[], req, customerRates, isCO=false, parentQ=null) {
   return {
     id:uid(), qn:nextQN(jobs), client,
     jobSite:      req?.jobSite    || "",
-    jobSiteAddress1: req?.jobSiteAddress1 || "",
-    jobSiteCity:     req?.jobSiteCity || "",
-    jobSiteState:    req?.jobSiteState || "",
-    jobSiteZip:      req?.jobSiteZip || "",
+    street: req?.street || "",
+    city:     req?.city || "",
+    state:    req?.state || "",
+    zipcode:      req?.zipcode || "",
     desc:         isCO && parentQ ? `Change Order – ${parentQ.desc}` : (req?.desc || ""),
     contactName:  req?.requester  || "",
     contactEmail: req?.email      || "",
@@ -3614,8 +3614,117 @@ function MarkDeadModal({ itemType, itemLabel, onConfirm, onClose }) {
     </div>
   );
 }
+function LeadRecordModal({ onClose, onSave, token, appUsers=[], custData={}, CUSTOMERS=[], jobs=[], C, fmt, mkBtn, Sec, Lbl, Card, inp, sel, AutoInput }) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [lead, setLead] = useState({
+    company_name: "",
+    street: "",
+    city: "",
+    state: "",
+    zipcode: "",
+    first_name: "",
+    last_name: "",
+    contact_phone: "",
+    contact_email: "",
+    description: "",
+    estimator_id: "",
+    status_number: 1,
+    create_date: new Date().toISOString().split('T')[0]
+  });
 
-function ActionBtns({ onFromReq, onNew, onNewLead }) {
+  const u = (f, v) => setLead(p => ({ ...p, [f]: v }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/admin/tables/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(lead)
+      });
+      if (!res.ok) throw new Error("Failed to create lead");
+      const created = await res.json();
+      onSave(created);
+      onClose();
+    } catch (e) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:24, backdropFilter:"blur(4px)" }}>
+      <div style={{ background:"#fff", width:"100%", maxWidth:900, borderRadius:20, padding:32, boxShadow:"0 20px 50px rgba(0,0,0,0.2)", maxHeight:"90vh", overflowY:"auto" }}>
+         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+           <div style={{ fontSize:22, fontWeight:900, color:C.acc }}>Record New Incoming Lead</div>
+           <button onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:"#aaa" }}>×</button>
+         </div>
+         <form onSubmit={handleSubmit}>
+           <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+             <Card>
+               <Sec c="Customer Information" />
+               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:10 }}>
+                 <div style={{ gridColumn:"span 2" }}>
+                   <Lbl c="CLIENT *" />
+                   <AutoInput 
+                     val={lead.company_name} 
+                     on={v => u("company_name", v)} 
+                     list={[...new Set([...CUSTOMERS, ...Object.keys(custData||{}), ...jobs.map(q=>q.client).filter(Boolean)])].sort()} 
+                     ph="Company name"
+                   />
+                 </div>
+                 <div style={{ gridColumn:"span 2", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:10 }}>
+                   <div style={{ gridColumn:"1/-1" }}><Lbl c="JOB SITE ADDRESS 1" /><input style={inp} value={lead.street} onChange={e=>u("street",e.target.value)} placeholder="123 Main St" /></div>
+                   <div><Lbl c="CITY" /><input style={inp} value={lead.city} onChange={e=>u("city",e.target.value)} placeholder="City" /></div>
+                   <div><Lbl c="STATE" /><input style={inp} value={lead.state} onChange={e=>u("state",e.target.value)} placeholder="ST" maxLength={2} /></div>
+                   <div><Lbl c="ZIP" /><input style={inp} value={lead.zipcode} onChange={e=>u("zipcode",e.target.value)} placeholder="ZIP" maxLength={10} /></div>
+                 </div>
+                 
+                 <div>
+                   <Lbl c="ESTIMATOR"/>
+                   <select style={{ ...sel, width:"100%" }} value={lead.estimator_id} onChange={e=>u("estimator_id",e.target.value)}>
+                     <option value="">Unassigned</option>
+                     {appUsers.filter(usr=>usr.role==="estimator" || (usr.roles||[]).includes("estimator")).map(usr=>(
+                       <option key={usr.id} value={usr.username}>{usr.first_name} {usr.last_name||""} ({usr.username})</option>
+                     ))}
+                   </select>
+                 </div>
+
+                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, gridColumn:"span 2" }}>
+                    <div><Lbl c="CONTACT FIRST NAME"/><input style={inp} value={lead.first_name} onChange={e=>u("first_name",e.target.value)}/></div>
+                    <div><Lbl c="CONTACT LAST NAME"/><input style={inp} value={lead.last_name} onChange={e=>u("last_name",e.target.value)}/></div>
+                 </div>
+                 <div><Lbl c="CONTACT PHONE"/><input style={inp} value={lead.contact_phone} onChange={e=>u("contact_phone",e.target.value)}/></div>
+                 <div><Lbl c="CONTACT EMAIL"/><input style={inp} value={lead.contact_email} onChange={e=>u("contact_email",e.target.value)}/></div>
+                 
+                 <div style={{ gridColumn:"span 2" }}>
+                   <Lbl c="JOB DESCRIPTION"/>
+                   <textarea style={{ ...inp, height:80, resize:"vertical" }} value={lead.description} onChange={e=>u("description",e.target.value)} placeholder="Detailed project description..." required/>
+                 </div>
+               </div>
+             </Card>
+
+             <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
+                <button type="button" style={mkBtn("ghost")} onClick={onClose}>Cancel</button>
+                <button 
+                  type="submit" 
+                  disabled={isSaving} 
+                  style={{ ...mkBtn("primary"), padding:"14px 28px", fontSize:15, fontWeight:800 }}
+                >
+                  {isSaving ? "CREATING..." : "SUBMIT NEW LEAD"}
+                </button>
+             </div>
+           </div>
+         </form>
+      </div>
+    </div>
+  );
+}
+
+
+function ActionBtns({ onFromReq, onNew, onNewLead, onAddLead }) {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
@@ -3635,6 +3744,7 @@ function ActionBtns({ onFromReq, onNew, onNewLead }) {
   const s = compact ? { fontSize:10, padding:"5px 8px", gap:3 } : {};
   return (
     <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+      <button style={{ ...mkBtn("blue"), ...s, background:C.acc }} onClick={onAddLead}>+ New Lead</button>
       <button style={{ ...mkBtn("green"), ...s }} onClick={onNewLead}>Open Leads</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Quote</button>
     </div>
@@ -3967,10 +4077,10 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
                         const val = e.target.value;
                         if (val === "__custom__") {
                           u("jobSite", "");
-                          u("jobSiteAddress1", "");
-                          u("jobSiteCity", "");
-                          u("jobSiteState", "");
-                          u("jobSiteZip", "");
+                          u("street", "");
+                          u("city", "");
+                          u("state", "");
+                          u("zipcode", "");
                         } else {
                           u("jobSite", val);
                           // For a known location, we might just store the raw string in jobSite 
@@ -3989,16 +4099,16 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
                   {(!hasLocations || isCustom || !f.jobSite) && (
                     <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:8 }}>
                       <div style={{ gridColumn:"1/-1" }}>
-                        <input style={inp} value={f.jobSiteAddress1||""} placeholder="Street Address" onChange={e=>u("jobSiteAddress1", e.target.value)}/>
+                        <input style={inp} value={f.street||""} placeholder="Street Address" onChange={e=>u("street", e.target.value)}/>
                       </div>
                       <div>
-                        <input style={inp} value={f.jobSiteCity||""} placeholder="City" onChange={e=>u("jobSiteCity", e.target.value)}/>
+                        <input style={inp} value={f.city||""} placeholder="City" onChange={e=>u("city", e.target.value)}/>
                       </div>
                       <div>
-                        <input style={inp} value={f.jobSiteState||""} placeholder="State (OH)" onChange={e=>u("jobSiteState", e.target.value.toUpperCase().slice(0, 2))} maxLength={2}/>
+                        <input style={inp} value={f.state||""} placeholder="State (OH)" onChange={e=>u("state", e.target.value.toUpperCase().slice(0, 2))} maxLength={2}/>
                       </div>
                       <div>
-                        <input style={inp} value={f.jobSiteZip||""} placeholder="Zip (44312)" onChange={e=>u("jobSiteZip", e.target.value.replace(/[^0-9]/g, "").slice(0, 5))} maxLength={5}/>
+                        <input style={inp} value={f.zipcode||""} placeholder="Zip (44312)" onChange={e=>u("zipcode", e.target.value.replace(/[^0-9]/g, "").slice(0, 5))} maxLength={5}/>
                       </div>
                     </div>
                   )}
@@ -7903,9 +8013,11 @@ function VectorBrowser({ token }) {
 function DatabaseBrowser({ token }) {
   const [selectedTable, setSelectedTable] = useState("users");
   const [data, setData] = useState([]);
+  const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tableSearch, setTableSearch] = useState("");
   const [editingRow, setEditingRow] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 100;
@@ -7934,14 +8046,20 @@ function DatabaseBrowser({ token }) {
     fetch(`/api/admin/tables/${selectedTable}`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => { 
-        setData(Array.isArray(d) ? d : []); 
+        if (d && d.data && d.columns) {
+          setData(Array.isArray(d.data) ? d.data : []);
+          setColumns(Array.isArray(d.columns) ? d.columns : []);
+        } else {
+          setData(Array.isArray(d) ? d : []); 
+          setColumns([]);
+        }
         setLoading(false); 
         setCurrentPage(1);
       })
       .catch(e => { console.error("Data load err:", e); setLoading(false); });
   }, [selectedTable, token]);
 
-  const headers = data.length > 0 ? Object.keys(data[0]) : [];
+  const headers = columns.length > 0 ? columns : (data.length > 0 ? Object.keys(data[0]) : []);
   const searchTerm = tableSearch.trim().toLowerCase();
   const filteredData = !searchTerm
     ? data
@@ -8030,6 +8148,33 @@ function DatabaseBrowser({ token }) {
     } catch (e) {
       console.error("Update error:", e);
       alert("Error updating record: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleCreate = async (newData) => {
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/admin/tables/${selectedTable}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(newData)
+      });
+      if (!res.ok) {
+        let msg = `Server error (${res.status})`;
+        try {
+          const d = await res.json();
+          msg = d.error || msg;
+        } catch (jErr) {}
+        throw new Error(msg);
+      }
+      const created = await res.json();
+      setData(prev => [created, ...prev]);
+      setShowAddModal(false);
+    } catch (e) {
+      console.error("Create error:", e);
+      alert("Error creating record: " + e.message);
     } finally {
       setUpdating(false);
     }
@@ -8140,6 +8285,12 @@ function DatabaseBrowser({ token }) {
                       style={{ ...mkBtn("red"), padding:"4px 8px", fontSize:11, opacity: checkedRows.size === 0 ? 0.4 : 1 }}
                     >
                       🗑️ Delete Checked
+                    </button>
+                    <button 
+                      onClick={() => setShowAddModal(true)} 
+                      style={{ ...mkBtn("primary"), padding:"4px 12px", fontSize:11, background:"#0d9488", border: "1px solid #134e4a" }}
+                    >
+                      + Add Record
                     </button>
                     <button onClick={exportExcel} style={{ ...mkBtn("ghost"), padding:"4px 8px", fontSize:11, border:`1px solid ${C.bdr}` }} disabled={!sortedItems.length}>📁 Excel</button>
                     <button onClick={exportCSV} style={{ ...mkBtn("ghost"), padding:"4px 8px", fontSize:11, border:`1px solid ${C.bdr}` }} disabled={!sortedItems.length}>📄 CSV</button>
@@ -8252,50 +8403,51 @@ function DatabaseBrowser({ token }) {
             </div>
           )}
       </div>
-      {editingRow && (
+      {(editingRow || showAddModal) && (
         <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.6)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:24, backdropFilter:"blur(4px)" }}>
           <Card style={{ maxWidth:540, width:"100%", maxHeight:"85vh", overflowY:"auto", padding:24, position:"relative", boxShadow:"0 10px 40px rgba(0,0,0,0.2)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
               <div>
-                <div style={{ fontSize:18, fontWeight:800, color:C.acc }}>Edit record in {selectedTable}</div>
-                <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>ID: {editingRow.id}</div>
+                <div style={{ fontSize:18, fontWeight:800, color:C.acc }}>{showAddModal ? `Add record to ${selectedTable}` : `Edit record in ${selectedTable}`}</div>
+                {!showAddModal && <div style={{ fontSize:12, color:C.txtS, marginTop:2 }}>ID: {editingRow.id}</div>}
               </div>
-              <button onClick={() => setEditingRow(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:C.txtS }}>×</button>
+              <button onClick={() => { setEditingRow(null); setShowAddModal(false); }} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:C.txtS }}>×</button>
             </div>
             
             <form onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.target);
-              const updated = {};
+              const payload = {};
               headers.forEach(h => {
                 if (h !== 'id' && h !== 'created_at' && h !== 'updated_at') {
-                  updated[h] = formData.get(h);
+                  payload[h] = formData.get(h);
                 }
               });
-              saveEdit(updated);
+              if (showAddModal) handleCreate(payload);
+              else saveEdit(payload);
             }}>
               <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
                 {headers.filter(h => h !== 'id' && h !== 'created_at' && h !== 'updated_at').map(h => (
                   <div key={h}>
                     <Lbl c={h.replace(/_/g, ' ').toUpperCase()} />
                     {selectedTable === 'rfqs' && h === 'customer_id' ? (
-                      <select name={h} defaultValue={editingRow[h]} style={{ ...inp, fontSize:12, padding:"6px 12px" }}>
+                      <select name={h} defaultValue={editingRow ? editingRow[h] : ""} style={{ ...inp, fontSize:12, padding:"6px 12px" }}>
                         <option value="">-- Select Company --</option>
                         {customersList.map(c => (
                           <option key={c.id} value={c.id}>{c.name} (ID: {c.id})</option>
                         ))}
                       </select>
-                    ) : String(editingRow[h] || "").length > 50 ? (
+                    ) : String(editingRow ? (editingRow[h] || "") : "").length > 50 ? (
                       <textarea 
                         name={h} 
-                        defaultValue={editingRow[h]} 
+                        defaultValue={editingRow ? editingRow[h] : ""} 
                         style={{ ...inp, minHeight:80, fontFamily:"inherit", fontSize:12, resize:"vertical" }}
                       />
                     ) : (
                       <input 
                         name={h} 
                         type="text"
-                        defaultValue={editingRow[h]} 
+                        defaultValue={editingRow ? editingRow[h] : ""} 
                         style={{ ...inp, fontSize:12 }}
                       />
                     )}
@@ -8305,9 +8457,9 @@ function DatabaseBrowser({ token }) {
               
               <div style={{ display:"flex", gap:12, marginTop:28 }}>
                 <button type="submit" disabled={updating} style={{ ...mkBtn("primary"), flex:2, justifyContent:"center", padding:12, fontWeight:700 }}>
-                  {updating ? "Saving..." : "Update Record"}
+                  {updating ? "Processing..." : (showAddModal ? "Create Record" : "Update Record")}
                 </button>
-                <button type="button" onClick={() => setEditingRow(null)} style={{ ...mkBtn("ghost"), flex:1, justifyContent:"center", padding:12, border:`1px solid ${C.bdr}` }}>
+                <button type="button" onClick={() => { setEditingRow(null); setShowAddModal(false); }} style={{ ...mkBtn("ghost"), flex:1, justifyContent:"center", padding:12, border:`1px solid ${C.bdr}` }}>
                   Cancel
                 </button>
               </div>
@@ -9359,6 +9511,7 @@ export default function App() {
   const [eqOv,       setEqOv]       = useState({});
   const [custData,         setCustData]         = useState(INIT_CUST_DATA);
   const [showCustModal,    setShowCustModal]    = useState(false);
+  const [showLeadModal,    setShowLeadModal]    = useState(false);
   const [profileTemplate,  setProfileTemplate]  = useState(DEFAULT_PROFILE_TEMPLATE);
   const [showProfileTempl, setShowProfileTempl] = useState(false);
   const [custFilter, setCustFilter] = useState("all"); // all | prospects | customers
@@ -9749,6 +9902,7 @@ export default function App() {
     onFromReq={()=>setView("rfqs")} 
     onNew={()=>openNew()} 
     onNewLead={() => setView("leads")}
+    onAddLead={() => setShowLeadModal(true)}
   />;
 
   const NotifPanel = () => (
@@ -9899,6 +10053,7 @@ export default function App() {
       )}
       {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} reqs={reqs} profileUser={profileUser} role={role} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
+      {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       {deadModal && <MarkDeadModal
         itemType={deadModal.type==="rfq"?"RFQ":"Job"}
         itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client}
@@ -10037,6 +10192,7 @@ export default function App() {
   // ── CUSTOMERS ──────────────────────────────────────────────────────────────
   if (view === "customers") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg }}>
+    {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
     <CustomerCRMBoard 
       {...{
         C, fmt, mkBtn, Badge, Sec, Lbl, Card, thS, tdS, inp, sel, actBtns,
@@ -10059,6 +10215,7 @@ export default function App() {
   // ── RFQs ───────────────────────────────────────────────────────────────
   if (view==="rfqs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize:14 }}>
+      {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} reqs={reqs} onClose={()=>{setShowRM(false);setEditR(null);}}/>}
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal
@@ -10080,21 +10237,24 @@ export default function App() {
   );
 
   // ── LEADS ──────────────────────────────────────────────────────────────
-  if (view==="leads") return (
-    <LeadsBoard 
-      {...{
-        C, fmt, mkBtn, Badge, Sec, Lbl, Card, thS, tdS, inp, sel, actBtns,
-        view, setView, token, setToken, role, setRole,
-        customers, custData, setCustData,
-        leads, setLeads, reqs, jobs, Header, appUsers, profileUser,
-        statusList: statusList
-      }}
-    />
-  );
+    <>
+      {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
+      <LeadsBoard 
+        {...{
+          C, fmt, mkBtn, Badge, Sec, Lbl, Card, thS, tdS, inp, sel, actBtns,
+          view, setView, token, setToken, role, setRole,
+          customers, custData, setCustData,
+          leads, setLeads, reqs, jobs, Header, appUsers, profileUser,
+          statusList: statusList,
+          onAddLead: () => setShowLeadModal(true)
+        }}
+      />
+    </>
 
   // ── QUOTES ─────────────────────────────────────────────────────────────
   if (view==="quotes") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
+      {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <QuotesPageView jobs={jobs} setJobs={setJobs} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} role={role} />
     </div>
@@ -10103,15 +10263,16 @@ export default function App() {
   // ── EQUIPMENT RATES ────────────────────────────────────────────────────────
   if (view==="equipment") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+      {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv} role={role}/>
       <Footer />
     </div>
   );
 
-  // ── LABOR RATES ────────────────────────────────────────────────────────────
   if (view==="labor") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+      {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates} role={role} baseLabor={baseLabor} setBaseLabor={setBaseLabor}/>
       <Footer />
@@ -10122,6 +10283,7 @@ export default function App() {
   // ── MASTER JOB LIST ──────────────────────────────────────────────────────────
   if (view==="jobs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+      {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Job"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
@@ -10185,6 +10347,7 @@ export default function App() {
 
   if (view==="calendar") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
+      {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <CalendarPage jobs={jobs} setJobs={setJobs} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
       <Footer />
@@ -10194,6 +10357,7 @@ export default function App() {
   // ── REPORTS ───────────────────────────────────────────────────────────────
   if (view==="reports") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14, overflowX:"auto" }}>
+      {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <ReportsPage
         jobs={jobs}
@@ -10422,10 +10586,10 @@ export default function App() {
                 {customerRates[active.client] && <div style={{ fontSize:11, color:C.yel, marginTop:2 }}>⚡ Special labor rates saved for this client</div>}
               </div>
               <div style={{ gridColumn:"span 2", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:10 }}>
-                <div style={{ gridColumn:"1/-1" }}><Lbl c="JOB SITE ADDRESS 1" /><input style={inp} value={active.jobSiteAddress1||""} onChange={e=>u("jobSiteAddress1",e.target.value)} placeholder="123 Main St" disabled={active.locked} /></div>
-                <div><Lbl c="CITY" /><input style={inp} value={active.jobSiteCity||""} onChange={e=>u("jobSiteCity",e.target.value)} placeholder="City" disabled={active.locked} /></div>
-                <div><Lbl c="STATE" /><input style={inp} value={active.jobSiteState||""} onChange={e=>u("jobSiteState",e.target.value)} placeholder="State" disabled={active.locked} maxLength={2} /></div>
-                <div><Lbl c="ZIP" /><input style={inp} value={active.jobSiteZip||""} onChange={e=>u("jobSiteZip",e.target.value)} placeholder="ZIP" disabled={active.locked} maxLength={10} /></div>
+                <div style={{ gridColumn:"1/-1" }}><Lbl c="JOB SITE ADDRESS 1" /><input style={inp} value={active.street||""} onChange={e=>u("street",e.target.value)} placeholder="123 Main St" disabled={active.locked} /></div>
+                <div><Lbl c="CITY" /><input style={inp} value={active.city||""} onChange={e=>u("city",e.target.value)} placeholder="City" disabled={active.locked} /></div>
+                <div><Lbl c="STATE" /><input style={inp} value={active.state||""} onChange={e=>u("state",e.target.value)} placeholder="State" disabled={active.locked} maxLength={2} /></div>
+                <div><Lbl c="ZIP" /><input style={inp} value={active.zipcode||""} onChange={e=>u("zipcode",e.target.value)} placeholder="ZIP" disabled={active.locked} maxLength={10} /></div>
               </div>
               <div><Lbl c="QUOTE TYPE"/><select style={{ ...sel, width:"100%" }} value={active.qtype} onChange={e=>u("qtype",e.target.value)} disabled={active.locked}><option>Contract</option><option>T&M</option><option>Not To Exceed</option></select></div>
               <div><Lbl c="STATUS"/><select style={{ ...sel, width:"100%" }} value={active.status} onChange={e=>u("status",e.target.value)} disabled={active.locked}>{["Quote Requested","In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost","Dead","Completed"].map(x=><option key={x} value={x}>{x}</option>)}</select></div>

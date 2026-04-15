@@ -144,6 +144,14 @@ async function ensureUserProfileColumns() {
     const [qRows] = await db.query(`SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quotes' AND COLUMN_NAME = 'quote_data'`);
     if (qRows.length === 0) {
       await db.query(`ALTER TABLE quotes ADD COLUMN quote_data LONGTEXT`);
+      // Update leads schema if needed
+      const [leadsCols] = await db.query('SHOW COLUMNS FROM leads');
+      const leadsColNames = leadsCols.map(c => c.Field);
+      if (!leadsColNames.includes('company_name')) await db.query('ALTER TABLE leads ADD COLUMN company_name VARCHAR(255) DEFAULT "" AFTER customer_number');
+      if (!leadsColNames.includes('contact_phone')) await db.query('ALTER TABLE leads ADD COLUMN contact_phone VARCHAR(50) DEFAULT "" AFTER last_name');
+      if (!leadsColNames.includes('contact_email')) await db.query('ALTER TABLE leads ADD COLUMN contact_email VARCHAR(100) DEFAULT "" AFTER contact_phone');
+      if (leadsColNames.includes('street1')) await db.query('ALTER TABLE leads CHANGE COLUMN street1 street VARCHAR(255) DEFAULT ""');
+      if (leadsColNames.includes('zip')) await db.query('ALTER TABLE leads CHANGE COLUMN zip zipcode VARCHAR(20) DEFAULT ""');
     }
   } catch (e) {
     console.warn('[Schema] Ignoring quote_data column check:', e.message);
@@ -413,10 +421,10 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         quote_number: row.qn || json.qn || '',
         client: row.client || row.customer_name || json.client || '',
         jobSite: row.jobSite || row.job_site || json.jobSite || '',
-        jobSiteAddress1: row.job_site_address1 || json.jobSiteAddress1 || '',
-        jobSiteCity: row.job_site_city || json.jobSiteCity || '',
-        jobSiteState: row.job_site_state || json.jobSiteState || '',
-        jobSiteZip: row.job_site_zip || json.jobSiteZip || '',
+        street: row.street || json.street || json.jobSiteAddress1 || '',
+        city: row.city || json.city || json.jobSiteCity || '',
+        state: row.state || json.state || json.jobSiteState || '',
+        zipcode: row.zipcode || json.zipcode || json.jobSiteZip || '',
         desc: row.jobDesc || row.desc || json.desc || '',
         qtype: row.qtype || json.qtype || 'Contract',
         salesAssoc: row.salesAssoc || json.salesAssoc || '',
@@ -479,10 +487,10 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const rfqsRaw = await safeQuery('SELECT r.*, c.name AS company, r.rfq_number as rn FROM rfqs r LEFT JOIN customers c ON r.customer_id = c.id');
     const rfqs = rfqsRaw.map(r => ({
       ...r,
-      jobSiteAddress1: r.job_site_address1 || '',
-      jobSiteCity: r.job_site_city || '',
-      jobSiteState: r.job_site_state || '',
-      jobSiteZip: r.job_site_zip || '',
+      street: r.job_site_address1 || '',
+      city: r.job_site_city || '',
+      state: r.job_site_state || '',
+      zipcode: r.job_site_zip || '',
       jobSite: r.job_site || ''
     }));
     const rawUsers = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, roles, is_disabled, user_number, created_at FROM users');
@@ -850,20 +858,72 @@ app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, a
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
 
   try {
-    const [idColumn] = await db.query(`SHOW COLUMNS FROM ${table} LIKE 'id'`);
+    const [cols] = await db.query(`SHOW COLUMNS FROM \`${table}\``);
+    let columnNames = cols.map(c => c.Field);
+
+    // Custom reordering for specific tables
+    if (table === 'status' && columnNames.includes('type') && columnNames.includes('name')) {
+      const typeIdx = columnNames.indexOf('type');
+      columnNames.splice(typeIdx, 1); // remove type from current position
+      const nameIdx = columnNames.indexOf('name');
+      columnNames.splice(nameIdx, 0, 'type'); // insert before name
+    }
+
+    const [idColumn] = await db.query(`SHOW COLUMNS FROM \`${table}\` LIKE 'id'`);
     const query = idColumn.length
       ? `SELECT * FROM \`${table}\` ORDER BY id ASC`
       : `SELECT * FROM \`${table}\``;
     const [rows] = await db.query(query);
-    res.json(rows);
+    res.json({ data: rows, columns: columnNames });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch table data' });
+  }
+});
+
+
+// CREATE RECORD IN TABLE (Admin Only)
+app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const table = req.params.table;
+  const data = req.body;
+
+  if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
+
+  try {
+    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at');
+    if (keys.length === 0) return res.status(400).json({ error: 'No data provided' });
+
+    const values = keys.map(k => {
+      let val = data[k];
+      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(val)) {
+        val = new Date(val).toISOString().slice(0, 19).replace('T', ' ');
+      }
+      if (typeof val === 'object' && val !== null) {
+        return JSON.stringify(val);
+      }
+      if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update')) {
+        return null;
+      }
+      return val;
+    });
+
+    const columns = keys.map(k => `\`${k}\``).join(', ');
+    const placeholders = keys.map(() => '?').join(', ');
+
+    const [result] = await db.query(`INSERT INTO \`${table}\` (${columns}) VALUES (${placeholders})`, values);
+    
+    // Fetch the newly created row to return it
+    const [newRow] = await db.query(`SELECT * FROM \`${table}\` WHERE id = ?`, [result.insertId]);
+    res.json(newRow[0]);
+  } catch (error) {
+    console.error(`[API] Table insert error (${table}):`, error);
+    res.status(500).json({ error: 'Insert failed', details: error.message });
   }
 });
 
@@ -876,7 +936,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
   }
   authenticateAdmin(req, res, next);
 }, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
   const id = req.params.id;
   const data = req.body;
@@ -938,8 +998,8 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
 
        const quoteDataStr = JSON.stringify({ 
            targetId: null, qn: '', client: customerName, 
-           jobSiteAddress1: leadRow.street1 || '', jobSiteCity: leadRow.city || '', 
-           jobSiteState: leadRow.state || '', jobSiteZip: leadRow.zip || '', 
+           street: leadRow.street1 || '', city: leadRow.city || '', 
+           state: leadRow.state || '', zipcode: leadRow.zip || '', 
            desc: leadRow.description || '', date: new Date().toISOString().split('T')[0], 
            status: 'Draft', qtype: '', salesAssoc: data.estimator_id 
        });
@@ -967,7 +1027,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
        ];
 
        const [insertRes] = await db.query(
-         'INSERT INTO quotes (quote_number, customer_id, customer_name, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+         'INSERT INTO quotes (quote_number, customer_id, customer_name, job_site, street, city, state, zipcode, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
          rowValues
        );
 
@@ -985,7 +1045,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
 
 // BATCH DELETE RECORDS IN TABLE (Admin Only)
 app.delete('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
   const { ids } = req.body;
 
@@ -1526,7 +1586,12 @@ app.post('/api/customers/quick', authenticateToken, async (req, res) => {
 
 app.get('/api/admin/customers', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
-    const [customers] = await db.query('SELECT * FROM customers');
+    const [customers] = await db.query(`
+      SELECT c.*, 
+             s.address1 as street, s.city, s.state, s.zip, s.address1 as address1
+      FROM customers c
+      LEFT JOIN sites s ON c.primary_site_id = s.id
+    `);
     res.json(customers);
   } catch (error) {
     console.error('Failed to fetch customers:', error);
@@ -1545,11 +1610,26 @@ app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (re
 
   try {
     const [result] = await db.query(
-      'INSERT INTO customers (name, notes, street, city, state, zip, billing_street, billing_city, billing_state, billing_zip, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name.trim(), notes || '', streetVal, city || '', state || '', zip || '', streetVal, city || '', state || '', zip || '', website || '', industry || '', payment_terms || '', account_num || '']
+      'INSERT INTO customers (name, notes, billing_street, billing_city, billing_state, billing_zip, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [name.trim(), notes || '', streetVal, city || '', state || '', zip || '', website || '', industry || '', payment_terms || '', account_num || '']
+    );
+    const custId = result.insertId;
+
+    // Create primary site
+    const [siteResult] = await db.query(
+      'INSERT INTO sites (customer_id, site_type, address1, city, state, zip, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [custId, 'PrimaryHQ', streetVal, city || '', state || '', zip || '', 'Automatically created during customer registration']
     );
     
-    const [newCustomer] = await db.query('SELECT * FROM customers WHERE id = ?', [result.insertId]);
+    // Link to customer
+    await db.query('UPDATE customers SET primary_site_id = ? WHERE id = ?', [siteResult.insertId, custId]);
+
+    const [newCustomer] = await db.query(`
+      SELECT c.*, s.address1 as street, s.city, s.state, s.zip
+      FROM customers c
+      LEFT JOIN sites s ON c.primary_site_id = s.id
+      WHERE c.id = ?
+    `, [custId]);
     res.status(201).json(newCustomer[0]);
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
@@ -1582,11 +1662,35 @@ app.put('/api/admin/customers/:id', authenticateToken, authenticateAdmin, async 
     }
 
     await db.query(
-      'UPDATE customers SET name = ?, notes = ?, street = ?, city = ?, state = ?, zip = ?, billing_street = ?, billing_city = ?, billing_state = ?, billing_zip = ?, website = ?, industry = ?, payment_terms = ?, account_num = ? WHERE id = ?',
-      [name.trim(), notes || '', streetVal, city || '', state || '', zip || '', streetVal, city || '', state || '', zip || '', website || '', industry || '', payment_terms || '', account_num || '', customerId]
+      'UPDATE customers SET name = ?, notes = ?, billing_street = ?, billing_city = ?, billing_state = ?, billing_zip = ?, website = ?, industry = ?, payment_terms = ?, account_num = ? WHERE id = ?',
+      [name.trim(), notes || '', streetVal, city || '', state || '', zip || '', website || '', industry || '', payment_terms || '', account_num || '', customerId]
     );
+
+    // Sync with sites table
+    const [custRows] = await db.query('SELECT primary_site_id FROM customers WHERE id = ?', [customerId]);
+    let primarySiteId = custRows[0]?.primary_site_id;
+
+    if (!primarySiteId) {
+      const [siteRes] = await db.query(
+        'INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)',
+        [customerId, 'PrimaryHQ', streetVal, city || '', state || '', zip || '']
+      );
+      primarySiteId = siteRes.insertId;
+      await db.query('UPDATE customers SET primary_site_id = ? WHERE id = ?', [primarySiteId, customerId]);
+    } else {
+      await db.query(
+        'UPDATE sites SET address1 = ?, city = ?, state = ?, zip = ? WHERE id = ?',
+        [streetVal, city || '', state || '', zip || '', primarySiteId]
+      );
+    }
     
-    const [updated] = await db.query('SELECT * FROM customers WHERE id = ?', [customerId]);
+    const [updated] = await db.query(`
+      SELECT c.*, s.address1 as street, s.city, s.state, s.zip
+      FROM customers c
+      LEFT JOIN sites s ON c.primary_site_id = s.id
+      WHERE c.id = ?
+    `, [customerId]);
+    
     if (updated.length === 0) {
       return res.status(404).json({ error: 'Customer not found' });
     }
@@ -1831,13 +1935,16 @@ const ensureLeadsTable = async () => {
       description TEXT,
       create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       customer_number INT,
+      company_name VARCHAR(255) DEFAULT '',
       status_number INT DEFAULT 1,
       first_name VARCHAR(100) DEFAULT '',
       last_name VARCHAR(100) DEFAULT '',
-      street1 VARCHAR(255) DEFAULT '',
+      contact_phone VARCHAR(50) DEFAULT '',
+      contact_email VARCHAR(100) DEFAULT '',
+      street VARCHAR(255) DEFAULT '',
       city VARCHAR(100) DEFAULT '',
       state VARCHAR(50) DEFAULT '',
-      zip VARCHAR(20) DEFAULT '',
+      zipcode VARCHAR(20) DEFAULT '',
       estimator_id VARCHAR(100) DEFAULT ''
     )
   `);
@@ -1970,7 +2077,7 @@ app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
       if (existingByRn.length > 0) targetId = existingByRn[0].id;
     }
 
-    const { rn, company, requester, reqFirst, reqLast, email, phone, jobSite, jobSiteAddress1, jobSiteCity, jobSiteState, jobSiteZip, desc, notes, date, status, salesAssoc } = rfq;
+    const { rn, company, requester, reqFirst, reqLast, email, phone, jobSite, street: street, city: city, state: state, zipcode: zipcode, desc, notes, date, status, salesAssoc } = rfq;
     
     let custId = null;
     if (company) {
@@ -2001,14 +2108,14 @@ app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
           `UPDATE rfqs SET 
             rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, notes=?, date=?, status=?, sales_assoc=?, active=?
            WHERE id=?`,
-          [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', activeFlag, targetId]
+          [rn, custId, requester||'', email||'', phone||'', jobSite||'', street||'', city||'', state||'', zipcode||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', activeFlag, targetId]
         );
       } else {
         await connection.query(
           `UPDATE rfqs SET 
             rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, notes=?, date=?, status=?, sales_assoc=?
            WHERE id=?`,
-          [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', targetId]
+          [rn, custId, requester||'', email||'', phone||'', jobSite||'', street||'', city||'', state||'', zipcode||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', targetId]
         );
       }
     } else {
@@ -2017,13 +2124,13 @@ app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
         `INSERT INTO rfqs 
           (rfq_number, customer_id, requester, email, phone, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, notes, date, status, sales_assoc, active) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [rn, custId, requester||'', email||'', phone||'', jobSite||'', jobSiteAddress1||'', jobSiteCity||'', jobSiteState||'', jobSiteZip||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', activeFlag]
+        [rn, custId, requester||'', email||'', phone||'', jobSite||'', street||'', city||'', state||'', zipcode||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', activeFlag]
       );
       
       // Mirror minimal data into newly requested 'leads' table with strict status_number 1 constraint
       await connection.query(
-        'INSERT INTO leads (description, customer_number, status_number, first_name, last_name, street1, city, state, zip, estimator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [desc || '', custId || null, 1, reqFirst || '', reqLast || '', jobSiteAddress1 || '', jobSiteCity || '', jobSiteState || '', jobSiteZip || '', salesAssoc || '']
+        'INSERT INTO leads (description, customer_number, company_name, status_number, first_name, last_name, contact_phone, contact_email, street, city, state, zipcode, estimator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [desc || '', custId || null, company || '', 1, reqFirst || '', reqLast || '', phone || '', email || '', street || '', city || '', state || '', zipcode || '', salesAssoc || '']
       );
     }
 
@@ -2094,7 +2201,7 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       if (existingCustomer.length === 0) {
         const [inserted] = await connection.query(
           'INSERT INTO customers (name, address1, city, state, zip, notes) VALUES (?, ?, ?, ?, ?, ?)',
-          [customerName, String(quote.jobSiteAddress1 || '').trim(), String(quote.jobSiteCity || '').trim(), String(quote.jobSiteState || '').trim(), String(quote.jobSiteZip || '').trim(), 'Auto-created from quote save']
+          [customerName, String(quote.street || '').trim(), String(quote.city || '').trim(), String(quote.state || '').trim(), String(quote.zipcode || '').trim(), 'Auto-created from quote save']
         );
         custId = inserted.insertId;
       } else {
@@ -2125,10 +2232,10 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       custId,
       customerName,
       quote.jobSite || '',
-      quote.jobSiteAddress1 || '',
-      quote.jobSiteCity || '',
-      quote.jobSiteState || '',
-      quote.jobSiteZip || '',
+      quote.street || '',
+      quote.city || '',
+      quote.state || '',
+      quote.zipcode || '',
       quote.desc || '',
       formatDate(quote.date),
       resolvedStatusId,
@@ -2152,7 +2259,7 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
     let savedId = targetId;
     if (targetId) {
       await connection.query(
-        'UPDATE quotes SET quote_number=?, customer_id=?, customer_name=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=? WHERE id=?',
+        'UPDATE quotes SET quote_number=?, customer_id=?, customer_name=?, job_site=?, street=?, city=?, state=?, zipcode=?, description=?, date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=? WHERE id=?',
         [...rowValues, targetId]
       );
       if (oldStatus !== (quote.status || 'Draft')) {
@@ -2163,7 +2270,7 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       }
     } else {
       const [insertResult] = await connection.query(
-        'INSERT INTO quotes (quote_number, customer_id, customer_name, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO quotes (quote_number, customer_id, customer_name, job_site, street, city, state, zipcode, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         rowValues
       );
       savedId = insertResult.insertId;

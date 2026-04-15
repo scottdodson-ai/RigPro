@@ -1,48 +1,67 @@
 const mysql = require('mysql2/promise');
+require('dotenv').config();
 
 async function run() {
   const db = await mysql.createConnection({
-    host: 'localhost', user: 'root', password: 'password123', database: 'rigpro', port: 3308
+    host: process.env.DB_HOST || 'db',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'password123',
+    database: process.env.DB_NAME || 'rigpro',
+    port: process.env.DB_PORT || 3306,
   });
 
-  console.log("Creating sites table...");
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS sites (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      customer_id INT NOT NULL,
-      site_type VARCHAR(50) DEFAULT '',
-      address1 VARCHAR(255) DEFAULT '',
-      city VARCHAR(100) DEFAULT '',
-      state VARCHAR(50) DEFAULT '',
-      zip VARCHAR(20) DEFAULT '',
-      notes TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-  `);
+  console.log("Starting site migration...");
 
-  console.log("Migrating addresses...");
-  const [customers] = await db.query('SELECT id, address1, city, state, zip FROM customers');
-  let count = 0;
-  for (const c of customers) {
-    if (c.address1 || c.city || c.state || c.zip) {
-      await db.query(`
-        INSERT INTO sites (customer_id, site_type, address1, city, state, zip)
-        VALUES (?, 'master_billing', ?, ?, ?, ?)
-      `, [c.id, c.address1||'', c.city||'', c.state||'', c.zip||'']);
-      count++;
+  try {
+    // 1. Add primary_site_id to customers if not exists
+    const [cols] = await db.query("SHOW COLUMNS FROM customers LIKE 'primary_site_id'");
+    if (cols.length === 0) {
+      await db.query("ALTER TABLE customers ADD COLUMN primary_site_id INT DEFAULT NULL");
+      console.log("Added primary_site_id column to customers table.");
     }
+
+    // 2. Fetch all customers
+    const [customers] = await db.query("SELECT id, name, street, city, state, zip FROM customers");
+    console.log(`Processing ${customers.length} customers...`);
+
+    let migratedCount = 0;
+    let createdSites = 0;
+
+    for (const cust of customers) {
+      const hasAddress = cust.street || cust.city || cust.state || cust.zip;
+      if (!hasAddress) continue;
+
+      // Check if this address already exists in sites for this customer
+      const [existing] = await db.query(
+        "SELECT id FROM sites WHERE customer_id = ? AND address1 = ? AND city = ? AND state = ? AND zip = ?",
+        [cust.id, cust.street || '', cust.city || '', cust.state || '', cust.zip || '']
+      );
+
+      let siteId;
+      if (existing.length > 0) {
+        siteId = existing[0].id;
+      } else {
+        // Create new site
+        const [res] = await db.query(
+          "INSERT INTO sites (customer_id, site_type, address1, city, state, zip, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [cust.id, 'PrimaryHQ', cust.street || '', cust.city || '', cust.state || '', cust.zip || '', `Migrated from customer record: ${cust.name}`]
+        );
+        siteId = res.insertId;
+        createdSites++;
+      }
+
+      // Update customer record
+      await db.query("UPDATE customers SET primary_site_id = ? WHERE id = ?", [siteId, cust.id]);
+      migratedCount++;
+    }
+
+    console.log(`Migration complete. Migrated ${migratedCount} customers. Created ${createdSites} new site records.`);
+
+  } catch (err) {
+    console.error("Migration error:", err);
+  } finally {
+    await db.end();
   }
-  console.log(`Migrated ${count} addresses to sites.`);
-
-  console.log("Dropping address columns from customers...");
-  await db.query('ALTER TABLE customers DROP COLUMN address1, DROP COLUMN city, DROP COLUMN state, DROP COLUMN zip;');
-  
-  // also add billing_site_id to customers just in case "pointer to sites" means that, though we can use site_type='master_billing'.
-  // Actually, standard 1:M is better. user says "Point master biiling address in Customers screen to sites and display record for 'master_billing'". This means frontend should query sites table.
-
-  console.log("Done.");
-  process.exit(0);
 }
-run().catch(console.error);
+
+run();
