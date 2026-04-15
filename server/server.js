@@ -500,16 +500,19 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
     customers.forEach(c => {
-      const mbSite = sites.find(s => s.customer_id === c.id && s.site_type === 'master_billing') || {};
       custData[c.name] = {
         ...c,
         customer_num: c.customer_num,
         company_summary: c.company_summary || "",
-        address1: mbSite.address1 || "",
-        city: mbSite.city || "",
-        state: mbSite.state || "",
-        zip: mbSite.zip || "",
-        master_billing_site_id: mbSite.id || null,
+        address1: c.street || "",
+        street: c.street || "",
+        city: c.city || "",
+        state: c.state || "",
+        zip: c.zip || "",
+        billing_street: c.billing_street || c.street || "",
+        billing_city: c.billing_city || c.city || "",
+        billing_state: c.billing_state || c.state || "",
+        billing_zip: c.billing_zip || c.zip || "",
         paymentTerms: c.payment_terms || "",
         accountNum: c.account_num || "",
         locations: sites.filter(s => s.customer_id === c.id).map(s => ({
@@ -1533,7 +1536,8 @@ app.get('/api/admin/customers', authenticateToken, authenticateAdmin, async (req
 
 // Add a new customer
 app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { name, notes, address1, city, state, zip, website, industry, payment_terms, account_num } = req.body;
+  const { name, notes, address1, street, city, state, zip, website, industry, payment_terms, account_num } = req.body;
+  const streetVal = street || address1 || '';
   
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Customer name is required' });
@@ -1541,8 +1545,8 @@ app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (re
 
   try {
     const [result] = await db.query(
-      'INSERT INTO customers (name, notes, address1, city, state, zip, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name.trim(), notes || '', address1 || '', city || '', state || '', zip || '', website || '', industry || '', payment_terms || '', account_num || '']
+      'INSERT INTO customers (name, notes, street, city, state, zip, billing_street, billing_city, billing_state, billing_zip, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [name.trim(), notes || '', streetVal, city || '', state || '', zip || '', streetVal, city || '', state || '', zip || '', website || '', industry || '', payment_terms || '', account_num || '']
     );
     
     const [newCustomer] = await db.query('SELECT * FROM customers WHERE id = ?', [result.insertId]);
@@ -1558,7 +1562,8 @@ app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (re
 
 // Edit existing customer
 app.put('/api/admin/customers/:id', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { name, notes, address1, city, state, zip, website, industry, payment_terms, account_num } = req.body;
+  const { name, notes, address1, street, city, state, zip, website, industry, payment_terms, account_num } = req.body;
+  const streetVal = street || address1 || '';
   const customerId = req.params.id;
 
   if (!name || !name.trim()) {
@@ -1577,8 +1582,8 @@ app.put('/api/admin/customers/:id', authenticateToken, authenticateAdmin, async 
     }
 
     await db.query(
-      'UPDATE customers SET name = ?, notes = ?, billing_address = ?, website = ?, industry = ?, payment_terms = ?, account_num = ? WHERE id = ?',
-      [name.trim(), notes || '', address1, city, state, zip, website || '', industry || '', payment_terms || '', account_num || '', customerId]
+      'UPDATE customers SET name = ?, notes = ?, street = ?, city = ?, state = ?, zip = ?, billing_street = ?, billing_city = ?, billing_state = ?, billing_zip = ?, website = ?, industry = ?, payment_terms = ?, account_num = ? WHERE id = ?',
+      [name.trim(), notes || '', streetVal, city || '', state || '', zip || '', streetVal, city || '', state || '', zip || '', website || '', industry || '', payment_terms || '', account_num || '', customerId]
     );
     
     const [updated] = await db.query('SELECT * FROM customers WHERE id = ?', [customerId]);

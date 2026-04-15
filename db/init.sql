@@ -157,29 +157,29 @@ INSERT INTO equipment (code, category, name, capacity, daily_rate, daily_cost) V
 -- 4. Customers
 CREATE TABLE IF NOT EXISTS customers (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    address1 VARCHAR(255),
+    name VARCHAR(255) NOT NULL UNIQUE,
+    street VARCHAR(255),
     city VARCHAR(100),
     state VARCHAR(50),
     zip VARCHAR(20),
     notes TEXT,
-    billing_address VARCHAR(255),
+    billing_street VARCHAR(255),
+    billing_city VARCHAR(100),
+    billing_state VARCHAR(50),
+    billing_zip VARCHAR(20),
     website VARCHAR(100),
     industry VARCHAR(100),
     payment_terms VARCHAR(50),
     account_num VARCHAR(50),
+    company_summary LONGTEXT,
+    customer_num VARCHAR(50),
     tombstone TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-INSERT INTO customers (name, notes, billing_address, website, industry, payment_terms, account_num) VALUES
-('Apex Industrial LLC', 'Long-term client since 2019. Always pays on time.', '1200 Industrial Pkwy, Akron, OH 44312', 'www.apexindustrial.com', 'Heavy Manufacturing', 'Net 30', 'APX-001'),
-('Beacon Manufacturing Co.', 'Mid-size shop. Multiple locations. Carolyn handles all rigging requests.', '500 Commerce Blvd, Dayton, OH 45402', 'www.beaconmfg.com', 'Precision Manufacturing', 'Net 45', 'BCN-002'),
-('Cornerstone Plastics Inc.', 'Growing account. New facility planned for 2026.', '800 Factory Dr, Columbus, OH 43219', '', 'Plastics Manufacturing', 'Net 30', 'CRN-003'),
-('Delta Fabrication Group', 'Competitive bidding environment. Price-sensitive.', '300 Metalworks Ave, Cleveland, OH 44124', 'www.deltafab.com', 'Metal Fabrication', 'Net 30', 'DLT-004'),
-('Eagle Press & Die', 'Excellent relationship. Repeat business every quarter.', '500 Eagle Way, Canton, OH 44702', 'www.eaglepress.com', 'Press & Die Manufacturing', 'Net 15', 'EGL-005'),
-('Frontier Castings Ltd.', 'Union shop. Require certified rigging documentation.', '900 Industrial Blvd, Youngstown, OH 44503', '', 'Metal Casting', 'Net 45', 'FRT-006');
+-- Customer data is imported from Final Customer List.xlsx via server/import_data/import_customers.cjs
+
 
 -- 5. Customer Contacts
 CREATE TABLE IF NOT EXISTS customer_contacts (

@@ -345,7 +345,7 @@ const INIT_CUST_DATA = {
 };
 
 const DEFAULT_PROFILE_TEMPLATE = [
-  { key:"address1",      label:"Address",          type:"text",     enabled:true  },
+  { key:"street",        label:"Address",          type:"text",     enabled:true  },
   { key:"city",          label:"City",               type:"text",     enabled:true  },
   { key:"state",         label:"State",              type:"text",     enabled:true  },
   { key:"zip",           label:"ZIP Code",           type:"text",     enabled:true  },

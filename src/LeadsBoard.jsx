@@ -115,7 +115,7 @@ const LeadsBoard = (props) => {
       <div style={{ padding:"14px", maxWidth:1600, margin:"0 auto", width:"100%" }}>
         
         {/* CONTROLS PANEL */}
-        <div style={{ position:"sticky", top:0, zIndex:10, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
+        <div className="sticky-search" style={{ position:"sticky", top:0, zIndex:10, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, flexWrap:"wrap", maxWidth:1280, margin:"0 auto" }}>
             <div style={{ flex:1 }}>
                <div style={{fontSize:11, fontWeight:800, color:C.txtS, marginBottom:6, letterSpacing:0.8}}>SEARCH LEADS</div>
@@ -156,9 +156,8 @@ const LeadsBoard = (props) => {
           {/* LEFT: LIST VIEW / CARDS */}
           {(!selLead || leadView === "list") && (
           <div className="leads-left-col" style={{ background: leadView === "list" ? "#fff" : "transparent", border: leadView === "list" ? `1px solid ${C.bdrL}` : "none", borderRadius:20, overflow:"hidden", display:"flex", flexDirection:"column", height: leadView === "list" ? "calc(100vh - 160px)" : "auto" }}>
-            <div style={{ overflowY:"auto", flex:1, padding: leadView === "list" ? 15 : 0 }}>
+            <div style={{ overflow:"auto", flex:1, padding: leadView === "list" ? 15 : 0 }}>
               {leadView === "list" ? (
-                <div className="app-table-wrap">
                   <table style={{ width:"100%", borderCollapse:"collapse" }}>
                     <thead>
                       <tr>
@@ -185,7 +184,6 @@ const LeadsBoard = (props) => {
                       )}
                     </tbody>
                   </table>
-                </div>
               ) : (
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:15 }}>
                   {sortedItems.map(l => (

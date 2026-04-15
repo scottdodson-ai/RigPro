@@ -109,7 +109,7 @@ const CustomerCRMBoard = (props) => {
       <div className="crm-main-container" style={{ padding:"14px", maxWidth: 1600, margin:"0 auto", width:"100%" }}>
         
         {/* CRM CONTROLS PANEL (STICKY) */}
-        <div style={{ position:"sticky", top:0, zIndex:10, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
+        <div className="sticky-search" style={{ position:"sticky", top:0, zIndex:10, background:"#fff", padding:"10px 0 20px 0", borderBottom:`2px solid ${C.accL}` }}>
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, flexWrap:"wrap", maxWidth:1280, margin:"0 auto" }}>
             <div style={{ flex:1 }}>
                <Lbl c="CUSTOMER DIRECT SEARCH"/>
@@ -144,16 +144,15 @@ const CustomerCRMBoard = (props) => {
           {/* LEFT: LIST VIEW / CARDS */}
           {(!selC || custView === "list") && (
           <div style={{ background: custView === "list" ? "#fff" : "transparent", border: custView === "list" ? `1px solid ${C.bdrL}` : "none", borderRadius:20, overflow:"hidden", display:"flex", flexDirection:"column", height: custView === "list" ? "calc(100vh - 160px)" : "auto" }}>
-            <div style={{ overflowY:"auto", flex:1, padding: custView === "list" ? 15 : 0 }}>
+            <div style={{ overflow:"auto", flex:1, padding: custView === "list" ? 15 : 0 }}>
               {custView === "list" ? (
-                <div className="app-table-wrap">
-                  <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                    <thead>
+                  <table style={{ width:"100%", borderCollapse:"separate", borderSpacing:0 }}>
+                    <thead style={{ position:"sticky", top:0, zIndex:5 }}>
                       <tr>
-                        <SortTh style={{ ...thS, width: "30%" }} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh style={{ ...thS, width: "25%" }} label="Email" sortKey={(c) => (custData[c.name]?.contacts||[])[0]?.email||""} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh style={{ ...thS, width: "25%" }} label="Phone" sortKey={(c) => (custData[c.name]?.contacts||[])[0]?.mobile||""} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center", width: "20%" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "30%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "25%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Email" sortKey={(c) => (custData[c.name]?.contacts||[])[0]?.email||""} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "25%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Phone" sortKey={(c) => (custData[c.name]?.contacts||[])[0]?.mobile||""} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center", width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                       </tr>
                     </thead>
                     <tbody>
@@ -181,7 +180,6 @@ const CustomerCRMBoard = (props) => {
                       )}
                     </tbody>
                   </table>
-                </div>
               ) : (
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:15 }}>
                   {sortedCustomers.map(c => {

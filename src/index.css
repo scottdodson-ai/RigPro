@@ -81,6 +81,47 @@ canvas {
   min-width: 640px;
 }
 
+/* ── GLOBAL STICKY TABLE HEADERS ─────────────────────────────── */
+/* border-collapse: collapse breaks position: sticky in most browsers.
+   We force separate + spacing:0 to keep the same visual but enable sticky. */
+table:has(thead) {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+}
+
+/* Subtle bottom shadow for sticky separation */
+table thead tr::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.06), transparent);
+  pointer-events: none;
+}
+
+table thead tr {
+  position: relative;
+}
+
+/* ── STICKY SEARCH / FILTER BARS ─────────────────────────────── */
+.sticky-search {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  padding: 10px 0 20px 0;
+  border-bottom: 2px solid #fff7ed;
+}
+
 .app-modal-overlay {
   position: fixed;
   inset: 0;
