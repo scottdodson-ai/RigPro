@@ -920,6 +920,19 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
     
     // Fetch the newly created row to return it
     const [newRow] = await db.query(`SELECT * FROM \`${table}\` WHERE id = ?`, [result.insertId]);
+
+    // When creating a lead with address data, auto-create a master_billing site record
+    if (table === 'leads' && data.street && data.customer_number) {
+      try {
+        await db.query(
+          `INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)`,
+          [data.customer_number, data.site_type || 'master_billing', data.street || '', data.city || '', data.state || '', data.zipcode || '']
+        );
+      } catch (siteErr) {
+        console.warn('[API] Could not auto-create site for lead:', siteErr.message);
+      }
+    }
+
     res.json(newRow[0]);
   } catch (error) {
     console.error(`[API] Table insert error (${table}):`, error);
@@ -1945,9 +1958,20 @@ const ensureLeadsTable = async () => {
       city VARCHAR(100) DEFAULT '',
       state VARCHAR(50) DEFAULT '',
       zipcode VARCHAR(20) DEFAULT '',
+      site_type VARCHAR(50) DEFAULT 'master_billing',
       estimator_id VARCHAR(100) DEFAULT ''
     )
   `);
+  // Ensure site_type column exists on older tables
+  try {
+    const [cols] = await db.query(`SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'leads' AND COLUMN_NAME = 'site_type'`);
+    if (cols.length === 0) {
+      await db.query(`ALTER TABLE leads ADD COLUMN site_type VARCHAR(50) DEFAULT 'master_billing' AFTER zipcode`);
+      console.log('[Schema] Added site_type column to leads');
+    }
+  } catch (e) {
+    console.warn('[Schema] site_type check:', e.message);
+  }
 };
 
 const ensureRfqsTable = async () => {

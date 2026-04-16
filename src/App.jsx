@@ -3622,6 +3622,7 @@ function LeadRecordModal({ onClose, onSave, token, appUsers=[], custData={}, CUS
     city: "",
     state: "",
     zipcode: "",
+    site_type: "master_billing",
     first_name: "",
     last_name: "",
     contact_phone: "",
@@ -3638,10 +3639,15 @@ function LeadRecordModal({ onClose, onSave, token, appUsers=[], custData={}, CUS
     e.preventDefault();
     setIsSaving(true);
     try {
+      // Resolve customer_number from custData if company matches
+      const payload = { ...lead };
+      if (lead.company_name && custData[lead.company_name]) {
+        payload.customer_number = custData[lead.company_name].id;
+      }
       const res = await fetch("/api/admin/tables/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify(lead)
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error("Failed to create lead");
       const created = await res.json();
@@ -3676,7 +3682,7 @@ function LeadRecordModal({ onClose, onSave, token, appUsers=[], custData={}, CUS
                    />
                  </div>
                  <div style={{ gridColumn:"span 2", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:10 }}>
-                   <div style={{ gridColumn:"1/-1" }}><Lbl c="JOB SITE ADDRESS 1" /><input style={inp} value={lead.street} onChange={e=>u("street",e.target.value)} placeholder="123 Main St" /></div>
+                   <div style={{ gridColumn:"1/-1" }}><Lbl c="PRIMARY ADDRESS" /><input style={inp} value={lead.street} onChange={e=>u("street",e.target.value)} placeholder="123 Main St" /></div>
                    <div><Lbl c="CITY" /><input style={inp} value={lead.city} onChange={e=>u("city",e.target.value)} placeholder="City" /></div>
                    <div><Lbl c="STATE" /><input style={inp} value={lead.state} onChange={e=>u("state",e.target.value)} placeholder="ST" maxLength={2} /></div>
                    <div><Lbl c="ZIP" /><input style={inp} value={lead.zipcode} onChange={e=>u("zipcode",e.target.value)} placeholder="ZIP" maxLength={10} /></div>
