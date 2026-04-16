@@ -36,6 +36,38 @@ const LeadsBoard = (props) => {
   const [search, setSearch] = useState("");
   const [leadView, setLeadView] = useState("list");
   const [selLead, setSelLead] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleCreateLead = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const fd = new FormData(e.target);
+      const payload = {
+        first_name: fd.get('first_name') || '',
+        last_name: fd.get('last_name') || '',
+        company_name: fd.get('company_name') || '',
+        description: fd.get('description') || '',
+        status_number: 1
+      };
+      const res = await fetch(`${fmt.api || "/api"}/admin/tables/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("Failed to create lead");
+      const newLead = await res.json();
+      if (setLeads) setLeads(prev => [{ ...newLead, status_number: Number(newLead.status_number) }, ...prev]);
+      setShowAddModal(false);
+      e.target.reset();
+    } catch (err) {
+      console.error(err);
+      alert("Error creating lead: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const isEstimator = (u) => u.role === "estimator" || (u.roles || []).includes("estimator");
   const allEstimators = (appUsers || []).filter(isEstimator);

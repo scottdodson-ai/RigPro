@@ -10237,6 +10237,7 @@ export default function App() {
   );
 
   // ── LEADS ──────────────────────────────────────────────────────────────
+  if (view==="leads") return (
     <>
       {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <LeadsBoard 
@@ -10250,6 +10251,7 @@ export default function App() {
         }}
       />
     </>
+  );
 
   // ── QUOTES ─────────────────────────────────────────────────────────────
   if (view==="quotes") return (
