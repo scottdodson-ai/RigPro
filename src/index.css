@@ -165,6 +165,10 @@ table thead tr {
 }
 
 @media (max-width: 1024px) {
+  .desktop-only {
+    display: none !important;
+  }
+
   .app-page-container {
     padding-inline: var(--page-gutter-tablet);
   }

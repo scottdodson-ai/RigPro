@@ -11,6 +11,7 @@ import multer from 'multer';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import https from 'https';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -484,15 +485,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         ...mappedMaster.filter(m => !existingKeys.has(m.qn || `master:${m.id}`)),
       ];
     }
-    const rfqsRaw = await safeQuery('SELECT r.*, c.name AS company, r.rfq_number as rn FROM rfqs r LEFT JOIN customers c ON r.customer_id = c.id');
-    const rfqs = rfqsRaw.map(r => ({
-      ...r,
-      street: r.job_site_address1 || '',
-      city: r.job_site_city || '',
-      state: r.job_site_state || '',
-      zipcode: r.job_site_zip || '',
-      jobSite: r.job_site || ''
-    }));
+
     const rawUsers = await safeQuery('SELECT id, first_name, last_name, username, email, cell_phone, roles, is_disabled, user_number, created_at FROM users');
     const users = rawUsers.map(u => {
       let r = u.roles;
@@ -545,7 +538,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       equipment,
       customers: custData,
       jobs,
-      rfqs,
+
       leads,
       users,
       estimators,
@@ -556,7 +549,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     // If the tables don't exist yet (e.g. after a failed restore wipe), return empty data
     // so the frontend can automatically trigger the DB re-initialization routine.
     if (error.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ labor: [], equipment: [], customers: {}, jobs: [], rfqs: [], leads: [], users: [], estimators: [], status: [] });
+      return res.json({ labor: [], equipment: [], customers: {}, jobs: [], leads: [], users: [], estimators: [], status: [] });
     }
     res.status(500).json({ error: 'Failed to fetch data', details: error.message });
   }
@@ -858,7 +851,7 @@ app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, a
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
@@ -885,11 +878,28 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
     res.status(500).json({ error: 'Failed to fetch table data' });
   }
 });
-
+const triggerGeocodeUpdate = (siteId, address1, city, state, zip) => {
+  const addrStr = `${address1 || ''}, ${city || ''}, ${state || ''} ${zip || ''}`.trim().replace(/, ,/g, ',').replace(/, $/g, '');
+  if (!addrStr || addrStr.length < 5) return;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addrStr)}`;
+  https.get(url, { headers: { 'User-Agent': 'RigPro-Geocoding-Hook/1.0' } }, (res) => {
+    let raw = '';
+    res.on('data', chunk => raw += chunk);
+    res.on('end', () => {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.length > 0) {
+          const geo = `${parsed[0].lat},${parsed[0].lon}`;
+          db.query('UPDATE sites SET geocode = ? WHERE id = ?', [geo, siteId]).catch(()=>{});
+        }
+      } catch(e) {}
+    });
+  }).on('error', () => {});
+};
 
 // CREATE RECORD IN TABLE (Admin Only)
 app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
   const data = req.body;
 
@@ -921,6 +931,10 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
     // Fetch the newly created row to return it
     const [newRow] = await db.query(`SELECT * FROM \`${table}\` WHERE id = ?`, [result.insertId]);
 
+    if (table === 'sites') {
+       triggerGeocodeUpdate(result.insertId, data.address1, data.city, data.state, data.zip);
+    }
+
     // When creating a lead with address data, auto-create a master_billing site record
     if (table === 'leads' && data.street && data.customer_number) {
       try {
@@ -949,7 +963,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
   }
   authenticateAdmin(req, res, next);
 }, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
   const id = req.params.id;
   const data = req.body;
@@ -991,6 +1005,12 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
     const setClause = keys.map(k => `\`${k}\` = ?`).join(', ');
 
     const [result] = await db.query(`UPDATE \`${table}\` SET ${setClause} WHERE id = ?`, [...values, id]);
+
+    if (table === 'sites') {
+      db.query('SELECT address1, city, state, zip FROM sites WHERE id = ?', [id]).then(([r])=> {
+        if (r.length > 0) triggerGeocodeUpdate(id, r[0].address1, r[0].city, r[0].state, r[0].zip);
+      }).catch(()=>{});
+    }
 
     if (interceptLeadAsQuote && leadRow) {
        let customerName = '';
@@ -1058,7 +1078,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
 
 // BATCH DELETE RECORDS IN TABLE (Admin Only)
 app.delete('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'rfqs', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History', 'leads', 'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
   const { ids } = req.body;
 
@@ -1124,9 +1144,9 @@ app.get('/api/admin/vector-db', authenticateToken, authenticateAdmin, async (req
 
 // BULK INITIALIZATION (Admin Only) - Seeds DB from frontend data
 app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { quotes, rfqs, customers } = req.body;
+  const { quotes, customers } = req.body;
   
-  if (!quotes || !rfqs || !customers) return res.status(400).json({ error: 'Missing data for initialization' });
+  if (!quotes || !customers) return res.status(400).json({ error: 'Missing data for initialization' });
 
   const connection = await db.getConnection();
   try {
@@ -1148,7 +1168,6 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
     // Ignore errors if table doesn't exist yet (just in case schema was incomplete)
     const clearTable = async (table) => { try { await connection.query(`DELETE FROM ${table}`); } catch(e){} };
     await clearTable('quotes');
-    await clearTable('rfqs');
     
     await connection.query('SET FOREIGN_KEY_CHECKS = 0');
     await clearTable('customers');
@@ -1187,13 +1206,6 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
       );
     }
 
-    // 3. Insert RFQs
-    for (const r of rfqs) {
-      await connection.query(
-        'INSERT INTO rfqs (rfq_number, company, requester, email, phone, job_site, description, notes, date, status, sales_assoc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [passStr(r.rn), passStr(r.company), passStr(r.requester), passStr(r.email), passStr(r.phone), passStr(r.jobSite), passStr(r.desc), passStr(r.notes), passDate(r.date), passStr(r.status), passStr(r.salesAssoc)]
-      );
-    }
 
     await connection.commit();
     res.json({ message: 'Database initialized successfully' });
@@ -1633,6 +1645,7 @@ app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (re
       'INSERT INTO sites (customer_id, site_type, address1, city, state, zip, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [custId, 'PrimaryHQ', streetVal, city || '', state || '', zip || '', 'Automatically created during customer registration']
     );
+    triggerGeocodeUpdate(siteResult.insertId, streetVal, city, state, zip);
     
     // Link to customer
     await db.query('UPDATE customers SET primary_site_id = ? WHERE id = ?', [siteResult.insertId, custId]);
@@ -1690,11 +1703,13 @@ app.put('/api/admin/customers/:id', authenticateToken, authenticateAdmin, async 
       );
       primarySiteId = siteRes.insertId;
       await db.query('UPDATE customers SET primary_site_id = ? WHERE id = ?', [primarySiteId, customerId]);
+      triggerGeocodeUpdate(primarySiteId, streetVal, city, state, zip);
     } else {
       await db.query(
         'UPDATE sites SET address1 = ?, city = ?, state = ?, zip = ? WHERE id = ?',
         [streetVal, city || '', state || '', zip || '', primarySiteId]
       );
+      triggerGeocodeUpdate(primarySiteId, streetVal, city, state, zip);
     }
     
     const [updated] = await db.query(`
@@ -1974,32 +1989,6 @@ const ensureLeadsTable = async () => {
   }
 };
 
-const ensureRfqsTable = async () => {
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS rfqs (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      rfq_number VARCHAR(50) UNIQUE,
-      customer_id INT,
-      requester VARCHAR(100),
-      email VARCHAR(100),
-      phone VARCHAR(50),
-      job_site VARCHAR(255),
-      job_site_address1 VARCHAR(255),
-      job_site_city VARCHAR(100),
-      job_site_state VARCHAR(50),
-      job_site_zip VARCHAR(20),
-      description TEXT,
-      notes TEXT,
-      date DATE,
-      status VARCHAR(50),
-      sales_assoc VARCHAR(100),
-      active TINYINT(1) DEFAULT 1,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )
-  `);
-};
-
 // Ensure every managed table has a `description` column.
 const ensureDescriptionColumns = async () => {
   const tables = [
@@ -2039,7 +2028,7 @@ const initAdmin = async () => {
 
     await ensureUserProfileColumns();
     await ensureCompanyInfoTable();
-    await ensureRfqsTable();
+
     await ensureLeadsTable();
     await ensureDescriptionColumns();
     const hash = await bcrypt.hash('pass', 10);
@@ -2082,113 +2071,6 @@ app.post('/api/admin/restore-local', authenticateToken, authenticateAdmin, async
     console.log('[RESTORE-LOCAL] Native CLI restore completed successfully');
     res.json({ message: 'Database restored successfully' });
   });
-});
-
-// DELETE RFQ ENDPOINT
-app.delete('/api/rfqs/:id', authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  const safeId = Number(id);
-  if (!Number.isInteger(safeId) || safeId <= 0) return res.status(400).json({ error: 'Invalid ID' });
-  try {
-    await db.query('DELETE FROM rfqs WHERE id = ?', [safeId]);
-    res.json({ success: true });
-  } catch(e) {
-    console.error(e);
-    res.status(500).json({ error: 'Failed to delete rfq' });
-  }
-});
-
-// SAVE QUOTE ENDPOINT
-app.post('/api/rfqs/:id', authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  const rfq = req.body;
-
-  if (!rfq || !rfq.rn) {
-    return res.status(400).json({ error: 'Invalid RFQ data' });
-  }
-
-  const connection = await db.getConnection();
-  try {
-    const safeId = Number(id);
-    let targetId = null;
-
-    if (Number.isInteger(safeId) && safeId > 0 && safeId <= 2147483647) {
-      const [existingById] = await connection.query('SELECT id FROM rfqs WHERE id = ?', [safeId]);
-      if (existingById.length > 0) targetId = existingById[0].id;
-    }
-
-    if (!targetId && rfq.rn) {
-      const [existingByRn] = await connection.query(
-        'SELECT id FROM rfqs WHERE rfq_number = ? ORDER BY id DESC LIMIT 1',
-        [rfq.rn]
-      );
-      if (existingByRn.length > 0) targetId = existingByRn[0].id;
-    }
-
-    const { rn, company, requester, reqFirst, reqLast, email, phone, jobSite, street: street, city: city, state: state, zipcode: zipcode, desc, notes, date, status, salesAssoc } = rfq;
-    
-    let custId = null;
-    if (company) {
-      const [exCust] = await connection.query('SELECT id FROM customers WHERE name = ?', [company]);
-      if (exCust.length > 0) {
-        custId = exCust[0].id;
-      } else {
-        const [insertRes] = await connection.query('INSERT INTO customers (name) VALUES (?)', [company.trim()]);
-        custId = insertRes.insertId;
-        // Optionally insert the requester into customer_contacts if available
-        if (requester) {
-          await connection.query('INSERT INTO customer_contacts (customer_id, name, email, phone, is_primary) VALUES (?, ?, ?, ?, 1)', [custId, requester.trim(), email||'', phone||'']);
-        }
-      }
-    }
-
-    let cleanDate = null;
-    if (date) {
-      try {
-        cleanDate = new Date(date).toISOString().split('T')[0];
-      } catch(e) { cleanDate = null; }
-    }
-
-    if (targetId) {
-      const activeFlag = rfq.active !== undefined ? (rfq.active ? 1 : 0) : null;
-      if (activeFlag !== null) {
-        await connection.query(
-          `UPDATE rfqs SET 
-            rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, notes=?, date=?, status=?, sales_assoc=?, active=?
-           WHERE id=?`,
-          [rn, custId, requester||'', email||'', phone||'', jobSite||'', street||'', city||'', state||'', zipcode||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', activeFlag, targetId]
-        );
-      } else {
-        await connection.query(
-          `UPDATE rfqs SET 
-            rfq_number=?, customer_id=?, requester=?, email=?, phone=?, job_site=?, job_site_address1=?, job_site_city=?, job_site_state=?, job_site_zip=?, description=?, notes=?, date=?, status=?, sales_assoc=?
-           WHERE id=?`,
-          [rn, custId, requester||'', email||'', phone||'', jobSite||'', street||'', city||'', state||'', zipcode||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', targetId]
-        );
-      }
-    } else {
-      const activeFlag = rfq.active !== undefined ? (rfq.active ? 1 : 0) : 1;
-      await connection.query(
-        `INSERT INTO rfqs 
-          (rfq_number, customer_id, requester, email, phone, job_site, job_site_address1, job_site_city, job_site_state, job_site_zip, description, notes, date, status, sales_assoc, active) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [rn, custId, requester||'', email||'', phone||'', jobSite||'', street||'', city||'', state||'', zipcode||'', desc||'', notes||'', cleanDate, status||'', salesAssoc||'', activeFlag]
-      );
-      
-      // Mirror minimal data into newly requested 'leads' table with strict status_number 1 constraint
-      await connection.query(
-        'INSERT INTO leads (description, customer_number, company_name, status_number, first_name, last_name, contact_phone, contact_email, street, city, state, zipcode, estimator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [desc || '', custId || null, company || '', 1, reqFirst || '', reqLast || '', phone || '', email || '', street || '', city || '', state || '', zipcode || '', salesAssoc || '']
-      );
-    }
-
-    res.json({ success: true, message: 'RFQ saved successfully' });
-  } catch (error) {
-    console.error('[API] /api/rfqs error:', error);
-    res.status(500).json({ error: 'Database error' });
-  } finally {
-    connection.release();
-  }
 });
 
 app.post('/api/quotes/:id', authenticateToken, async (req, res) => {

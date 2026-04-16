@@ -643,8 +643,9 @@ function AutoInput({ val, on, list, ph }) {
 }
 
 // ── HEADER ────────────────────────────────────────────────────────────────────
-function Header({ view, setView, extra, crumb, role, token, setToken, setRole, profileUser, setProfileUser, customerCount, reqCount, quoteCount, jobCount, leadCount }) {
+function Header({ view, setView, extra, crumb, role, token, setToken, setRole, profileUser, setProfileUser, customerCount, reqCount, quoteCount, jobCount, leadCount, siteCount }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({ first_name:"", last_name:"", username:"", email:"", cell_phone:"", role:"user", password:"" });
   const [profileErr, setProfileErr] = useState("");
@@ -653,7 +654,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
   const comp = compStr ? JSON.parse(compStr) : { name: "Shoemaker Rigging & Transport LLC", logoSrc: null };
 
   const TABS = token ? [
-    ["dash","Dashboard"], ["leads", leadCount !== undefined ? `Leads (${leadCount})` : "Leads"], ["customers", customerCount !== undefined ? `Customers (${customerCount})` : "Customers"], ["quotes", quoteCount !== undefined ? `Quotes (${quoteCount})` : "Quotes"],
+    ["dash","Dashboard"], ["leads", leadCount !== undefined ? `Leads (${leadCount})` : "Leads"], ["customers", customerCount !== undefined ? `Customers (${customerCount})` : "Customers"], ["sites", siteCount !== undefined ? `Sites (${siteCount})` : "Sites"], ["quotes", quoteCount !== undefined ? `Quotes (${quoteCount})` : "Quotes"],
     ["jobs", jobCount !== undefined ? `Job List (${jobCount})` : "Job List"], ["equipment","Equip Rates"], ["labor","Labor Rates"], ["calendar","Calendar"], ["reports","Reports"]
   ] : [["landing", "Home"]];
   
@@ -794,7 +795,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
         style={{
           background: C.sur,
           borderBottom: `1px solid ${C.bdr}`,
-          padding: "6px 14px 10px",
+          padding: "3px 14px 10px",
           position: "sticky",
           top: 0,
           zIndex: 100,
@@ -808,70 +809,70 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
           </div>
         )}
 
-        {/* Desktop actions row: right-aligned above menu */}
-        <div className="desktop-nav desktop-actions-row" style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:4 }}>
-          {token && profileUser && (
-            <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", display:"inline-flex", alignItems:"center", gap:6, borderRadius:20 }} onClick={() => setProfileOpen(true)}>
-              <div style={{ width:20, height:20, background:C.accL, borderRadius:"50%", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", border:`1px solid ${C.bdr}` }}>
-                {profileUser.avatar ? (
-                  <img src={profileUser.avatar} alt="Me" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+        {/* Top row: logo + text + actions */}
+        <div className="app-header-top-row" style={{ display:"flex", alignItems:"center", justifyContent:"space-between", minHeight:44, flexWrap:"wrap", width:"100%" }}>
+          <div style={{ display:"flex", alignItems:"center" }}>
+            <div 
+              className="app-brand" 
+              onClick={() => setView(token ? "dash" : "landing")}
+              style={{ display:"flex", alignItems:"center", cursor:"pointer" }}
+            >
+              <div className="app-brand-main" style={{ display:"flex", alignItems:"center", gap:8 }}>
+                {comp.logoSrc ? (
+                  <img className="app-brand-logo" src={comp.logoSrc} alt="Logo" style={{ width:36, height:36, objectFit:"contain", borderRadius:4, background:"#fff", border:`2px solid ${C.accB}` }}/>
                 ) : (
-                  <span style={{ fontSize:10, fontWeight:700, color:C.acc }}>{(profileUser.first_name?.[0] || profileUser.username?.[0] || "?").toUpperCase()}</span>
+                  <div className="app-brand-logo" style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏗</div>
                 )}
-              </div>
-              <span style={{ fontWeight:700 }}>{displayName}</span>
-            </button>
-          )}
-          {token ? (
-            <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
-          ) : (
-            view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px" }} onClick={() => setView("login")}>Login</button>
-          )}
-        </div>
-
-        {/* Top row: logo + nav */}
-        <div className="app-header-top-row" style={{ display:"flex", alignItems:"center", minHeight:54 }}>
-          <div 
-            className="app-brand" 
-            onClick={() => setView(token ? "dash" : "landing")}
-            style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginRight:16, cursor:"pointer" }}
-          >
-            <div className="app-brand-main" style={{ display:"flex", alignItems:"center", gap:8 }}>
-              {comp.logoSrc ? (
-                <img className="app-brand-logo" src={comp.logoSrc} alt="Logo" style={{ width:36, height:36, objectFit:"contain", borderRadius:4, background:"#fff", border:`2px solid ${C.accB}` }}/>
-              ) : (
-                <div className="app-brand-logo" style={{ width:36, height:36, background:C.accL, border:`2px solid ${C.accB}`, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏗</div>
-              )}
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center" }}>
-                <div className="app-brand-name" style={{ fontFamily:"Georgia,serif", fontSize:14, color:C.acc, fontWeight:800, lineHeight:1.1 }}>
-                  {comp.name.split(" ")[0]}
-                </div>
-                <div className="app-brand-version" style={{ fontSize:9, color:C.txtS, letterSpacing:.35, textTransform:"uppercase", marginTop:1, fontWeight:700 }}>
-                  RigPro v3.1
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start" }}>
+                  <div className="app-brand-name" style={{ fontFamily:"Georgia,serif", fontSize:14, color:C.acc, fontWeight:800, lineHeight:1.1 }}>
+                    {comp.name.split(" ")[0]}
+                  </div>
+                  <div className="app-brand-version" style={{ fontSize:9, color:C.txtS, letterSpacing:.35, textTransform:"uppercase", marginTop:1, fontWeight:700 }}>
+                    RigPro v3.1
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="app-brand-service" style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
-              Industrial Rigging,
-            </div>
-            <div className="app-brand-service" style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
-              Machinery Moving,
-            </div>
-            <div className="app-brand-service" style={{ fontSize:9, color:C.txtS, letterSpacing:.4, textTransform:"uppercase", marginTop:1 }}>
-              Heavy Haul Transport
-            </div>
-            <div className="app-brand-address" style={{ fontSize:9, color:C.txtS, letterSpacing:.3, marginTop:1 }}>
-              3385 Miller Park Road · Akron, OH 44312
+
+            <div className="desktop-only" style={{ marginLeft: 16, fontSize: 10, color: C.txtS, whiteSpace: "nowrap" }}>
+              <span style={{ textTransform: "uppercase", fontWeight: 700, letterSpacing: .4 }}>Industrial Rigging, Machinery Moving, Heavy Haul Transport</span>
+              <span style={{ margin: "0 8px", color: C.bdr }}>|</span>
+              <span style={{ letterSpacing: .3 }}>3385 Miller Park Road · Akron, OH 44312</span>
             </div>
           </div>
 
-          {/* Desktop Nav */}
-          <div className="desktop-nav" style={{ display:"flex", alignItems:"center", flex:1, gap:4, overflowX:"auto" }}>
-            {TABS.map(([v,l]) => (
-              <button className="top-tab-btn" key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", color:view===v?C.acc:C.txtM, fontSize:12, cursor:"pointer", padding:"4px 8px", borderBottom:view===v?`2px solid ${C.acc}`:"2px solid transparent", fontFamily:"inherit", fontWeight:view===v?700:400, whiteSpace:"nowrap" }}>{l}</button>
-            ))}
-            {crumb && <><span style={{ color:C.bdr, margin:"0 2px" }}>›</span><span style={{ color:C.txtS, fontSize:12, whiteSpace:"nowrap" }}>{crumb}</span></>}
+          <div className="desktop-nav" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {token && leadCount > 0 && (
+              <button 
+                onClick={() => setNotifOpen(prev => !prev)} 
+                style={{ background:"none", border:"none", cursor:"pointer", position:"relative", fontSize:18, display:"flex", alignItems:"center", padding:4 }}
+                title={`1 New Notification`}
+              >
+                🔔
+                <div style={{ position:"absolute", top:-2, right:-4, background:"#ef4444", color:"white", borderRadius:10, fontSize:9, padding:"1px 4px", fontWeight:800, lineHeight:1, pointerEvents:"none" }}>
+                  1
+                </div>
+              </button>
+            )}
+            {token && profileUser && (
+              <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"4px 10px", display:"inline-flex", alignItems:"center", gap:6, borderRadius:20 }} onClick={() => setProfileOpen(true)}>
+                <div style={{ width:20, height:20, background:C.accL, borderRadius:"50%", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", border:`1px solid ${C.bdr}` }}>
+                  {profileUser.avatar ? (
+                    <img src={profileUser.avatar} alt="Me" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  ) : (
+                    <span style={{ fontSize:10, fontWeight:700, color:C.acc }}>{(profileUser.first_name?.[0] || profileUser.username?.[0] || "?").toUpperCase()}</span>
+                  )}
+                </div>
+                <span style={{ fontWeight:700 }}>{displayName}</span>
+              </button>
+            )}
+            {token ? (
+              <button style={{ ...mkBtn("danger"), fontSize:11, padding:"4px 8px" }} onClick={handleLogout}>Logout</button>
+            ) : (
+              view !== "login" && <button style={{ ...mkBtn("primary"), fontSize:11, padding:"4px 12px" }} onClick={() => setView("login")}>Login</button>
+            )}
           </div>
+
 
           {/* Mobile inline actions (same top line as logo + hamburger) */}
           <div
@@ -889,6 +890,18 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
             }}
           >
             <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              {token && leadCount > 0 && (
+                <button 
+                  onClick={() => { setNotifOpen(prev => !prev); setMenuOpen(false); }} 
+                  style={{ background:"none", border:"none", cursor:"pointer", position:"relative", fontSize:18, display:"flex", alignItems:"center", padding:2, marginRight:2 }}
+                  title={`1 New Notification`}
+                >
+                  🔔
+                  <div style={{ position:"absolute", top:-1, right:-5, background:"#ef4444", color:"white", borderRadius:10, fontSize:9, padding:"1px 4px", fontWeight:800, lineHeight:1, pointerEvents:"none" }}>
+                    1
+                  </div>
+                </button>
+              )}
               {token && profileUser && (
                 <button style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:6, color:C.txt, fontWeight:600, fontSize:12, padding:"4px 8px" }} onClick={() => setProfileOpen(true)}>
                   <div style={{ width:20, height:20, borderRadius:"50%", background:C.acc, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700 }}>{profileUser.first_name?.[0]||"U"}</div>
@@ -908,6 +921,14 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
           <button className="hamburger-btn" onClick={() => setMenuOpen(!menuOpen)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:C.txtM, padding:"4px" }}>
             ☰
           </button>
+        </div>
+
+        {/* Desktop Menu Row */}
+        <div className="desktop-nav" style={{ display:"flex", alignItems:"center", width:"100%", overflowX:"auto", paddingBottom: 6 }}>
+          {TABS.map(([v,l]) => (
+            <button className="top-tab-btn" key={v} onClick={() => setView(v)} style={{ background:"none", border:"none", color:view===v?C.acc:C.txtM, fontSize:12, cursor:"pointer", padding:"4px 8px", borderBottom:view===v?`2px solid ${C.acc}`:"2px solid transparent", fontFamily:"inherit", fontWeight:view===v?700:400, whiteSpace:"nowrap" }}>{l}</button>
+          ))}
+          {crumb && <><span style={{ color:C.bdr, margin:"0 2px" }}>›</span><span style={{ color:C.txtS, fontSize:12, whiteSpace:"nowrap" }}>{crumb}</span></>}
         </div>
 
       </div>
@@ -1007,6 +1028,38 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
                 <button type="submit" style={{ ...mkBtn("primary"), padding:"8px 16px" }} disabled={profileSaving}>{profileSaving ? "Saving..." : "Save"}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {notifOpen && token && (
+        <div className="app-modal-overlay" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0)", zIndex:11000 }} onClick={() => setNotifOpen(false)}>
+          <div 
+            style={{ position:"absolute", top:54, right:14, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, boxShadow:"0 4px 12px rgba(0,0,0,0.1)", zIndex:12000, width: 280, padding: 0, overflow:"hidden" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: "10px 14px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+               <span style={{ fontWeight:700, fontSize:13 }}>Notifications</span>
+               <button onClick={() => setNotifOpen(false)} style={{ background:"none", border:"none", cursor:"pointer", color:C.txtM, padding:0 }}>✕</button>
+            </div>
+            <div style={{ maxHeight: 300, overflowY:"auto" }}>
+              {leadCount > 0 ? (
+                <div 
+                   onClick={() => { setView("leads"); setNotifOpen(false); setMenuOpen(false); }}
+                   style={{ padding:"12px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}
+                   onMouseEnter={e => e.currentTarget.style.background = C.accL}
+                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                   <div style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444" }}></div>
+                   <div style={{ flex:1 }}>
+                     <div style={{ fontSize:13, fontWeight:600, color:C.txt }}>New Leads Available</div>
+                     <div style={{ fontSize:11, color:C.txtS, marginTop:2 }}>You have {leadCount} new incoming lead(s). Click to view.</div>
+                   </div>
+                </div>
+              ) : (
+                <div style={{ padding:"20px", textAlign:"center", fontSize:12, color:C.txtM }}>No new notifications</div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -2975,6 +3028,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
 
 function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQuote, setSelectedQuote, role }) {
   const [filter, setFilter] = useState('');
+  const [viewMode, setViewMode] = useState('card');
   
   const quotes = useMemo(() => {
     return jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).sort((a, b) => {
@@ -2988,12 +3042,30 @@ function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQu
     return quotes.filter(q => (q.client?.toLowerCase().includes(l)) || (q.job_description?.toLowerCase().includes(l)) || (q.description?.toLowerCase().includes(l)) || (q.qn?.toLowerCase().includes(l)));
   }, [quotes, filter]);
 
+  useEffect(() => {
+    if (!selectedQuote && filtered.length > 0) {
+      setSelectedQuote(filtered[0]);
+    }
+  }, [selectedQuote, filtered, setSelectedQuote]);
+
   return (
     <div style={{ display:"flex", height:"max(calc(100vh - 54px), 600px)" }}>
       {/* Left List */}
       <div style={{ width:400, flexShrink:0, borderRight:`1px solid ${C.bdr}`, background:C.sur, display:"flex", flexDirection:"column" }}>
         <div style={{ padding:"20px 20px 16px", borderBottom:`1px solid ${C.bdr}` }}>
-          <h2 style={{ fontSize:20, fontWeight:800, margin:"0 0 12px 0", color:C.txt }}>Project Quotes</h2>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+            <h2 style={{ fontSize:20, fontWeight:800, margin:0, color:C.txt }}>Project Quotes</h2>
+            <div style={{ display:"flex", background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, overflow:"hidden" }}>
+              <button 
+                onClick={()=>setViewMode("card")} 
+                style={{ background:viewMode==="card"?C.accL:"transparent", border:"none", padding:"4px 8px", cursor:"pointer", color:viewMode==="card"?C.acc:C.txtM, fontWeight:700, fontSize:12 }}
+              >Cards</button>
+              <button 
+                onClick={()=>setViewMode("list")} 
+                style={{ background:viewMode==="list"?C.accL:"transparent", border:"none", borderLeft:`1px solid ${C.bdr}`, padding:"4px 8px", cursor:"pointer", color:viewMode==="list"?C.acc:C.txtM, fontWeight:700, fontSize:12 }}
+              >List</button>
+            </div>
+          </div>
           <div style={{ position:"relative", width:"100%" }}>
             <input 
               type="text" 
@@ -3008,7 +3080,31 @@ function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQu
         <div style={{ flex:1, overflowY:"auto", padding:"12px" }}>
           {filtered.map(q => {
             const isSel = selectedQuote?.id === q.id;
-            return (
+            return viewMode === 'list' ? (
+              <div 
+                key={q.id} 
+                onClick={() => setSelectedQuote(q)}
+                style={{ 
+                  padding:"10px 12px", 
+                  background:isSel ? C.accL : "transparent",
+                  borderLeft:`3px solid ${isSel ? C.acc : "transparent"}`,
+                  borderBottom:`1px solid ${C.bdr}33`,
+                  cursor:"pointer",
+                  display:"flex",
+                  justifyContent:"space-between",
+                  alignItems:"center"
+                }}
+              >
+                <div style={{ width: "65%", overflow: "hidden", paddingRight: 8 }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:C.txt, whiteSpace:"nowrap", textOverflow:"ellipsis", overflow:"hidden" }}>{q.client || 'Unknown'}</div>
+                  <div style={{ fontSize:11, color:C.txtM, whiteSpace:"nowrap", textOverflow:"ellipsis", overflow:"hidden" }}>{q.jobSite || q.description || q.job_description || "Not Specified"}</div>
+                </div>
+                <div style={{ textAlign:"right", width: "35%" }}>
+                  <div style={{ fontSize:12, fontWeight:800, color:C.acc }}>{fmt(parseFloat(q.total||0))}</div>
+                  <div style={{ fontSize:10, color:C.txtM }}>{q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleDateString() : 'N/A'}</div>
+                </div>
+              </div>
+            ) : (
               <div 
                 key={q.id} 
                 onClick={() => setSelectedQuote(q)}
@@ -3150,7 +3246,26 @@ function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setSelectedQuote,
             </div>
           </div>
         </div>
-        <button style={{ ...mkBtn("primary"), fontSize:14, padding:"10px 18px", borderRadius:8, boxShadow:"0 4px 12px rgba(10,37,64,0.15)" }} onClick={onEdit}>Edit Quote</button>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button style={{ ...mkBtn("secondary"), fontSize:14, padding:"10px 18px", borderRadius:8, border:`1px solid ${C.bdr}`, boxShadow:"0 4px 12px rgba(10,37,64,0.05)" }} onClick={async () => {
+            if (!window.confirm("Are you sure you want to submit this quote for review?")) return;
+            const tkn = localStorage.getItem('token');
+            const updatedQuote = { ...quote, status: 7 };
+            try {
+              const res = await fetch(`/api/quotes/${quote.id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tkn}` },
+                body: JSON.stringify(updatedQuote)
+              });
+              if (!res.ok) throw new Error("Failed to submit");
+              setJobs(prev => prev.map(q => q.id === quote.id ? { ...updatedQuote, status: 'Submitted' } : q));
+              setSelectedQuote({ ...updatedQuote, status: 'Submitted' });
+            } catch (e) {
+              alert(e.message);
+            }
+          }}>Submit for Review</button>
+          <button style={{ ...mkBtn("primary"), fontSize:14, padding:"10px 18px", borderRadius:8, boxShadow:"0 4px 12px rgba(10,37,64,0.15)" }} onClick={onEdit}>Edit Quote</button>
+        </div>
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32 }}>
@@ -8090,8 +8205,8 @@ function VectorBrowser({ token }) {
 }
 
 // ── ADMIN PAGE ───────────────────────────────────────────────────────────────
-function DatabaseBrowser({ token }) {
-  const [selectedTable, setSelectedTable] = useState("users");
+function DatabaseBrowser({ token, initialTable, hideTabs }) {
+  const [selectedTable, setSelectedTable] = useState(initialTable || "users");
   const [data, setData] = useState([]);
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -8324,6 +8439,7 @@ function DatabaseBrowser({ token }) {
     <div style={{ width: "100%", overflow: "hidden" }}>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <div style={{ fontSize: 12, color: C.txtS }}>Live view of all MySQL database records.</div>
+        {!hideTabs && (
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Lbl c="SELECT TABLE" />
           <select 
@@ -8342,6 +8458,7 @@ function DatabaseBrowser({ token }) {
             })}
           </select>
         </div>
+        )}
       </div>
       
       <div style={{ width: "100%" }}>
@@ -9531,9 +9648,116 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
     </div>
   );
 }
+function SitesMapModal({ token, onClose }) {
+  const [sites, setSites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [siteTypeFilter, setSiteTypeFilter] = useState('');
+
+  const uniqueSiteTypes = useMemo(() => {
+    const types = new Set();
+    sites.forEach(s => {
+      if (s.site_type) types.add(s.site_type);
+    });
+    return Array.from(types).sort();
+  }, [sites]);
+
+  const filteredSites = siteTypeFilter ? sites.filter(s => s.site_type === siteTypeFilter) : sites;
+
+  useEffect(() => {
+    fetch('/api/admin/tables/sites', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => {
+        const rows = d.data || (Array.isArray(d) ? d : []);
+        setSites(rows.filter(s => typeof s.geocode === 'string' && s.geocode.includes(',') && s.geocode.trim() !== ','));
+        setLoading(false);
+      })
+      .catch(e => { console.error(e); setLoading(false); });
+  }, [token]);
+
+  const mapHtml = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>body { margin: 0; padding: 0; font-family: sans-serif; } #map { width: 100vw; height: 100vh; background: #e5e3df; }</style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      const sites = ${JSON.stringify(filteredSites)};
+      const map = L.map('map').setView([40.5, -82.0], 7); // Center approx Ohio
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      }).addTo(map);
+
+      // Custom marker icon
+      const siteIcon = L.divIcon({
+        className: 'custom-div-icon',
+        html: "<div style='background-color:#0a2540; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,0.3);'></div>",
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      if (sites.length > 0) {
+        const bounds = [];
+        sites.forEach(s => {
+          const coords = s.geocode.split(',');
+          if (coords.length === 2) {
+             const lat = parseFloat(coords[0].trim());
+             const lon = parseFloat(coords[1].trim());
+             if (!isNaN(lat) && !isNaN(lon)) {
+               L.marker([lat, lon], { icon: siteIcon })
+                .addTo(map)
+                .bindPopup('<div style="padding:4px"><b style="color:#0a2540;font-size:14px">' + (s.site_type || 'Customer Site').toUpperCase() + '</b><hr style="margin:6px 0;border:0;border-top:1px solid #eee"><div style="color:#333">' + (s.address1 || 'No address provided') + '<br>' + (s.city || '') + ', ' + (s.state || '') + ' ' + (s.zip || '') + '</div></div>');
+               bounds.push([lat, lon]);
+             }
+          }
+        });
+        if (bounds.length > 0) map.fitBounds(bounds, { padding: [40, 40] });
+      }
+    </script>
+  </body>
+  </html>
+  `;
+
+  return (
+    <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(10,37,64,0.7)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ width:"90%", height:"92%", background:C.sur, borderRadius:16, overflow:"hidden", display:"flex", flexDirection:"column", position:"relative", boxShadow:"0 10px 40px rgba(0,0,0,0.3)" }}>
+        <div style={{ padding:"18px 24px", borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+            <div>
+              <h3 style={{ margin:0, fontWeight:900, color:C.txt, fontSize:22 }}>Global Equipment Deployment & Site Map</h3>
+              <div style={{ color:C.txtM, fontSize:13, marginTop:2 }}>Showing {filteredSites.length} geocoded locations</div>
+            </div>
+            <select
+              value={siteTypeFilter}
+              onChange={(e) => setSiteTypeFilter(e.target.value)}
+              style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.bdr}`, background: C.bg, fontSize: 13, textTransform: "capitalize", cursor: "pointer", minWidth: 160 }}
+            >
+              <option value="">All Site Types</option>
+              {uniqueSiteTypes.map(st => (
+                <option key={st} value={st}>{st.replace('_', ' ')}</option>
+              ))}
+            </select>
+          </div>
+          <button onClick={onClose} style={{ background:C.accL, color:C.acc, border:"none", borderRadius:"50%", width:36, height:36, fontSize:20, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s" }}>&times;</button>
+        </div>
+        <div style={{ flex:1, position:"relative", background: C.bg }}>
+          {loading ? (
+            <div style={{ display:"flex", height:"100%", alignItems:"center", justifyContent:"center", color:C.acc, fontWeight:800 }}>Loading mapping telemetry...</div>
+          ) : (
+            <iframe srcDoc={mapHtml} style={{ width:"100%", height:"100%", border:"none" }} title="Site Map" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
+  const [showSitesMap, setShowSitesMap] = useState(false);
   const [token,      setToken]      = useState(localStorage.getItem("token") || "");
   const [role,       setRole]       = useState(() => { try { return JSON.parse(localStorage.getItem("role")) || []; } catch(e) { return []; } });
   
@@ -10066,7 +10290,7 @@ export default function App() {
   // ── LANDING PAGE ───────────────────────────────────────────────────────────
   if (view==="landing") return (
     <div style={{ minHeight:"100vh", background:C.sur, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", display:"flex", flexDirection:"column" }}>
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:"6rem", fontWeight:800, color:C.acc, letterSpacing:"-2px", lineHeight:1, marginBottom:10 }}>RigPro</div>
@@ -10088,7 +10312,7 @@ export default function App() {
     }
     return (
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
-        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} onForgotPassword={() => setView("forgot-password")} />
         </div>
@@ -10099,7 +10323,7 @@ export default function App() {
   if (view==="forgot-password") {
     return (
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
-        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <ForgotPasswordForm onBack={() => setView("login")} />
         </div>
@@ -10110,7 +10334,7 @@ export default function App() {
   if (view==="reset-password") {
     return (
       <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
-        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <ResetPasswordForm onBack={() => setView("login")} />
         </div>
@@ -10123,7 +10347,7 @@ export default function App() {
   if (view==="admin" && !(Array.isArray(role) ? role : [role]).includes('admin')) return <div style={{padding:40, color:C.red, fontWeight:700, fontSize:20}}>403 Unauthorized. Access Restricted to Administrators.</div>;
   if (view==="admin") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <AdminPage token={token} profileUser={profileUser} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo}/>
       <Footer />
     </div>
@@ -10167,10 +10391,6 @@ export default function App() {
       {showNotifs && <NotifPanel/>}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-          <button style={{ ...mkBtn("ghost"), padding:"5px 9px", position:"relative" }} onClick={()=>setShowNotifs(true)}>
-            🔔
-            {pendN>0&&<span style={{ position:"absolute", top:-3, right:-3, background:C.red, color:"#fff", borderRadius:"50%", width:15, height:15, fontSize:9, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>{pendN}</span>}
-          </button>
           <div className="desktop-act-btns">{actBtns}</div>
         </div>
       }/>
@@ -10328,7 +10548,7 @@ export default function App() {
         }}
         onClose={()=>setDeadModal(null)}
       />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <div className="app-page-container" style={{ maxWidth:1160 }}>
         <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal} deleteRfq={deleteRfq} reopenRfq={reopenRfq} persistReq={persistReq} />
       </div>
@@ -10337,6 +10557,20 @@ export default function App() {
   );
 
   // ── LEADS ──────────────────────────────────────────────────────────────
+  if (view==="sites") return (
+    <div style={{ minHeight:"100vh", background:C.sur, display:"flex", flexDirection:"column" }}>
+      {showSitesMap && <SitesMapModal token={token} onClose={() => setShowSitesMap(false)} />}
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <div style={{ flex:1, padding:24, overflowY:"auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom:16 }}>
+          <h2 style={{ fontSize:20, fontWeight:800, margin:0, color:C.txt }}>Site Management</h2>
+          <button style={{ ...mkBtn("primary"), fontSize:13, padding:"8px 16px" }} onClick={() => setShowSitesMap(true)}>Show locations</button>
+        </div>
+        <DatabaseBrowser token={token} initialTable="sites" hideTabs={true} />
+      </div>
+    </div>
+  );
+
   if (view==="leads") return (
     <>
       {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
@@ -10357,7 +10591,7 @@ export default function App() {
   if (view==="quotes") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
       {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <QuotesPageView jobs={jobs} setJobs={setJobs} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} role={role} />
     </div>
   );
@@ -10366,7 +10600,7 @@ export default function App() {
   if (view==="equipment") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv} role={role}/>
       <Footer />
     </div>
@@ -10375,7 +10609,7 @@ export default function App() {
   if (view==="labor") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates} role={role} baseLabor={baseLabor} setBaseLabor={setBaseLabor}/>
       <Footer />
     </div>
@@ -10386,7 +10620,7 @@ export default function App() {
   if (view==="jobs") return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r=>{ setDeadModal({type:"rfq",item:r}); setShowJFM(null); }} onUpdateRfq={r=>setReqs(p=>p.map(x=>x.id===r.id?r:x))} onCreateEstimate={r=>{setShowJFM(null);openNew(r);}} appUsers={appUsers} linkedQuote={jobs.find(q=>q.fromReqId===showJFM?.id)||null} liftTonThreshold={liftTonThreshold} onClose={()=>setShowJFM(null)}/>}
       {deadModal && <MarkDeadModal itemType={deadModal.type==="rfq"?"RFQ":"Job"} itemLabel={deadModal.type==="rfq"?deadModal.item.rn+" · "+deadModal.item.company:deadModal.item.job_num+" · "+deadModal.item.client} onConfirm={note=>{ if(deadModal.type==="rfq") setReqs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); else setJobs(p=>p.map(x=>x.id===deadModal.item.id?{...x,status:"Dead",deadNote:note}:x)); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
       <MasterJobList
@@ -10450,7 +10684,7 @@ export default function App() {
   if (view==="calendar") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
       {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <CalendarPage jobs={jobs} setJobs={setJobs} eqMap={eqMap} onOpenQuote={q=>{ openEdit(q); setView("editor"); }}/>
       <Footer />
     </div>
@@ -10460,7 +10694,7 @@ export default function App() {
   if (view==="reports") return (
     <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14, overflowX:"auto" }}>
       {showLeadModal && <LeadRecordModal onClose={()=>setShowLeadModal(false)} onSave={l=>setLeads(p=>[l,...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a,c)=>a+(c.locations?.length||0),0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns}/>
       <ReportsPage
         jobs={jobs}
         reqs={reqs}
