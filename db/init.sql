@@ -186,6 +186,23 @@ CREATE TABLE IF NOT EXISTS customers (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- 4.5 Sites / Locations
+CREATE TABLE IF NOT EXISTS sites (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    site_type VARCHAR(50),
+    address1 VARCHAR(255),
+    city VARCHAR(100),
+    state VARCHAR(50),
+    zip VARCHAR(20),
+    geocode VARCHAR(100),
+    notes TEXT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+);
+
 -- Customer data is imported from Final Customer List.xlsx via server/import_data/import_customers.cjs
 
 

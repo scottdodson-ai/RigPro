@@ -869,9 +869,22 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
     }
 
     const [idColumn] = await db.query(`SHOW COLUMNS FROM \`${table}\` LIKE 'id'`);
-    const query = idColumn.length
-      ? `SELECT * FROM \`${table}\` ORDER BY id ASC`
-      : `SELECT * FROM \`${table}\``;
+    let query;
+    if (table === 'sites') {
+      query = `SELECT s.*, c.name AS customer_name FROM sites s LEFT JOIN customers c ON s.customer_id = c.id ORDER BY s.id ASC`;
+      if (!columnNames.includes('customer_name')) columnNames.push('customer_name');
+    } else if (table === 'customers') {
+      query = `SELECT * FROM customers ORDER BY id ASC`;
+      if (columnNames.includes('customer_num')) {
+        const idx = columnNames.indexOf('customer_num');
+        columnNames.splice(idx, 1);
+        columnNames.unshift('customer_num');
+      }
+    } else {
+      query = idColumn.length
+        ? `SELECT * FROM \`${table}\` ORDER BY id ASC`
+        : `SELECT * FROM \`${table}\``;
+    }
     const [rows] = await db.query(query);
     res.json({ data: rows, columns: columnNames });
   } catch (error) {
@@ -936,12 +949,13 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
     }
 
     // When creating a lead with address data, auto-create a master_billing site record
-    if (table === 'leads' && data.street && data.customer_number) {
+    if (table === 'leads' && (data.street || data.street1) && data.customer_number) {
       try {
-        await db.query(
+        const [siteResult] = await db.query(
           `INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)`,
-          [data.customer_number, data.site_type || 'master_billing', data.street || '', data.city || '', data.state || '', data.zipcode || '']
+          [data.customer_number, data.site_type || 'master_billing', data.street || data.street1 || '', data.city || '', data.state || '', data.zipcode || data.zip || '']
         );
+        triggerGeocodeUpdate(siteResult.insertId, data.street || data.street1, data.city, data.state, data.zipcode || data.zip);
       } catch (siteErr) {
         console.warn('[API] Could not auto-create site for lead:', siteErr.message);
       }
@@ -1183,8 +1197,8 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
     for (const name in customers) {
       const c = customers[name];
       const [result] = await connection.query(
-        'INSERT INTO customers (name, notes, address1, city, state, zip, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [name, passStr(c.notes), passStr(c.address1), passStr(c.city), passStr(c.state), passStr(c.zip), passStr(c.website), passStr(c.industry), passStr(c.paymentTerms), passStr(c.accountNum)]
+        'INSERT INTO customers (name, notes, address1, city, state, zip, website, industry, payment_terms, account_num, customer_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [name, passStr(c.notes), passStr(c.address1), passStr(c.city), passStr(c.state), passStr(c.zip), passStr(c.website), passStr(c.industry), passStr(c.paymentTerms), passStr(c.accountNum), passStr(c.accountNum)]
       );
       const customerId = result.insertId;
       
@@ -2012,6 +2026,25 @@ const ensureDescriptionColumns = async () => {
   }
 };
 
+const ensureSitesTable = async () => {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS sites (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      customer_id INT,
+      site_type VARCHAR(50),
+      address1 VARCHAR(255),
+      city VARCHAR(100),
+      state VARCHAR(50),
+      zip VARCHAR(20),
+      geocode VARCHAR(100),
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    )
+  `);
+};
+
 // Ensure admin account exists and has known password (dev/seed behavior).
 const initAdmin = async () => {
   try {
@@ -2028,7 +2061,7 @@ const initAdmin = async () => {
 
     await ensureUserProfileColumns();
     await ensureCompanyInfoTable();
-
+    await ensureSitesTable();
     await ensureLeadsTable();
     await ensureDescriptionColumns();
     const hash = await bcrypt.hash('pass', 10);

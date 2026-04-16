@@ -9709,7 +9709,7 @@ function SitesMapModal({ token, onClose }) {
              if (!isNaN(lat) && !isNaN(lon)) {
                L.marker([lat, lon], { icon: siteIcon })
                 .addTo(map)
-                .bindPopup('<div style="padding:4px"><b style="color:#0a2540;font-size:14px">' + (s.site_type || 'Customer Site').toUpperCase() + '</b><hr style="margin:6px 0;border:0;border-top:1px solid #eee"><div style="color:#333">' + (s.address1 || 'No address provided') + '<br>' + (s.city || '') + ', ' + (s.state || '') + ' ' + (s.zip || '') + '</div></div>');
+                .bindPopup('<div style="padding:4px"><b style="color:#0a2540;font-size:14px">' + (s.customer_name || 'Customer Site').toUpperCase() + '</b><div style="font-size:11px;color:#666;margin-bottom:4px">' + (s.site_type || '') + '</div><hr style="margin:6px 0;border:0;border-top:1px solid #eee"><div style="color:#333">' + (s.address1 || 'No address provided') + '<br>' + (s.city || '') + ', ' + (s.state || '') + ' ' + (s.zip || '') + '</div></div>');
                bounds.push([lat, lon]);
              }
           }

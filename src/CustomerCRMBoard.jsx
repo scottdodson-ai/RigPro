@@ -1,30 +1,57 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 
-function useTableSort(items) {
+function useTableSort(items, custData, search, custFilter, SORT_GETTERS) {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState(1);
-  const requestSort = (key) => {
-    if (sortKey === key) setSortDir(-sortDir);
-    else { setSortKey(key); setSortDir(1); }
-  };
+
+  const requestSort = useCallback((key) => {
+    setSortKey(current => {
+      if (current === key) {
+        setSortDir(d => -d);
+        return current;
+      }
+      setSortDir(1);
+      return key;
+    });
+  }, []);
+
   const sortedItems = useMemo(() => {
-    if (!sortKey) return items;
-    return [...items].sort((a,b) => {
-      let v1 = typeof sortKey === 'function' ? sortKey(a) : a[sortKey];
-      let v2 = typeof sortKey === 'function' ? sortKey(b) : b[sortKey];
-      const clean = v => {
-        if(typeof v === 'string') {
-          if (/^[\$]?[0-9,]+(\.[0-9]+)?%?(\s*(days|hrs|m|w))?$/.test(v.trim().toLowerCase())) return Number(v.replace(/[^0-9.-]/g, ''));
-          return v.toLowerCase();
-        }
-        return v;
+    const fresh = items.filter(c => (
+      (!search || c.name?.toLowerCase().includes(search.toLowerCase())) &&
+      (custFilter === "all" || (custFilter === "prospects" ? c.isProspect : !c.isProspect))
+    ));
+    
+    if (!sortKey) return fresh;
+
+    return [...fresh].sort((a, b) => {
+      const getter = SORT_GETTERS[sortKey];
+      let v1 = typeof getter === 'function' ? getter(a, custData) : a[getter];
+      let v2 = typeof getter === 'function' ? getter(b, custData) : b[getter];
+
+      const normalize = (v) => {
+        if (v === null || v === undefined) return "";
+        if (typeof v === 'number') return v;
+        const s = String(v).trim().toLowerCase();
+        if (/^[\$]?[0-9,]+(\.[0-9]+)?%?$/.test(s)) return Number(s.replace(/[^0-9.-]/g, ''));
+        return s;
       };
-      v1 = clean(v1); v2 = clean(v2);
+
+      v1 = normalize(v1);
+      v2 = normalize(v2);
+
+      if (v1 === v2) return 0;
+      
+      if (typeof v1 !== typeof v2) {
+        v1 = String(v1);
+        v2 = String(v2);
+      }
+
       if (v1 < v2) return -1 * sortDir;
       if (v1 > v2) return 1 * sortDir;
       return 0;
     });
-  }, [items, sortKey, sortDir]);
+  }, [items, custData, search, custFilter, sortKey, sortDir, SORT_GETTERS]);
+
   return { sortedItems, requestSort, sortKey, sortDir };
 }
 
@@ -71,7 +98,15 @@ const CustomerCRMBoard = (props) => {
   const currentSelectionData = selC ? custData[selC] : null;
   const contacts = currentSelectionData?.contacts || [];
 
-  const { sortedItems: sortedCustomers, requestSort, sortKey, sortDir } = useTableSort(customers.filter(c=>(!search||c.name.toLowerCase().includes(search.toLowerCase()))&&(custFilter==="all"||(custFilter==="prospects"?c.isProspect:!c.isProspect))));
+  const SORT_GETTERS = useMemo(() => ({
+    custNum: (c) => c?.customer_num || c?.accountNum || c?.id || 0,
+    name: "name",
+    email: (c, data) => (data[c?.name]?.contacts||[]).map(con=>con.email).filter(Boolean)[0] || "",
+    phone: (c, data) => (data[c?.name]?.contacts||[]).map(con=>con.phone||con.mobile).filter(Boolean)[0] || "",
+    jobs: (c) => (c?.quotes||[]).length
+  }), []);
+
+  const { sortedItems: sortedCustomers, requestSort, sortKey, sortDir } = useTableSort(customers, custData, search, custFilter, SORT_GETTERS);
 
   // RESTORE SCROLL POSITION WITH ROBUST TIMING
   useEffect(() => {
@@ -104,6 +139,7 @@ const CustomerCRMBoard = (props) => {
       state: formData.get("state") || "",
       zip: formData.get("zip") || "",
       website: formData.get("website") || "",
+      customer_num: formData.get("customer_num") || "",
       industry: formData.get("industry") || "Industrial",
       isProspect: 1
     };
@@ -208,13 +244,17 @@ const CustomerCRMBoard = (props) => {
                  </div>
                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                     <div>
-                      <Lbl c="WEBSITE" />
-                      <input name="website" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="www.example.com" />
+                      <Lbl c="CUSTOMER NUMBER" />
+                      <input name="customer_num" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="e.g. CUST-001" />
                     </div>
                     <div>
                       <Lbl c="INDUSTRY" />
                       <input name="industry" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="e.g. Construction" />
                     </div>
+                 </div>
+                 <div>
+                    <Lbl c="WEBSITE" />
+                    <input name="website" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="www.example.com" />
                  </div>
                  <div>
                     <Lbl c="HEADQUARTERS ADDRESS" />
@@ -248,10 +288,11 @@ const CustomerCRMBoard = (props) => {
                   <table style={{ width:"100%", borderCollapse:"separate", borderSpacing:0 }}>
                     <thead style={{ position:"sticky", top:0, zIndex:5 }}>
                       <tr>
-                        <SortTh style={{ ...thS, width: "30%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh style={{ ...thS, width: "25%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Email" sortKey={(c) => (custData[c.name]?.contacts||[])[0]?.email||""} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh style={{ ...thS, width: "25%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Phone" sortKey={(c) => (custData[c.name]?.contacts||[])[0]?.mobile||""} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center", width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Master Jobs" sortKey={(c) => (c.quotes||[]).length} currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "15%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Cust #" sortKey="custNum" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "25%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Email" sortKey="email" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Phone" sortKey="phone" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center", width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Master Jobs" sortKey="jobs" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                       </tr>
                     </thead>
                     <tbody>
@@ -263,6 +304,9 @@ const CustomerCRMBoard = (props) => {
                         const isSel = selC === c.name;
                         return (
                           <tr key={c.name} style={{ background: isSel ? C.accL : "transparent", cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelC(c.name); }}>
+                            <td style={{ ...tdS, fontWeight:700, fontSize:13, color:C.txtS, paddingTop:12, paddingBottom:12 }}>
+                              {c.customer_num || c.accountNum || c.id || "—"}
+                            </td>
                             <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 140, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.name}>
                               {c.name}
                             </td>
@@ -350,7 +394,8 @@ const CustomerCRMBoard = (props) => {
 
                     <div>
                       <div style={{ fontSize:44, fontWeight:900, color:C.txt, letterSpacing:"-1px", lineHeight:1 }}>{selC}</div>
-                      <div style={{ display:"flex", gap:20, marginTop:18 }}>
+                      <div style={{ display:"flex", gap:20, marginTop:18, flexWrap:"wrap" }}>
+                        <div style={{ fontSize:13, color:C.acc, fontWeight:800, textTransform:"uppercase", background:C.accL, padding:"5px 12px", borderRadius:8 }}>ID: {currentSelectionData?.customer_num || currentSelectionData?.accountNum || currentSelectionData?.id || "N/A"}</div>
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>{currentSelectionData?.industry || "Industrial Sector"}</div>
                         <div style={{ fontSize:13, color:C.ora, fontWeight:800, background:"#fff7ed", padding:"5px 12px", borderRadius:8 }}>PAYMENT TERMS: {currentSelectionData?.paymentTerms || "Net 30"}</div>
                       </div>
