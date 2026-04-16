@@ -1976,6 +1976,29 @@ const ensureRfqsTable = async () => {
   `);
 };
 
+// Ensure every managed table has a `description` column.
+const ensureDescriptionColumns = async () => {
+  const tables = [
+    'users', 'admin_tasks', 'customers', 'customer_contacts', 'base_labor',
+    'equipment', 'estimators', 'status', 'Quote_Status_History', 'sites',
+    'company_info', 'user_auth_audit', 'phi_config', 'in_review', 'master_jobs'
+  ];
+  for (const table of tables) {
+    try {
+      const [cols] = await db.query(`SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'description'`, [table]);
+      if (cols.length === 0) {
+        await db.query(`ALTER TABLE \`${table}\` ADD COLUMN description TEXT`);
+        console.log(`[Schema] Added description column to ${table}`);
+      }
+    } catch (e) {
+      // Table might not exist yet – skip silently
+      if (e.code !== 'ER_NO_SUCH_TABLE') {
+        console.warn(`[Schema] Could not add description to ${table}:`, e.message);
+      }
+    }
+  }
+};
+
 // Ensure admin account exists and has known password (dev/seed behavior).
 const initAdmin = async () => {
   try {
@@ -1994,6 +2017,7 @@ const initAdmin = async () => {
     await ensureCompanyInfoTable();
     await ensureRfqsTable();
     await ensureLeadsTable();
+    await ensureDescriptionColumns();
     const hash = await bcrypt.hash('pass', 10);
     await db.query(
       `INSERT INTO users (first_name, last_name, username, email, cell_phone, password_hash)

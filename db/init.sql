@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
     is_disabled BOOLEAN NOT NULL DEFAULT FALSE,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) DEFAULT 'user',
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS company_info (
     address TEXT,
     services TEXT,
     logo_src LONGTEXT,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -52,6 +54,7 @@ CREATE TABLE IF NOT EXISTS user_auth_audit (
     event_type VARCHAR(20) NOT NULL,
     ip_address VARCHAR(64),
     user_agent VARCHAR(255),
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
@@ -65,6 +68,7 @@ CREATE TABLE IF NOT EXISTS admin_tasks (
     text VARCHAR(255) NOT NULL,
     done BOOLEAN DEFAULT FALSE,
     subnotes JSON, -- Array of strings or objects
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -85,6 +89,7 @@ CREATE TABLE IF NOT EXISTS estimators (
     email VARCHAR(100),
     phone VARCHAR(50),
     status VARCHAR(20) DEFAULT 'Active',
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -102,6 +107,7 @@ CREATE TABLE IF NOT EXISTS base_labor (
     ot_rate DECIMAL(10, 2) NOT NULL,
     cost_reg DECIMAL(10, 2) NOT NULL,
     cost_ot DECIMAL(10, 2) NOT NULL,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -121,6 +127,7 @@ CREATE TABLE IF NOT EXISTS equipment (
     capacity VARCHAR(50),
     daily_rate DECIMAL(10, 2) NOT NULL,
     daily_cost DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -174,6 +181,7 @@ CREATE TABLE IF NOT EXISTS customers (
     company_summary LONGTEXT,
     customer_num VARCHAR(50),
     tombstone TINYINT(1) DEFAULT 0,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -191,6 +199,7 @@ CREATE TABLE IF NOT EXISTS customer_contacts (
     mobile VARCHAR(100),
     phone VARCHAR(50),
     is_primary BOOLEAN DEFAULT false,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
@@ -276,6 +285,7 @@ CREATE TABLE IF NOT EXISTS phi_config (
     band_excellent INT DEFAULT 90,
     stale_days INT DEFAULT 14,
     response_flag_hrs INT DEFAULT 48,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_by INT
@@ -288,6 +298,7 @@ CREATE TABLE IF NOT EXISTS status (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     sort_order INT DEFAULT 0,
+    description TEXT,
     date_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -313,5 +324,6 @@ CREATE TABLE IF NOT EXISTS Quote_Status_History (
     changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     changed_by INT DEFAULT NULL,
     notes TEXT,
+    description TEXT,
     FOREIGN KEY (quote_id) REFERENCES quotes (id) ON DELETE CASCADE
 );
