@@ -9651,7 +9651,20 @@ function AdminPage({ token, profileUser, appUsers=[], setAppUsers, companyInfo, 
 function SitesMapModal({ token, onClose }) {
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showLabels, setShowLabels] = useState(false);
   const [siteTypeFilter, setSiteTypeFilter] = useState('');
+  const mapIframeRef = useRef(null);
+
+  // Send message to iframe when showLabels or filter changes
+  useEffect(() => {
+    if (mapIframeRef.current && mapIframeRef.current.contentWindow) {
+      mapIframeRef.current.contentWindow.postMessage({ 
+        type: 'UPDATE_VIEW', 
+        showLabels: showLabels,
+        filter: siteTypeFilter 
+      }, '*');
+    }
+  }, [showLabels, siteTypeFilter, sites]); // Also trigger on sites change to ensure initial state sync
 
   const uniqueSiteTypes = useMemo(() => {
     const types = new Set();
@@ -9660,8 +9673,6 @@ function SitesMapModal({ token, onClose }) {
     });
     return Array.from(types).sort();
   }, [sites]);
-
-  const filteredSites = siteTypeFilter ? sites.filter(s => s.site_type === siteTypeFilter) : sites;
 
   useEffect(() => {
     fetch('/api/admin/tables/sites', { headers: { 'Authorization': `Bearer ${token}` } })
@@ -9674,30 +9685,60 @@ function SitesMapModal({ token, onClose }) {
       .catch(e => { console.error(e); setLoading(false); });
   }, [token]);
 
-  const mapHtml = `
+  // Stable mapHtml - depends ONLY on the full sites list
+  const mapHtml = useMemo(() => `
   <!DOCTYPE html>
   <html>
   <head>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <style>body { margin: 0; padding: 0; font-family: sans-serif; } #map { width: 100vw; height: 100vh; background: #e5e3df; }</style>
+    <style>
+      body { margin: 0; padding: 0; font-family: sans-serif; } 
+      #map { width: 100vw; height: 100vh; background: #e5e3df; }
+      .site-label { transition: opacity 0.2s; opacity: 0; pointer-events: none; }
+      body:not(.labels-hidden).labels-active .site-label { opacity: 1; pointer-events: auto; }
+    </style>
   </head>
-  <body>
+  <body class="labels-hidden">
     <div id="map"></div>
     <script>
-      const sites = ${JSON.stringify(filteredSites)};
-      const map = L.map('map').setView([40.5, -82.0], 7); // Center approx Ohio
+      const sites = ${JSON.stringify(sites)};
+      const map = L.map('map').setView([40.5, -82.0], 7);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
       }).addTo(map);
 
-      // Custom marker icon
-      const siteIcon = L.divIcon({
-        className: 'custom-div-icon',
-        html: "<div style='background-color:#0a2540; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,0.3);'></div>",
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
+      const markers = [];
+
+      window.addEventListener('message', (event) => {
+        if (event.data.type === 'UPDATE_VIEW') {
+          // Toggle labels
+          if (event.data.showLabels) {
+            document.body.classList.remove('labels-hidden');
+            document.body.classList.add('labels-active');
+          } else {
+            document.body.classList.add('labels-hidden');
+            document.body.classList.remove('labels-active');
+          }
+
+          // Filter markers
+          const f = event.data.filter;
+          markers.forEach(m => {
+            if (!f || m._type === f) m.addTo(map);
+            else m.remove();
+          });
+        }
       });
+
+      const getSiteColor = (type) => {
+        if (!type) return '#ec4899'; // Hot Pink fallback
+        const t = type.toLowerCase();
+        if (t === 'master_billing' || t.includes('hq')) return '#7c3aed'; // Electric Purple
+        if (t.includes('primary') || t.includes('industrial')) return '#10b981'; // Emerald Green
+        if (t.includes('remote') || t.includes('satellite')) return '#f59e0b'; // Solar Orange
+        if (t.includes('service') || t.includes('maintenance')) return '#0ea5e9'; // Bright Sky Blue
+        return '#ec4899'; // Hot Pink
+      };
 
       if (sites.length > 0) {
         const bounds = [];
@@ -9707,9 +9748,25 @@ function SitesMapModal({ token, onClose }) {
              const lat = parseFloat(coords[0].trim());
              const lon = parseFloat(coords[1].trim());
              if (!isNaN(lat) && !isNaN(lon)) {
-               L.marker([lat, lon], { icon: siteIcon })
-                .addTo(map)
-                .bindPopup('<div style="padding:4px"><b style="color:#0a2540;font-size:14px">' + (s.customer_name || 'Customer Site').toUpperCase() + '</b><div style="font-size:11px;color:#666;margin-bottom:4px">' + (s.site_type || '') + '</div><hr style="margin:6px 0;border:0;border-top:1px solid #eee"><div style="color:#333">' + (s.address1 || 'No address provided') + '<br>' + (s.city || '') + ', ' + (s.state || '') + ' ' + (s.zip || '') + '</div></div>');
+               const sColor = getSiteColor(s.site_type);
+               const dynamicIcon = L.divIcon({
+                 className: 'custom-div-icon',
+                 html: '<div style="position:relative">' +
+                          '<div style="background-color:' + sColor + '; width:16px; height:16px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px ' + sColor + ', 0 2px 4px rgba(0,0,0,0.3);"></div>' +
+                          '<div class="site-label" style="position:absolute; left:20px; top:-4px; background:rgba(255,255,255,0.95); padding:2px 8px; border-radius:4px; font-size:10px; font-weight:900; white-space:nowrap; border:1px solid ' + sColor + '; color:' + sColor + '; pointer-events:none; box-shadow:0 2px 8px rgba(0,0,0,0.15); text-transform:uppercase; letter-spacing:0.5px">' +
+                            (s.customer_name || 'Site') +
+                          '</div>' +
+                        '</div>',
+                 iconSize: [20, 20],
+                 iconAnchor: [10, 10]
+               });
+
+               const m = L.marker([lat, lon], { icon: dynamicIcon });
+               m._type = s.site_type;
+               m.addTo(map)
+                .bindPopup('<div style="padding:4px"><b style="color:' + sColor + ';font-size:14px">' + (s.customer_name || 'Customer Site').toUpperCase() + '</b><div style="font-size:11px;color:#666;margin-bottom:4px">' + (s.site_type || '').toUpperCase().replace(/_/g, ' ') + '</div><hr style="margin:6px 0;border:0;border-top:1px solid #eee"><div style="color:#333">' + (s.address1 || 'No address provided') + '<br>' + (s.city || '') + ', ' + (s.state || '') + ' ' + (s.zip || '') + '</div></div>');
+               
+               markers.push(m);
                bounds.push([lat, lon]);
              }
           }
@@ -9719,7 +9776,7 @@ function SitesMapModal({ token, onClose }) {
     </script>
   </body>
   </html>
-  `;
+  `, [sites]);
 
   return (
     <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(10,37,64,0.7)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -9728,18 +9785,30 @@ function SitesMapModal({ token, onClose }) {
           <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
             <div>
               <h3 style={{ margin:0, fontWeight:900, color:C.txt, fontSize:22 }}>Global Equipment Deployment & Site Map</h3>
-              <div style={{ color:C.txtM, fontSize:13, marginTop:2 }}>Showing {filteredSites.length} geocoded locations</div>
+              <div style={{ color:C.txtM, fontSize:13, marginTop:2 }}>
+                Showing {siteTypeFilter ? sites.filter(s => s.site_type === siteTypeFilter).length : sites.length} geocoded locations
+              </div>
             </div>
-            <select
-              value={siteTypeFilter}
-              onChange={(e) => setSiteTypeFilter(e.target.value)}
-              style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.bdr}`, background: C.bg, fontSize: 13, textTransform: "capitalize", cursor: "pointer", minWidth: 160 }}
-            >
-              <option value="">All Site Types</option>
-              {uniqueSiteTypes.map(st => (
-                <option key={st} value={st}>{st.replace('_', ' ')}</option>
-              ))}
-            </select>
+            
+            <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+              <select
+                value={siteTypeFilter}
+                onChange={(e) => setSiteTypeFilter(e.target.value)}
+                style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.bdr}`, background: C.bg, fontSize: 13, textTransform: "capitalize", cursor: "pointer", minWidth: 160 }}
+              >
+                <option value="">All Site Types</option>
+                {uniqueSiteTypes.map(st => (
+                  <option key={st} value={st}>{st.replace('_', ' ')}</option>
+                ))}
+              </select>
+
+              <button 
+                onClick={() => setShowLabels(!showLabels)}
+                style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${showLabels ? C.acc : C.bdr}`, background: showLabels ? C.accL : C.white, color: showLabels ? C.acc : C.txtS, fontSize: 13, fontVariant: "small-caps", fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
+              >
+                {showLabels ? "Hide Names" : "Show Names"}
+              </button>
+            </div>
           </div>
           <button onClick={onClose} style={{ background:C.accL, color:C.acc, border:"none", borderRadius:"50%", width:36, height:36, fontSize:20, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s" }}>&times;</button>
         </div>
@@ -9747,7 +9816,7 @@ function SitesMapModal({ token, onClose }) {
           {loading ? (
             <div style={{ display:"flex", height:"100%", alignItems:"center", justifyContent:"center", color:C.acc, fontWeight:800 }}>Loading mapping telemetry...</div>
           ) : (
-            <iframe srcDoc={mapHtml} style={{ width:"100%", height:"100%", border:"none" }} title="Site Map" />
+            <iframe ref={mapIframeRef} srcDoc={mapHtml} style={{ width:"100%", height:"100%", border:"none" }} title="Site Map" />
           )}
         </div>
       </div>
