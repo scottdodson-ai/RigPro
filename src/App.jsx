@@ -8096,6 +8096,7 @@ function DatabaseBrowser({ token }) {
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tableSearch, setTableSearch] = useState("");
+  const [siteTypeFilter, setSiteTypeFilter] = useState("");
   const [editingRow, setEditingRow] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -8141,15 +8142,21 @@ function DatabaseBrowser({ token }) {
 
   const headers = columns.length > 0 ? columns : (data.length > 0 ? Object.keys(data[0]) : []);
   const searchTerm = tableSearch.trim().toLowerCase();
-  const filteredData = !searchTerm
-    ? data
-    : data.filter((row) =>
-        headers.some((h) => {
-          const val = row[h];
-          if (val === null || val === undefined) return false;
-          return String(val).toLowerCase().includes(searchTerm);
-        })
-      );
+  
+  const uniqueSiteTypes = useMemo(() => {
+    if (selectedTable !== 'sites' && selectedTable !== 'Sites') return [];
+    return Array.from(new Set(data.map(r => r.site_type).filter(x => x !== null && x !== undefined && x !== ''))).sort();
+  }, [data, selectedTable]);
+
+  const filteredData = data.filter((row) => {
+    if ((selectedTable === 'sites' || selectedTable === 'Sites') && siteTypeFilter && String(row.site_type) !== siteTypeFilter) return false;
+    if (!searchTerm) return true;
+    return headers.some((h) => {
+      const val = row[h];
+      if (val === null || val === undefined) return false;
+      return String(val).toLowerCase().includes(searchTerm);
+    });
+  });
   const { sortedItems, requestSort, sortKey, sortDir, setSortKey } = useTableSort(filteredData, 'id');
 
   const totalPages = Math.ceil(sortedItems.length / pageSize);
@@ -8157,7 +8164,7 @@ function DatabaseBrowser({ token }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [tableSearch]);
+  }, [tableSearch, siteTypeFilter]);
 
   useEffect(() => {
     setSortKey('id');
@@ -8343,6 +8350,18 @@ function DatabaseBrowser({ token }) {
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                 <div style={{ fontWeight:800, fontSize:15, color:C.acc }}>Table: {selectedTable}</div>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  {(selectedTable === 'sites' || selectedTable === 'Sites') && (
+                    <select
+                      value={siteTypeFilter}
+                      onChange={(e) => setSiteTypeFilter(e.target.value)}
+                      style={{ ...inp, width: 140, fontSize: 12, padding: "6px 10px" }}
+                    >
+                      <option value="">All Site Types</option>
+                      {uniqueSiteTypes.map(st => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
+                    </select>
+                  )}
                   <div style={{position:"relative"}}>
                     <input
                       value={tableSearch}
