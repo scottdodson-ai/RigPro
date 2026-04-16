@@ -1032,7 +1032,7 @@ const BUILT_IN_REPORTS = [
   { id:"new-vs-returning",     name:"New vs. Returning Revenue Split", category:"Executive", desc:"Donut or split bar; % of period revenue by account type", scope:"org" },
   { id:"win-loss-exec",        name:"Win/Loss Analysis (exec)", category:"Executive",  desc:"Blended win rate % + trend only — no per-estimator detail", scope:"org" },
   { id:"top-10-customers",     name:"Top 10 Customers by Revenue", category:"Executive", desc:"Ranked list, current vs. prior period, delta indicator", scope:"org" },
-  { id:"follow-up-queue",      name:"Follow-Up Queue",          category:"Executive",  desc:"Open estimates stale >14d, color-coded by severity", scope:"org" },
+  { id:"follow-up-queue",      name:"Follow-Up Queue",          category:"Executive",  desc:"Open quotes stale >14d, color-coded by severity", scope:"org" },
   { id:"phi-explainer",        name:"PHI Explainer",            category:"Executive",  desc:"Standalone report explaining PHI calculation logic", scope:"org" },
 
   // 1. Sales
@@ -1047,13 +1047,13 @@ const BUILT_IN_REPORTS = [
   { id:"pipeline-summary",     name:"Pipeline Summary",         category:"Pipeline",   desc:"Open jobs by status with total weighted value",      scope:"org" },
   { id:"win-loss",             name:"Win / Loss Analysis",      category:"Pipeline",   desc:"Success rates by estimator and quote type",          scope:"org" },
   { id:"quote-aging",          name:"Quote Aging",              category:"Pipeline",   desc:"Open opportunities ranked by days since creation",   scope:"org" },
-  { id:"open-estimates",       name:"Open Estimates",           category:"Pipeline",   desc:"Outstanding quotes formatted as aging summary",      scope:"org" },
+  { id:"open-quotes",       name:"Open Quotes",           category:"Pipeline",   desc:"Outstanding quotes formatted as aging summary",      scope:"org" },
   { id:"job-schedule",         name:"Job Schedule",             category:"Pipeline",   desc:"Consolidated view of timeline-based job metrics",     scope:"org" },
 
   // 3. Historical
   { id:"historical-dashboard", name:"Historical Dashboard",      category:"Historical", desc:"Operational history and performance summary",        scope:"org" },
   { id:"inactive-reqs",        name:"Inactive Requests",        category:"Historical", desc:"Summary of all RFQs marked as Dead/Complete",        scope:"org" },
-  { id:"lost-estimates",       name:"Lost Estimates",           category:"Historical", desc:"Rejected quotes analyzed by customer and reason",    scope:"org" },
+  { id:"lost-quotes",       name:"Lost Quotes",           category:"Historical", desc:"Rejected quotes analyzed by customer and reason",    scope:"org" },
 
   // 4. Finance
   { id:"finance-dashboard",    name:"Finance Dashboard",         category:"Finance",    desc:"High-level financial performance and summary",       scope:"org" },
@@ -1065,12 +1065,12 @@ const BUILT_IN_REPORTS = [
   { id:"equip-quoted",         name:"Equipment Quoted",          category:"Finance",    desc:"Equipment usage costs and hauling charges",          scope:"org" },
   { id:"sub-materials",        name:"Subcontractors & Materials",category:"Finance",    desc:"External fees, materials, and permit costs",         scope:"org" },
   { id:"discounts-given",      name:"Discounts Given",           category:"Finance",    desc:"Total discount volume tracked by estimator",         scope:"org" },
-  { id:"sales-adj-report",     name:"Sales Adjustment Report",   category:"Finance",    desc:"Estimates with specific sales adjustments",          scope:"org" },
+  { id:"sales-adj-report",     name:"Sales Adjustment Report",   category:"Finance",    desc:"Quotes with specific sales adjustments",          scope:"org" },
 
   // 5. Activity
   { id:"activity-dashboard",   name:"Activity Dashboard",        category:"Activity",   desc:"Overall team performance and system activity",       scope:"org" },
   { id:"rfq-response",         name:"RFQ Response Time",        category:"Activity",   desc:"Days from RFQ received to formal submission",        scope:"org" },
-  { id:"avg-estimate-cycle",   name:"Average Estimate Cycle",   category:"Activity",   desc:"Duration from intake to 'Won' status",                scope:"org" },
+  { id:"avg-quote-cycle",   name:"Average Quote Cycle",   category:"Activity",   desc:"Duration from intake to 'Won' status",                scope:"org" },
   { id:"estimator-activity",   name:"Estimator Activity",        category:"Activity",   desc:"Quotes created, submitted, and won per user",        scope:"org" },
 
   // 6. Customers
@@ -1171,7 +1171,7 @@ function buildReportData(reportId, jobs, reqs) {
           ["Volume Ratio", "Current RFQs compared to standard run rate", "20%"],
           ["Margin Deviation", "Deviation from expected profitability GM%", "15%"],
           ["Aging Factor", "Risk coefficient for idle active pipeline", "30%"],
-          ["Speed Penalty", "Deductions for delayed estimate turnaround", "10%"]
+          ["Speed Penalty", "Deductions for delayed quote turnaround", "10%"]
         ],
         summary: "Formal mathematical methodology explanation for the PHI Score."
       };
@@ -1229,10 +1229,10 @@ function buildReportData(reportId, jobs, reqs) {
         cols: ["Metric", "Value"],
         rows: [
           ["Total RFQs Received", reqs.length],
-          ["RFQ to Estimate Conversion", conversion],
+          ["RFQ to Quote Conversion", conversion],
           ["Quote Win Rate", winRate],
           ["Active Open RFQs", reqs.filter(r => r.status !== "Dead" && r.status !== "Completed").length],
-          ["Open Estimates", jobs.filter(q => !["Won", "Lost", "Dead"].includes(q.status)).length]
+          ["Open Quotes", jobs.filter(q => !["Won", "Lost", "Dead"].includes(q.status)).length]
         ],
         summary: "Pipeline throughput and conversion summary"
       };
@@ -1288,7 +1288,7 @@ function buildReportData(reportId, jobs, reqs) {
         rawRefs:data.map(({q})=>({type:"quote",quote:q})),
         summary:`${openQ.length} open jobs · Oldest: ${data[0]?data[0].days+" days":"—"}` };
     }
-    case "open-estimates": {
+    case "open-quotes": {
       const now = new Date();
       const openQ = jobs.filter(q => !["Won", "Lost", "Dead", "HISTORICAL"].includes(q.status));
       const data = openQ.map(q => ({ q, age: Math.floor((now - new Date(q.start_date || q.date || now)) / 86400000) })).sort((a,b) => b.age - a.age);
@@ -1296,7 +1296,7 @@ function buildReportData(reportId, jobs, reqs) {
         cols: ["Quote #", "Customer", "Estimator", "Age", "Value"],
         rows: data.map(({q, age}) => [q.job_num||q.quote_number, q.client, q.salesAssoc || "Unassigned", age + " days", fmt2(q.total || 0)]),
         rawRefs: data.map(({q}) => ({ type: "quote", quote: q })),
-        summary: `${openQ.length} open estimates formatting as aging summary`
+        summary: `${openQ.length} open quotes formatting as aging summary`
       };
     }
 
@@ -1326,10 +1326,10 @@ function buildReportData(reportId, jobs, reqs) {
     case "rfq-response": {
       const data=reqs.filter(r=>r.date).map(r=>{ const linked=jobs.find(q=>q.fromReqId===r.id); const days=linked?Math.floor((new Date(linked.date)-new Date(r.date))/86400000):null; return {r,linked,days}; }).sort((a,b)=>{ if(a.days===null)return 1; if(b.days===null)return -1; return a.days-b.days; });
       const withResp=data.filter(d=>d.days!==null); const avg=withResp.length?Math.round(withResp.reduce((s,d)=>s+d.days,0)/withResp.length):0;
-      return { cols:["RFQ #","Customer","RFQ Date","Est. Date","Response Time"], clickHint:"Click an RFQ to open its Job Folder · Click estimate column to open the quote",
-        rows:data.map(({r,linked,days})=>[r.rn,r.company,r.date,linked?linked.date:"No estimate",days!==null?days+" days":"—"]),
+      return { cols:["RFQ #","Customer","RFQ Date","Est. Date","Response Time"], clickHint:"Click an RFQ to open its Job Folder · Click quote column to open the quote",
+        rows:data.map(({r,linked,days})=>[r.rn,r.company,r.date,linked?linked.date:"No quote",days!==null?days+" days":"—"]),
         rawRefs:data.map(({r,linked})=>({type:"rfq",req:r,quote:linked||null})),
-        summary:`${withResp.length} of ${data.length} RFQs have estimates · Avg response: ${avg} days` };
+        summary:`${withResp.length} of ${data.length} RFQs have quotes · Avg response: ${avg} days` };
     }
     case "job-schedule": {
       const activeJobs=won.filter(q=>q.startDate).sort((a,b)=>a.startDate>b.startDate?1:-1);
@@ -1338,7 +1338,7 @@ function buildReportData(reportId, jobs, reqs) {
         rawRefs:activeJobs.map(q=>({type:"quote",quote:q})),
         summary:`${activeJobs.length} scheduled/won jobs` };
     }
-    case "lost-estimates": {
+    case "lost-quotes": {
       const data = lost.sort((a, b) => b.total - a.total);
       return {
         cols: ["Quote #", "Customer", "Estimator", "Value Won", "Reason", "Competitor"],
@@ -1347,10 +1347,10 @@ function buildReportData(reportId, jobs, reqs) {
           return [q.job_num, q.client, q.salesAssoc || "Unassigned", fmt2(q.total || 0), q.deadNote || q.lossReason || "Competitor/Price", q.competitor || "Unknown"];
         }),
         rawRefs: data.map(q => ({ type: "quote", quote: q })),
-        summary: `${data.length} lost estimates analyzed by account`
+        summary: `${data.length} lost quotes analyzed by account`
       };
     }
-    case "avg-estimate-cycle": {
+    case "avg-quote-cycle": {
       const wonWithReq = won.filter(q => q.fromReqId);
       const data = wonWithReq.map(q => {
         const req = reqs.find(r => r.id === q.fromReqId);
@@ -1414,8 +1414,8 @@ function buildReportData(reportId, jobs, reqs) {
         cols: ["Financial Metric", "Amount"],
         rows: [
           ["Gross Revenue (Won)", fmt2(totalRev)],
-          ["Estimated Direct Costs", fmt2(totalCost)],
-          ["Estimated Gross Margin", fmt2(totalRev - totalCost)],
+          ["Quoted Direct Costs", fmt2(totalCost)],
+          ["Quoted Gross Margin", fmt2(totalRev - totalCost)],
           ["Avg Margin Percentage", totalRev ? ((totalRev - totalCost) / totalRev * 100).toFixed(1) + "%" : "0%"]
         ],
         summary: "Organization financial health summary"
@@ -1482,8 +1482,8 @@ function buildReportData(reportId, jobs, reqs) {
         cols: ["Activity Area", "Count"],
         rows: [
           ["New Quotes Created", jobs.length],
-          ["Estimates Won", won.length],
-          ["Estimates Lost", lost.length],
+          ["Quotes Won", won.length],
+          ["Quotes Lost", lost.length],
           ["New Quotes Ingested", reqs.length],
           ["Total Adjustments Made", jobs.reduce((s,q) => s + (q.salesAdjustments?.length || 0), 0)]
         ],
@@ -1496,7 +1496,7 @@ function buildReportData(reportId, jobs, reqs) {
         cols: ["Quote #", "Customer", "Adjustments Total", "Adjustments Count"],
         rows: data.map(q => [q.job_num, q.client, fmt2(q.salesAdjustments.reduce((s,a) => s + a.amount, 0)), q.salesAdjustments.length]),
         rawRefs: data.map(q => ({ type: "quote", quote: q })),
-        summary: `${data.length} estimates with specific sales adjustments recorded`
+        summary: `${data.length} quotes with specific sales adjustments recorded`
       };
     }
     case "jobs-by-customer": {
@@ -1612,7 +1612,7 @@ function buildReportData(reportId, jobs, reqs) {
       pData.sort((a,b) => b.lastActMs - a.lastActMs);
       
       return {
-        cols: ["Prospect Name", "Quotes Provided", "Historical Activity Trail", "Last Activity", "RFQ Count", "Open Estimates"],
+        cols: ["Prospect Name", "Quotes Provided", "Historical Activity Trail", "Last Activity", "RFQ Count", "Open Quotes"],
         rows: pData.map(p => [p.name, p.qCount, p.hist, p.lastAct, p.rfqCount, p.openEsts]),
         summary: `${prospects.length} prospects identified (quoted but never won)`
       };
@@ -1754,7 +1754,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
             </div>
             {/* Cost breakdown */}
             <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8, padding:"12px 16px" }}>
-              <div style={{ fontSize:10, color:C.txtS, fontWeight:700, textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Estimated Cost Breakdown</div>
+              <div style={{ fontSize:10, color:C.txtS, fontWeight:700, textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Quoted Cost Breakdown</div>
               {[
                 {label:"Labor (60% of billed)",    billed:q.labor||0,  cost:laborCost, color:C.ora  },
                 {label:"Equipment (70% of billed)", billed:q.equip||0,  cost:equipCost, color:C.teal },
@@ -1835,12 +1835,12 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
               {days!==null && (
                 <div style={{ flex:1, background:days<=3?C.grnB:days<=7?C.yelB:C.redB, border:`1px solid ${days<=3?C.grnBdr:days<=7?C.yelBdr:C.redBdr}`, borderRadius:8, padding:"10px 14px", textAlign:"center" }}>
                   <div style={{ fontSize:22, fontWeight:800, color:days<=3?C.grn:days<=7?C.yel:C.red }}>{days}</div>
-                  <div style={{ fontSize:10, fontWeight:700, color:days<=3?C.grn:days<=7?C.yel:C.red }}>Days to Estimate</div>
+                  <div style={{ fontSize:10, fontWeight:700, color:days<=3?C.grn:days<=7?C.yel:C.red }}>Days to Quote</div>
                 </div>
               )}
               {days===null && (
                 <div style={{ flex:1, background:C.redB, border:`1px solid ${C.redBdr}`, borderRadius:8, padding:"10px 14px", textAlign:"center" }}>
-                  <div style={{ fontSize:16, fontWeight:700, color:C.red }}>No Estimate</div>
+                  <div style={{ fontSize:16, fontWeight:700, color:C.red }}>No Quote</div>
                   <div style={{ fontSize:10, color:C.red }}>Not yet quoted</div>
                 </div>
               )}
@@ -1848,7 +1848,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
             {/* Linked quote summary */}
             {quote && (
               <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8, padding:"12px 16px" }}>
-                <div style={{ fontSize:9, color:C.txtS, fontWeight:700, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Linked Estimate</div>
+                <div style={{ fontSize:9, color:C.txtS, fontWeight:700, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Linked Quote</div>
                 <div style={{ display:"flex", gap:16, flexWrap:"wrap", alignItems:"center" }}>
                   <div><div style={{ fontSize:10, color:C.txtS }}>Quote #</div><div style={{ fontWeight:700, color:C.acc }}>{quote.qn}</div></div>
                   <div><div style={{ fontSize:10, color:C.txtS }}>Status</div><Badge status={quote.status}/></div>
@@ -1861,7 +1861,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
           <div className="app-modal-actions" style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <div style={{ display:"flex", gap:8 }}>
               <button style={{ ...mkBtn("primary"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ onOpenJobFolder(req); onClose(); }}>Open Job Folder</button>
-              {quote && <button style={{ ...mkBtn("blue"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ onOpenQuote(quote); onClose(); }}>Open Estimate →</button>}
+              {quote && <button style={{ ...mkBtn("blue"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ onOpenQuote(quote); onClose(); }}>Open Quote →</button>}
             </div>
             <button style={mkBtn("ghost")} onClick={onClose}>Close</button>
           </div>
@@ -2504,7 +2504,7 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, rfqStageFilter, setRfqStag
           { l:"Revenue Won",  v:fmt(cur.rev),    s:`${cur.wonN} jobs`,           c:C.grn,  cv:cur.rev,  pv:prev.rev,  report:"rev-by-month"      },
           { l:"Pipeline",     v:fmt(cur.pipe),   s:`${cur.subN} open`,      c:C.blue, cv:cur.pipe, pv:prev.pipe, report:"pipeline-summary"  },
           { l:"Win Rate",     v:cur.wr+"%",      s:"closed jobs",              c:C.acc,  cv:cur.wr,   pv:prev.wr,   report:"win-loss"           },
-          { l:"Open RFQs",    v:cur.rn,          s:"need estimates",             c:C.ora,  cv:cur.rn,   pv:prev.rn,   report:"rfq-response"       },
+          { l:"Open RFQs",    v:cur.rn,          s:"need quotes",             c:C.ora,  cv:cur.rn,   pv:prev.rn,   report:"rfq-response"       },
         ].map(x => (
           <Card key={x.l} style={{ marginBottom:0, position:"relative", cursor:"pointer", transition:"box-shadow .15s", display:"flex", flexDirection:"column", height:"100%" }}
             onClick={()=>onOpenReport&&onOpenReport(x.report)}
@@ -2737,7 +2737,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
                     ))}
                   </div>
                   <button style={{ ...mkBtn("ghost"), padding:"4px 9px", fontSize:11 }} onClick={e=>{e.stopPropagation();setShowJFM(r);}}>Job Folder</button>
-                  <button style={{ ...mkBtn("blue"), padding:"4px 9px", fontSize:11 }} onClick={e=>{e.stopPropagation();openNew(r);}}>Estimate →</button>
+                  <button style={{ ...mkBtn("blue"), padding:"4px 9px", fontSize:11 }} onClick={e=>{e.stopPropagation();openNew(r);}}>Quote →</button>
                 </div>
               </div>
 
@@ -2775,10 +2775,10 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
                     </div>
                   </div>
 
-                  {/* Estimate summary */}
+                  {/* Quote summary */}
                   {linkedQ ? (
                     <div style={{ background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:7, padding:"10px 14px" }}>
-                      <div style={{ fontSize:9, color:C.txtS, fontWeight:700, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Estimate Summary</div>
+                      <div style={{ fontSize:9, color:C.txtS, fontWeight:700, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Quote Summary</div>
                       <div style={{ display:"flex", gap:16, flexWrap:"wrap", alignItems:"center" }}>
                         <div><div style={{ fontSize:10, color:C.txtS }}>Quote #</div><div style={{ fontWeight:700, fontSize:13, color:C.acc }}>{linkedQ.qn}</div></div>
                         <div><div style={{ fontSize:10, color:C.txtS }}>Status</div><Badge status={linkedQ.status}/></div>
@@ -2787,14 +2787,14 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
                         <div><div style={{ fontSize:10, color:C.txtS }}>Equipment</div><div style={{ fontWeight:600, fontSize:13, color:C.teal }}>{fmt(linkedQ.equip||0)}</div></div>
                         <div><div style={{ fontSize:10, color:C.txtS }}>Hauling</div><div style={{ fontWeight:600, fontSize:13, color:C.purp }}>{fmt(linkedQ.hauling||0)}</div></div>
                         <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
-                          <button style={{ ...mkBtn("outline"), fontSize:11, padding:"4px 10px" }} onClick={()=>openEdit(linkedQ)}>Open Estimate</button>
+                          <button style={{ ...mkBtn("outline"), fontSize:11, padding:"4px 10px" }} onClick={()=>openEdit(linkedQ)}>Open Quote</button>
                           <button style={{ background:"#1c1f26", color:"#9ca3af", border:"1px solid #374151", borderRadius:6, padding:"4px 10px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:600 }} onClick={()=>setDeadModal&&setDeadModal({type:"rfq",item:r})}>Mark Dead</button>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div style={{ background:C.bg, border:`1px dashed ${C.bdrM}`, borderRadius:7, padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
-                      <span style={{ fontSize:12, color:C.txtS }}>No estimate yet.</span>
+                      <span style={{ fontSize:12, color:C.txtS }}>No quote yet.</span>
                       <div style={{ display:"flex", gap:8 }}>
                         <button style={{ ...mkBtn("blue"), fontSize:11, padding:"4px 11px" }} onClick={()=>openNew(r)}>Create Quote →</button>
                         <button style={{ background:"#1c1f26", color:"#9ca3af", border:"1px solid #374151", borderRadius:6, padding:"4px 11px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:600 }} onClick={()=>setDeadModal&&setDeadModal({type:"rfq",item:r})}>Mark Dead</button>
@@ -2945,7 +2945,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
                   )}
                   {isQuoted && linkedQ && (
                     <div style={{ fontSize:11, color:C.grn, marginTop:4, fontWeight:600 }}>
-                      ✓ Estimate: {linkedQ.qn} · ${Math.round(linkedQ.total||0).toLocaleString()} · {linkedQ.status}
+                      ✓ Quote: {linkedQ.qn} · ${Math.round(linkedQ.total||0).toLocaleString()} · {linkedQ.status}
                     </div>
                   )}
                 </div>
@@ -3048,7 +3048,7 @@ function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQu
 
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderTop:`1px solid ${C.bdr}33`, paddingTop:10 }}>
                   <div>
-                    <div style={{ fontSize:9, fontWeight:800, color:C.txtS, textTransform:"uppercase", marginBottom:2 }}>Estimate</div>
+                    <div style={{ fontSize:9, fontWeight:800, color:C.txtS, textTransform:"uppercase", marginBottom:2 }}>Quote</div>
                     <span style={{ fontSize:16, fontWeight:800, color:C.acc }}>{fmt(parseFloat(q.total||0))}</span>
                   </div>
                   <div>
@@ -3167,7 +3167,7 @@ function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setSelectedQuote,
           <div style={{ fontSize:16, fontWeight:700, color:C.txt }}>{quote.salesAssoc || qd.sender?.name || 'N/A'}</div>
         </Card>
         <Card style={{ padding:"20px", display:"flex", flexDirection:"column", gap:6, background:C.accL, border:`1px solid ${C.acc}33` }}>
-          <Lbl style={{ margin:0, fontSize:12, color:C.acc }}>Total Estimate</Lbl>
+          <Lbl style={{ margin:0, fontSize:12, color:C.acc }}>Total Quote</Lbl>
           <div style={{ fontSize:22, fontWeight:800, color:C.acc }}>{fmt(parseFloat(quote.total||0))}</div>
         </Card>
       </div>
@@ -3431,7 +3431,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
                     <div style={{ display:"flex", gap:5, flexWrap:"nowrap" }}>
                       <button style={{ ...mkBtn("ghost"), fontSize:10, padding:"3px 8px", whiteSpace:"nowrap" }}
                         onClick={()=>openEdit(j.quote)}>
-                        📋 Estimate
+                        📋 Quote
                       </button>
                       {j.rfq && (
                         <button style={{ ...mkBtn("outline"), fontSize:10, padding:"3px 8px", whiteSpace:"nowrap" }}
@@ -4329,7 +4329,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
               <span style={{ fontSize:18 }}>🚨</span>
               <div>
                 <div style={{ fontSize:12, fontWeight:700, color:C.red }}>Lift Plan Not Marked Required</div>
-                <div style={{ fontSize:11, color:C.red }}>Job tonnage ({linkedQuote.maxLiftTons}T) exceeds the {liftTonThreshold}T threshold but Lift Plan Required is not checked on the estimate.</div>
+                <div style={{ fontSize:11, color:C.red }}>Job tonnage ({linkedQuote.maxLiftTons}T) exceeds the {liftTonThreshold}T threshold but Lift Plan Required is not checked on the quote.</div>
               </div>
             </div>
           )}
@@ -4627,7 +4627,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
             )}
             {linkedQuote && (
               <div style={{ fontSize:11, color:C.grn, fontWeight:600, display:"flex", alignItems:"center", gap:4 }}>
-                ✓ Estimate {linkedQuote.qn}
+                ✓ Quote {linkedQuote.qn}
               </div>
             )}
             <button style={mkBtn("ghost")} onClick={onClose}>Discard</button>
@@ -4635,6 +4635,80 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
           </div>
         </div>
 
+      </div>
+    </div>
+  );
+}
+
+
+// ── JOB SITE MODAL ──────────────────────────────────────────────────────────
+function JobSiteModal({ onSave, onClose, token, clientName, custData }) {
+  const [site, setSite] = useState({ street: "", city: "", state: "", zipcode: "", notes: "" });
+  const [saving, setSaving] = useState(false);
+  const s = (k, v) => setSite(p => ({ ...p, [k]: v }));
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!site.street) return;
+    setSaving(true);
+    try {
+      // Resolve customer_id from custData
+      const custId = clientName && custData[clientName] ? custData[clientName].id : null;
+      if (custId) {
+        await fetch("/api/admin/tables/sites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({
+            customer_id: custId,
+            site_type: "job_site",
+            address1: site.street,
+            city: site.city,
+            state: site.state,
+            zip: site.zipcode,
+            notes: site.notes
+          })
+        });
+      }
+      onSave(site);
+      onClose();
+    } catch (err) {
+      alert("Error saving job site: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:24, backdropFilter:"blur(4px)" }}>
+      <div style={{ background:"#fff", width:"100%", maxWidth:560, borderRadius:20, boxShadow:"0 20px 50px rgba(0,0,0,0.2)", overflow:"hidden" }}>
+        <div style={{ padding:"20px 28px", background:C.accL, borderBottom:`1px solid ${C.bdr}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:10, color:C.acc, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>New Job Site</div>
+            <div style={{ fontSize:18, fontWeight:800, color:C.txt, marginTop:2 }}>Add Job Site Address</div>
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:"#aaa" }}>×</button>
+        </div>
+        <form onSubmit={handleSave} style={{ padding:"24px 28px", display:"flex", flexDirection:"column", gap:14 }}>
+          <div>
+            <Lbl c="STREET ADDRESS *" />
+            <input style={inp} value={site.street} onChange={e => s("street", e.target.value)} placeholder="456 Industrial Blvd" required />
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:10 }}>
+            <div><Lbl c="CITY" /><input style={inp} value={site.city} onChange={e => s("city", e.target.value)} placeholder="City" /></div>
+            <div><Lbl c="STATE" /><input style={inp} value={site.state} onChange={e => s("state", e.target.value)} placeholder="ST" maxLength={2} /></div>
+            <div><Lbl c="ZIP" /><input style={inp} value={site.zipcode} onChange={e => s("zipcode", e.target.value)} placeholder="ZIP" maxLength={10} /></div>
+          </div>
+          <div>
+            <Lbl c="SITE NOTES" />
+            <textarea style={{ ...inp, height:60, resize:"vertical" }} value={site.notes} onChange={e => s("notes", e.target.value)} placeholder="Gate code, dock info, etc." />
+          </div>
+          <div style={{ display:"flex", justifyContent:"flex-end", gap:10, marginTop:6 }}>
+            <button type="button" style={mkBtn("ghost")} onClick={onClose}>Cancel</button>
+            <button type="submit" disabled={saving} style={{ ...mkBtn("primary"), padding:"10px 24px", fontSize:14, fontWeight:800 }}>
+              {saving ? "Saving..." : "📍 Save Job Site"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -4669,7 +4743,7 @@ function DiscountModal({ quoteTotal, onSave, onClose }) {
           <div style={{ width:38, height:38, borderRadius:"50%", background:"#ecfdf5", border:"2px solid #86efac", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🏷</div>
           <div>
             <div style={{ fontSize:16, fontWeight:700 }}>Apply Discount</div>
-            <div style={{ fontSize:12, color:C.txtS }}>Current estimate total: {fmt(quoteTotal)}</div>
+            <div style={{ fontSize:12, color:C.txtS }}>Current quote total: {fmt(quoteTotal)}</div>
           </div>
         </div>
 
@@ -5110,7 +5184,7 @@ function WonModal({ quote, onSave, onClose }) {
           <div><Lbl c="EST. COMPLETION DATE"/><input style={inp} type="date" value={cd} onChange={e=>setCd(e.target.value)}/></div>
         </div>
         <div style={{ background:C.yelB, border:`1px solid ${C.yelBdr}`, borderRadius:6, padding:"8px 10px", marginTop:12, fontSize:11, color:C.yel }}>
-          Once marked Won, this estimate will be locked. Change orders can still be created.
+          Once marked Won, this quote will be locked. Change orders can still be created.
         </div>
         <div style={{ display:"flex", gap:7, marginTop:14, justifyContent:"flex-end" }}>
           <button style={mkBtn("ghost")} onClick={onClose}>Cancel</button>
@@ -5737,7 +5811,7 @@ function LaborRatesPage({ customerRates, setCustomerRates, role, baseLabor, setB
     <div style={{ padding: "0 24px 40px", maxWidth: 1000, margin: "0 auto" }}>
       <h1 style={{ fontSize: 28, fontWeight: 700, margin: "24px 0 8px" }}>Labor Rates</h1>
       <p style={{ color: C.txtS, fontSize: 13, marginBottom: 24 }}>
-        Standard billing and cost rates used in all estimates. Create customer-specific rates that override standard rates.
+        Standard billing and cost rates used in all quotes. Create customer-specific rates that override standard rates.
       </p>
 
       {/* Standard Rates Section */}
@@ -5787,7 +5861,7 @@ function LaborRatesPage({ customerRates, setCustomerRates, role, baseLabor, setB
             </table>
          </div>
          <div style={{ background: C.bg, padding: "12px 16px", borderRadius: 8, marginTop: 18, fontSize: 12, color: C.txtS, textAlign: "center", lineHeight: 1.5 }}>
-            OT rate = 1.5× regular · Cost rates include wages, burden, and overhead · These rates apply to all estimates unless a customer special rate is set
+            OT rate = 1.5× regular · Cost rates include wages, burden, and overhead · These rates apply to all quotes unless a customer special rate is set
          </div>
       </Card>
 
@@ -6390,7 +6464,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
                               {loc.notes   && <div style={{ fontSize:11,color:"#8a93a2",marginTop:1,fontStyle:"italic" }}>{loc.notes}</div>}
                               <div style={{ display:"flex",gap:10,marginTop:5,fontSize:11,color:"#8a93a2" }}>
                                 <span>{locContacts.length} contact(s)</span>
-                                <span>{locQuotes.length} estimate(s)</span>
+                                <span>{locQuotes.length} quote(s)</span>
                               </div>
                             </>
                           )}
@@ -6421,10 +6495,10 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
                         </div>
                       )}
 
-                      {/* Location estimates */}
+                      {/* Location quotes */}
                       {locQuotes.length > 0 && (
                         <div style={{ padding:"10px 14px",borderTop:"1px solid #e2e5ea" }}>
-                          <div style={{ fontSize:11,color:"#8a93a2",fontWeight:600,marginBottom:7,textTransform:"uppercase",letterSpacing:.5 }}>Estimates at this Location</div>
+                          <div style={{ fontSize:11,color:"#8a93a2",fontWeight:600,marginBottom:7,textTransform:"uppercase",letterSpacing:.5 }}>Quotes at this Location</div>
                           <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
                             {locQuotes.map((q, i)=>{
                               const ss={"In Progress":{bg:C.yelB,cl:C.yel,bd:C.yelBdr},"In Review":{bg:C.bluB,cl:C.blue,bd:C.bluBdr},"Approved":{bg:"#f0fdfa",cl:"#0d9488",bd:"#99f6e4"},"Adjustments Needed":{bg:"#fff1f2",cl:"#e11d48",bd:"#fecdd3"},Submitted:{bg:"#eff6ff",cl:"#2563eb",bd:"#bfdbfe"},Won:{bg:"#f0fdf4",cl:"#16a34a",bd:"#bbf7d0"},Lost:{bg:"#fef2f2",cl:"#dc2626",bd:"#fecaca"},Dead:{bg:"#1c1f26",cl:"#9ca3af",bd:"#374151"},Draft:{bg:"#f1f5f9",cl:"#475569",bd:"#cbd5e1"},"Change Order":{bg:"#f5f3ff",cl:"#6d28d9",bd:"#ddd6fe"}};
@@ -6494,7 +6568,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
                         </div>
                         <div style={{ textAlign:"right",flexShrink:0 }}>
                           <div style={{ fontSize:18,fontWeight:700,color:"#1c1f26" }}>${Math.round(q.total||0).toLocaleString()}</div>
-                          <button onClick={()=>{onOpenQuote(q);onClose();}} style={{ background:"#fff",color:"#b86b0a",border:"1px solid #f5a623",borderRadius:5,padding:"4px 10px",fontSize:11,fontWeight:600,cursor:"pointer",marginTop:5 }}>Open Estimate</button>
+                          <button onClick={()=>{onOpenQuote(q);onClose();}} style={{ background:"#fff",color:"#b86b0a",border:"1px solid #f5a623",borderRadius:5,padding:"4px 10px",fontSize:11,fontWeight:600,cursor:"pointer",marginTop:5 }}>Open Quote</button>
                         </div>
                       </div>
                     </div>
@@ -6546,13 +6620,13 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
                     <div style={{ display:"flex", flexDirection:"column", gap:5, alignItems:"flex-end", flexShrink:0 }}>
                       {linked ? (
                         <div style={{ textAlign:"right" }}>
-                          <div style={{ fontSize:10, color:C.txtS, marginBottom:2 }}>Linked estimate</div>
+                          <div style={{ fontSize:10, color:C.txtS, marginBottom:2 }}>Linked quote</div>
                           <div style={{ fontSize:12, fontWeight:700, color:C.acc }}>{linked.qn}</div>
                           <div style={{ fontSize:12, fontWeight:600, color:C.grn }}>${Math.round(linked.total||0).toLocaleString()}</div>
                           <Badge status={linked.status}/>
                         </div>
                       ) : (
-                        <div style={{ fontSize:10, color:C.txtS, fontStyle:"italic", textAlign:"right" }}>No estimate yet</div>
+                        <div style={{ fontSize:10, color:C.txtS, fontStyle:"italic", textAlign:"right" }}>No quote yet</div>
                       )}
                       <button
                         onClick={()=>onOpenJobFolder&&onOpenJobFolder(r)}
@@ -6658,7 +6732,7 @@ function CustomerModal({ custName, jobs, reqs=[], jobFolders={}, custData, setCu
 
             // From jobs
             jobs.forEach(q=>{
-              allEvents.push({ date:q.start_date, note:`Estimate ${q.job_num} — ${q.status} — $${Math.round(q.total||0).toLocaleString()}`, source:"quote", rfqRn:null, rfqId:null, color:q.status==="Won"?C.grn:q.status==="Lost"?C.red:C.txtM });
+              allEvents.push({ date:q.start_date, note:`Quote ${q.job_num} — ${q.status} — $${Math.round(q.total||0).toLocaleString()}`, source:"quote", rfqRn:null, rfqId:null, color:q.status==="Won"?C.grn:q.status==="Lost"?C.red:C.txtM });
             });
 
             // Sort newest first
@@ -6908,7 +6982,7 @@ function SalesmanCharts({ jobs, reqs, onBack }) {
           onClickChart={d=>setDetail({...d,showAmt:true})}
         />
         <ChartCard
-          title="Submitted Estimates by Sales Associate"
+          title="Submitted Quotes by Sales Associate"
           data={submitData}
           total={submittedQ.length}
           onClickChart={d=>setDetail({...d,showAmt:true})}
@@ -7219,7 +7293,7 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div>
                 <div style={{ fontSize: 11, color: C.txtS, textTransform: "uppercase", letterSpacing: 1 }}>
-                  {detailJob.status === "Won" ? "Active Job" : "Submitted Estimate"}
+                  {detailJob.status === "Won" ? "Active Job" : "Submitted Quote"}
                 </div>
                 <div style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>{detailJob.qn}</div>
               </div>
@@ -7345,7 +7419,7 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button style={mkBtn("ghost")} onClick={() => { setDetailJob(null); setEditDates(null); }}>Close</button>
               <button style={mkBtn("primary")} onClick={() => { onOpenQuote(detailJob); setDetailJob(null); setEditDates(null); }}>
-                Open Estimate
+                Open Quote
               </button>
             </div>
           </div>
@@ -7440,7 +7514,7 @@ function CalendarPage({ jobs, setJobs, eqMap, onOpenQuote }) {
       <div style={{ display: "flex", gap: 14, marginBottom: 12, flexWrap: "wrap" }}>
         {[
           { c: C.grn,  l: "Won Job (active span)" },
-          { c: C.blue, l: "Submitted Estimate"    },
+          { c: C.blue, l: "Submitted Quote"    },
           { c: C.yel,  l: "Equipment scheduled"   },
           { c: C.red,  l: "Equipment conflict ⚠"  },
           { c: C.accB, l: "Today"                 },
@@ -7851,7 +7925,7 @@ function VectorBrowser({ token }) {
 
   const corpus = [
     { label: "Customers",  icon: "🏢", count: data?.indexedCounts?.customers  ?? "—", desc: "Company profiles & contacts" },
-    { label: "Quotes",     icon: "📋", count: data?.indexedCounts?.quotes     ?? "—", desc: "Estimates & bid history" },
+    { label: "Quotes",     icon: "📋", count: data?.indexedCounts?.quotes     ?? "—", desc: "Quotes & bid history" },
     { label: "RFQs",       icon: "📩", count: data?.indexedCounts?.rfqs       ?? "—", desc: "Incoming requests for quote" },
     { label: "Equipment",  icon: "🔩", count: data?.indexedCounts?.equipment  ?? "—", desc: "Rigging & equipment catalog" },
   ];
@@ -9500,6 +9574,7 @@ export default function App() {
   const [showWM,       setShowWM]       = useState(false);
   const [showDiscModal,setShowDiscModal] = useState(false);
   const [showCustDoc,  setShowCustDoc]  = useState(false);
+  const [showJobSiteModal, setShowJobSiteModal] = useState(false);
   const [attachModal,  setAttachModal]  = useState(null); // { job } for viewing all attachments
   const [adjModal,     setAdjModal]     = useState(null);  // quote to adjust
   const [deadModal,    setDeadModal]    = useState(null);  // {type:"rfq"|"quote", item}
@@ -9855,7 +9930,7 @@ export default function App() {
     setJobs(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
     if (upd.fromReqId) {
       if (upd.status==="Dead") {
-        setReqs(prev=>prev.map(r=>r.id===upd.fromReqId?{...r,status:"Dead",deadNote:upd.deadNote||"Estimate marked dead"}:r));
+        setReqs(prev=>prev.map(r=>r.id===upd.fromReqId?{...r,status:"Dead",deadNote:upd.deadNote||"Quote marked dead"}:r));
       } else {
         setReqs(prev=>prev.map(r=>r.id===upd.fromReqId?{...r,status:"Quoted"}:r));
       }
@@ -10343,7 +10418,7 @@ export default function App() {
             <div className="app-modal-actions" style={{ padding:"12px 22px", borderTop:`1px solid ${C.bdr}`, background:C.bg, borderBottomLeftRadius:12, borderBottomRightRadius:12, display:"flex", gap:8, justifyContent:"space-between" }}>
               <div style={{ display:"flex", gap:8 }}>
                 {attachModal.rfq && <button style={{ ...mkBtn("outline"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ setAttachModal(null); setShowJFM(attachModal.rfq); }}>Open Job Folder</button>}
-                <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ setAttachModal(null); openEdit(attachModal.quote); }}>Open Estimate</button>
+                <button style={{ ...mkBtn("ghost"), fontSize:11, padding:"5px 12px" }} onClick={()=>{ setAttachModal(null); openEdit(attachModal.quote); }}>Open Quote</button>
               </div>
               <button style={mkBtn("ghost")} onClick={()=>setAttachModal(null)}>Close</button>
             </div>
@@ -10406,7 +10481,7 @@ export default function App() {
 
     const SummaryPanel = () => (
       <Card>
-        <Sec c="Estimate Summary"/>
+        <Sec c="Quote Summary"/>
         <div style={{ fontSize:12, color:C.txtM, marginBottom:2 }}>{active.qn} · {active.date} · {active.qtype}{active.isChangeOrder?" · Change Order":""}</div>
         {/* Lift plan flag in summary */}
         {active.liftPlanRequired && (
@@ -10479,7 +10554,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Total estimate box */}
+        {/* Total quote box */}
         <div style={{ background:C.accL, border:`1.5px solid ${C.accB}`, borderRadius:7, padding:14, marginTop:10 }}>
           {cv.discAmt>0 && (
             <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:C.txtS, marginBottom:4 }}>
@@ -10487,7 +10562,7 @@ export default function App() {
               <span style={{ textDecoration:"line-through" }}>{fmt(cv.preDisc)}</span>
             </div>
           )}
-          <div style={{ fontSize:10, color:C.acc, letterSpacing:1, fontWeight:700, marginBottom:2 }}>TOTAL ESTIMATE</div>
+          <div style={{ fontSize:10, color:C.acc, letterSpacing:1, fontWeight:700, marginBottom:2 }}>TOTAL QUOTE</div>
           <div style={{ fontSize:30, fontWeight:700, color:C.acc }}>{fmt(cv.total)}</div>
           {cv.discAmt>0 && <div style={{ fontSize:11, color:C.grn, marginTop:2, fontWeight:600 }}>Saving {fmt(cv.discAmt)} ({(cv.discAmt/cv.preDisc*100).toFixed(1)}% off)</div>}
         </div>
@@ -10563,6 +10638,7 @@ export default function App() {
         {deadModal && <MarkDeadModal itemType="Quote" itemLabel={active.client} onConfirm={note=>{ setActive(q=>({...q,status:"Dead",deadNote:note})); setDeadModal(null); }} onClose={()=>setDeadModal(null)}/>}
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d=>{ u("discounts",[...(active.discounts||[]),d]); setShowDiscModal(false); }} onClose={()=>setShowDiscModal(false)}/>}
         {showCustDoc && <CustomerDocModal quote={{...active, total:cv.total}} onClose={()=>setShowCustDoc(false)}/>}
+        {showJobSiteModal && <JobSiteModal token={token} clientName={active.client} custData={custData} onSave={site => { u("jobSites", [...(active.jobSites||[]), site]); }} onClose={()=>setShowJobSiteModal(false)} />}
         <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
           <div style={{ display:"flex", gap:5 }}>
             <button style={mkBtn("ghost")} onClick={goBack}>Cancel</button>
@@ -10575,7 +10651,7 @@ export default function App() {
             <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
               {active.fromReqId    && <div style={{ background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.blue }}>Pre-filled from a Lead.</div>}
               {active.isChangeOrder && <div style={{ background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"6px 12px", fontSize:12, color:"#6d28d9" }}>Change Order — linked to original won quote.</div>}
-              {active.isHistorical && <div style={{ background:C.accL, border:`1px solid ${C.accB}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.acc, fontWeight:700 }}>HISTORICAL ESTIMATE — Metrics manually established.</div>}
+              {active.isHistorical && <div style={{ background:C.accL, border:`1px solid ${C.accB}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.acc, fontWeight:700 }}>HISTORICAL QUOTE — Metrics manually established.</div>}
               {active.locked       && <div style={{ background:C.yelB, border:`1px solid ${C.yelBdr}`, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.yel }}>This quote is locked. View only.</div>}
             </div>
           </div>
@@ -10594,10 +10670,38 @@ export default function App() {
                 {customerRates[active.client] && <div style={{ fontSize:11, color:C.yel, marginTop:2 }}>⚡ Special labor rates saved for this client</div>}
               </div>
               <div style={{ gridColumn:"span 2", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:10 }}>
-                <div style={{ gridColumn:"1/-1" }}><Lbl c="JOB SITE ADDRESS 1" /><input style={inp} value={active.street||""} onChange={e=>u("street",e.target.value)} placeholder="123 Main St" disabled={active.locked} /></div>
+                <div style={{ gridColumn:"1/-1", display:"flex", alignItems:"flex-end", gap:10 }}>
+                  <div style={{ flex:1 }}><Lbl c="STREET ADDRESS" /><input style={inp} value={active.street||""} onChange={e=>u("street",e.target.value)} placeholder="123 Main St" disabled={active.locked} /></div>
+                  <div style={{ fontSize:9, color:C.acc, fontWeight:700, background:C.accL, borderRadius:4, padding:"4px 8px", whiteSpace:"nowrap", marginBottom:4 }}>MASTER BILLING</div>
+                </div>
                 <div><Lbl c="CITY" /><input style={inp} value={active.city||""} onChange={e=>u("city",e.target.value)} placeholder="City" disabled={active.locked} /></div>
                 <div><Lbl c="STATE" /><input style={inp} value={active.state||""} onChange={e=>u("state",e.target.value)} placeholder="State" disabled={active.locked} maxLength={2} /></div>
                 <div><Lbl c="ZIP" /><input style={inp} value={active.zipcode||""} onChange={e=>u("zipcode",e.target.value)} placeholder="ZIP" disabled={active.locked} maxLength={10} /></div>
+              </div>
+              {/* Job Sites */}
+              <div style={{ gridColumn:"span 2" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
+                  <Lbl c="JOB SITES" style={{ margin:0 }} />
+                  {!active.locked && <button type="button" style={{ ...mkBtn("outline"), padding:"4px 12px", fontSize:11, borderColor:C.acc, color:C.acc }} onClick={()=>setShowJobSiteModal(true)}>+ Add Job Site</button>}
+                </div>
+                {(active.jobSites||[]).length > 0 ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {(active.jobSites||[]).map((s, i) => (
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:C.bg, border:`1px solid ${C.bdr}`, borderRadius:8 }}>
+                        <span style={{ fontSize:14 }}>📍</span>
+                        <div style={{ flex:1, fontSize:13 }}>
+                          <span style={{ fontWeight:700 }}>{s.street}</span>
+                          {(s.city || s.state || s.zipcode) && <span style={{ color:C.txtM }}> — {[s.city, s.state, s.zipcode].filter(Boolean).join(", ")}</span>}
+                          {s.notes && <div style={{ fontSize:11, color:C.txtS, marginTop:2 }}>{s.notes}</div>}
+                        </div>
+                        <span style={{ fontSize:9, color:C.grn, fontWeight:700, background:C.grnB, borderRadius:4, padding:"3px 7px", border:`1px solid ${C.grnBdr}` }}>JOB SITE</span>
+                        {!active.locked && <button type="button" style={{ background:"none", border:"none", color:"#ccc", cursor:"pointer", fontSize:16, padding:0, lineHeight:1 }} onClick={()=>u("jobSites",(active.jobSites||[]).filter((_,j)=>j!==i))}>×</button>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding:"10px 12px", background:C.bg, border:`1px dashed ${C.bdr}`, borderRadius:8, color:C.txtS, fontSize:12, textAlign:"center" }}>No additional job sites added. Click "+ Add Job Site" to add one.</div>
+                )}
               </div>
               <div><Lbl c="QUOTE TYPE"/><select style={{ ...sel, width:"100%" }} value={active.qtype} onChange={e=>u("qtype",e.target.value)} disabled={active.locked}><option>Contract</option><option>T&M</option><option>Not To Exceed</option></select></div>
               <div><Lbl c="STATUS"/><select style={{ ...sel, width:"100%" }} value={active.status} onChange={e=>u("status",e.target.value)} disabled={active.locked}>{["Quote Requested","In Progress","In Review","Approved","Adjustments Needed","Submitted","Won","Lost","Dead","Completed"].map(x=><option key={x} value={x}>{x}</option>)}</select></div>
@@ -10635,7 +10739,7 @@ export default function App() {
                 <textarea style={{ ...inp, height:56, resize:"vertical", marginBottom:8 }} value={active.desc||""} onChange={e=>u("desc",e.target.value)} disabled={active.locked}/>
                 <label style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:C.txtM, cursor:active.locked?"not-allowed":"pointer" }}>
                   <input type="checkbox" checked={!!active.isHistorical} onChange={e=>u("isHistorical", e.target.checked)} disabled={active.locked} style={{ width:15, height:15 }}/>
-                  <span style={{ color:C.acc }}>Historical Estimate Only</span>
+                  <span style={{ color:C.acc }}>Historical Quote Only</span>
                 </label>
                 {active.isHistorical && (
                   <div style={{ marginTop:6 }}>
@@ -10643,7 +10747,7 @@ export default function App() {
                       ⚠️ Quote will be instantly locked upon closing unless historical jobs are being bulk entered.
                     </div>
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, padding:12, background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:6, alignItems:"end", marginBottom:10 }}>
-                      <div><Lbl c="TOTAL ESTIMATE AMOUNT"/><input type="number" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.histTotal||""} onChange={e=>u("histTotal",e.target.value)} disabled={active.locked}/></div>
+                      <div><Lbl c="TOTAL QUOTE AMOUNT"/><input type="number" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.histTotal||""} onChange={e=>u("histTotal",e.target.value)} disabled={active.locked}/></div>
                       <div><Lbl c="TOTAL COSTS"/><input type="number" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.histCosts||""} onChange={e=>u("histCosts",e.target.value)} disabled={active.locked}/></div>
                       <div><Lbl c="TOTAL HOURS"/><input type="number" style={{ ...inp, width:"100%", boxSizing:"border-box" }} value={active.histHours||""} onChange={e=>u("histHours",e.target.value)} disabled={active.locked}/></div>
                     </div>
