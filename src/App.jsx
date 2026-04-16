@@ -9816,7 +9816,27 @@ function SitesMapModal({ token, onClose }) {
           {loading ? (
             <div style={{ display:"flex", height:"100%", alignItems:"center", justifyContent:"center", color:C.acc, fontWeight:800 }}>Loading mapping telemetry...</div>
           ) : (
-            <iframe ref={mapIframeRef} srcDoc={mapHtml} style={{ width:"100%", height:"100%", border:"none" }} title="Site Map" />
+            <>
+              <iframe ref={mapIframeRef} srcDoc={mapHtml} style={{ width:"100%", height:"100%", border:"none" }} title="Site Map" />
+              
+              {/* MAP LEGEND */}
+              <div style={{ position:"absolute", bottom:24, left:24, background:"rgba(255,255,255,0.9)", backdropFilter:"blur(8px)", padding:"12px 16px", borderRadius:12, boxShadow:"0 4px 20px rgba(0,0,0,0.15)", border:"1px solid rgba(10,37,64,0.1)", zIndex:100, display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ fontSize:11, fontWeight:800, color:C.txtS, textTransform:"uppercase", letterSpacing:1, marginBottom:4 }}>Site Type Legend</div>
+                
+                {[
+                  { label: "HQ / Billing", color: "#7c3aed" },
+                  { label: "Industrial Facility", color: "#10b981" },
+                  { label: "Remote / Satellite", color: "#f59e0b" },
+                  { label: "Service Hub", color: "#0ea5e9" },
+                  { label: "General Site", color: "#ec4899" }
+                ].map(item => (
+                  <div key={item.label} style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <div style={{ width:12, height:12, borderRadius:"50%", background:item.color, border:"2px solid #fff", boxShadow:`0 0 5px ${item.color}` }}></div>
+                    <span style={{ fontSize:12, fontWeight:700, color:C.txt }}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
