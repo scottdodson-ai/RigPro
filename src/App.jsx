@@ -10793,6 +10793,7 @@ export default function App() {
           customers, custData, setCustData,
           leads, setLeads, reqs, jobs, Header, appUsers, profileUser,
           statusList: statusList,
+          AutoInput,
           onAddLead: () => setShowLeadModal(true)
         }}
       />

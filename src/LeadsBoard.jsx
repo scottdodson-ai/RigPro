@@ -36,39 +36,6 @@ const LeadsBoard = (props) => {
   const [search, setSearch] = useState("");
   const [leadView, setLeadView] = useState("list");
   const [selLead, setSelLead] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [newLeadForm, setNewLeadForm] = useState({ first_name:'', last_name:'', customer_name:'', description:'' });
-  const uNew = (f, v) => setNewLeadForm(p => ({ ...p, [f]: v }));
-
-  const handleCreateLead = async (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = {
-        ...newLeadForm,
-        status_number: 1
-      };
-      if (newLeadForm.customer_name && custData[newLeadForm.customer_name]) {
-        payload.customer_id = custData[newLeadForm.customer_name].id;
-      }
-      const res = await fetch(`${fmt.api || "/api"}/admin/tables/leads`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error("Failed to create lead");
-      const newLead = await res.json();
-      if (setLeads) setLeads(prev => [{ ...newLead, status_number: Number(newLead.status_number) }, ...prev]);
-      setShowAddModal(false);
-      setNewLeadForm({ first_name:'', last_name:'', customer_name:'', description:'' });
-    } catch (err) {
-      console.error(err);
-      alert("Error creating lead: " + err.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const isEstimator = (u) => u.role === "estimator" || (u.roles || []).includes("estimator");
   const allEstimators = (appUsers || []).filter(isEstimator);
@@ -177,48 +144,11 @@ const LeadsBoard = (props) => {
             </div>
             <div style={{ display:"flex", flexDirection:"column" }}>
                <div style={{fontSize:11, fontWeight:800, color:C.txtS, marginBottom:6, letterSpacing:0.8, opacity:0}}>ACTION</div>
-               <button onClick={() => setShowAddModal(true)} style={{ ...mkBtn("blue"), background:C.acc, color:"#fff" }}>+ New Lead</button>
+               <button onClick={onAddLead} style={{ ...mkBtn("blue"), background:C.acc, color:"#fff" }}>+ New Lead</button>
             </div>
           </div>
         </div>
 
-        {showAddModal && (
-          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:24, backdropFilter:"blur(4px)" }}>
-            <div style={{ background:"#fff", width:"100%", maxWidth:500, borderRadius:20, padding:32, boxShadow:"0 20px 50px rgba(0,0,0,0.2)" }}>
-               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
-                 <div style={{ fontSize:22, fontWeight:900, color:C.acc }}>Record New Incoming Lead</div>
-                 <button onClick={() => setShowAddModal(false)} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:"#aaa" }}>×</button>
-               </div>
-               <form onSubmit={handleCreateLead} style={{ display:"flex", flexDirection:"column", gap:16 }}>
-                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                    <div>
-                      <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>FIRST NAME</div>
-                      <input value={newLeadForm.first_name} onChange={e=>uNew("first_name", e.target.value)} style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} required />
-                    </div>
-                    <div>
-                      <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>LAST NAME</div>
-                      <input value={newLeadForm.last_name} onChange={e=>uNew("last_name", e.target.value)} style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} required />
-                    </div>
-                 </div>
-                 <div>
-                    <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>CUSTOMER NAME</div>
-                    <AutoInput val={newLeadForm.customer_name} on={v => uNew("customer_name", v)} list={Object.keys(custData || {})} ph="Search existing customers..." />
-                 </div>
-                 <div>
-                    <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>PROJECT DESCRIPTION</div>
-                    <textarea value={newLeadForm.description} onChange={e=>uNew("description", e.target.value)} style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14, minHeight:100, fontFamily:"inherit" }} required placeholder="Brief summary of requirements..." />
-                 </div>
-                 <button 
-                   type="submit" 
-                   disabled={isSaving}
-                   style={{ background:C.acc, color:"#fff", border:"none", borderRadius:10, padding:"14px", fontSize:15, fontWeight:800, cursor:"pointer", marginTop:10 }}
-                 >
-                   {isSaving ? "CREATING..." : "SUBMIT NEW LEAD"}
-                 </button>
-               </form>
-            </div>
-          </div>
-        )}
 
         {/* DATA TABLE */}
         {/* VIEW MODE RENDERER: SPLIT SCREEN OR FULL GRID */}
