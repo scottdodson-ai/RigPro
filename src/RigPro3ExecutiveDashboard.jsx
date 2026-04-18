@@ -96,8 +96,20 @@ export default function RigPro3ExecutiveDashboard({ jobs, reqs, token }) {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const actualVolume = reqs.filter(r => r.date && new Date(r.date) >= thirtyDaysAgo).length;
 
+    // Zone 1 Metrics (Spec)
+    const rfqsIn = reqs.filter(r => r.date && new Date(r.date).getFullYear() === now.getFullYear()).length;
+    const estimatesGiven = jobs.filter(q => q.date && new Date(q.date).getFullYear() === now.getFullYear()).length;
+    const responseRate = rfqsIn > 0 ? (estimatesGiven / rfqsIn * 100) : 0;
+    
+    const activeCustomers = new Set(jobs.filter(q => q.date && new Date(q.date).getFullYear() === now.getFullYear()).map(q => q.client));
+    const customerCount = activeCustomers.size;
+    
+    const wonSum = ytdJobs.reduce((sum, q) => sum + (q.total || 0), 0);
+    const avgMargin = marginCount > 0 ? totalMarginPct / marginCount : 0;
+
     return {
       revYTD, pipelineVal, actualWinRate, actualMargin, rfqCount,
+      rfqsIn, estimatesGiven, responseRate, customerCount, wonSum, avgMargin,
       phiData: {
         winRate: actualWinRate,
         volume: actualVolume,
@@ -115,18 +127,19 @@ export default function RigPro3ExecutiveDashboard({ jobs, reqs, token }) {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-      {/* 1. Top KPI Ribbon (5 Cards) */}
+      {/* 1. Top KPI Ribbon (5 Cards) - per RigPro3 Spec Section 2.1 */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16 }}>
         {[
-          { label:"Total Revenue YTD", value:fmt2(stats.revYTD), color:C.acc },
-          { label:"Active Pipeline Value", value:fmt2(stats.pipelineVal), color:C.purp },
-          { label:"Win Rate (Row 90d)", value:stats.actualWinRate.toFixed(1)+"%", color:C.grn },
-          { label:"Avg Margin %", value:Math.round(stats.actualMargin)+"%", color:C.teal },
-          { label:"Open RFQs", value:stats.rfqCount, color:C.yel }
+          { label:"Total RFQs In", value:stats.rfqsIn, color:C.acc, sub:"Current Year" },
+          { label:"Estimates Given", value:stats.estimatesGiven, color:C.purp, sub:`${stats.responseRate.toFixed(1)}% Response` },
+          { label:"Customers", value:stats.customerCount, color:C.yel, sub:"Active in Period" },
+          { label:"Won Sales", value:fmt2(stats.wonSum), color:C.grn, sub:"YTD Total" },
+          { label:"Avg Gross Margin", value:Math.round(stats.avgMargin)+"%", color:C.teal, sub:"Blended Average" }
         ].map((kpi, i) => (
           <div key={i} style={{ background:C.sur, border:`1px solid ${C.bdr}`, padding:20, borderRadius:12, boxShadow:"0 2px 4px rgba(0,0,0,0.02)" }}>
             <div style={{ color:C.txtS, fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:0.5 }}>{kpi.label}</div>
             <div style={{ color:kpi.color, fontSize:28, fontWeight:800, marginTop:8 }}>{kpi.value}</div>
+            <div style={{ color:C.txtS, fontSize:11, marginTop:4, fontWeight:600 }}>{kpi.sub}</div>
           </div>
         ))}
       </div>

@@ -3,8 +3,8 @@ import CustomerCRMBoard from "./CustomerCRMBoard";
 import VectorSearchPanel from "./VectorSearchPanel";
 import RigPro3ExecutiveDashboard from "./RigPro3ExecutiveDashboard";
 import RigPro3FinanceDashboard from "./RigPro3FinanceDashboard";
+import RigPro3InvestorDashboard from "./RigPro3InvestorDashboard";
 import LeadsBoard from "./LeadsBoard";
-const InvestorDashboard = () => <div style={{padding:40,color:"#fff",textAlign:"center",fontSize:18}}>Investor Dashboard — coming soon.</div>;
 
 
 // ── BASE DATA ─────────────────────────────────────────────────────────────────
@@ -1087,6 +1087,7 @@ const BUILT_IN_REPORTS = [
   { id:"top-10-customers",     name:"Top 10 Customers by Revenue", category:"Executive", desc:"Ranked list, current vs. prior period, delta indicator", scope:"org" },
   { id:"follow-up-queue",      name:"Follow-Up Queue",          category:"Executive",  desc:"Open quotes stale >14d, color-coded by severity", scope:"org" },
   { id:"phi-explainer",        name:"PHI Explainer",            category:"Executive",  desc:"Standalone report explaining PHI calculation logic", scope:"org" },
+  { id:"investor-dashboard",   name:"Investor Dashboard",       category:"Executive",  desc:"Strategic valuation analysis and equity modeling",   scope:"org" },
 
   // 1. Sales
   { id:"sales-dashboard",      name:"Sales Dashboard",          category:"Sales",      desc:"Revenue performance overview with trend analysis",   scope:"org" },
@@ -1102,6 +1103,7 @@ const BUILT_IN_REPORTS = [
   { id:"quote-aging",          name:"Quote Aging",              category:"Pipeline",   desc:"Open opportunities ranked by days since creation",   scope:"org" },
   { id:"open-quotes",       name:"Open Quotes",           category:"Pipeline",   desc:"Outstanding quotes formatted as aging summary",      scope:"org" },
   { id:"job-schedule",         name:"Job Schedule",             category:"Pipeline",   desc:"Consolidated view of timeline-based job metrics",     scope:"org" },
+  { id:"quote-to-award-by-type", name:"Quote-to-Award by Job Type", category:"Pipeline", desc:"Win rate segmented by job type (crane/rigging/etc)", scope:"org" },
 
   // 3. Historical
   { id:"historical-dashboard", name:"Historical Dashboard",      category:"Historical", desc:"Operational history and performance summary",        scope:"org" },
@@ -1125,12 +1127,15 @@ const BUILT_IN_REPORTS = [
   { id:"rfq-response",         name:"RFQ Response Time",        category:"Activity",   desc:"Days from RFQ received to formal submission",        scope:"org" },
   { id:"avg-quote-cycle",   name:"Average Quote Cycle",   category:"Activity",   desc:"Duration from intake to 'Won' status",                scope:"org" },
   { id:"estimator-activity",   name:"Estimator Activity",        category:"Activity",   desc:"Quotes created, submitted, and won per user",        scope:"org" },
+  { id:"estimator-response-time", name:"Estimator Response Time", category:"Activity",   desc:"Avg hours RFQ received to first estimate submitted", scope:"org" },
 
   // 6. Customers
   { id:"customer-activity-dash",name:"Customer Activity Dash",   category:"Customers",  desc:"Dynamic dashboard of activity for specific client",  scope:"org" },
   { id:"neighborhood-report",  name:"Neighborhood Report",       category:"Customers",  desc:"Customer distribution sorted by geographic proximity",scope:"org" },
   { id:"prospect-report",      name:"Prospect Report",           category:"Customers",  desc:"Accounts with no won jobs and historical trails",    scope:"org" },
   { id:"jobs-by-customer",     name:"Jobs by Customer",         category:"Customers",  desc:"Total job count and completion value by client",      scope:"org" },
+  { id:"customer-yoy",         name:"Customer YOY Comparison",   category:"Customers",  desc:"Side-by-side revenue per customer: current vs prior year", scope:"org" },
+  { id:"customer-health-score", name:"Customer Health Score",     category:"Customers",  desc:"Composite score indicating relationship health and churn risk", scope:"org" },
 ];
 
 const REPORT_CATEGORIES = ["Executive","Activity","Pipeline","Customers","Finance","Sales","Historical"];
@@ -1145,6 +1150,7 @@ function buildReportData(reportId, jobs, reqs) {
 
   switch(reportId) {
     // ── EXECUTIVE ─────────────────────────────────────────────────────────────
+    case "investor-dashboard": return {}; // Handled by custom component logic
     case "pipeline-health-index": {
       return {
         cols: ["PHI Component", "Metric Impact", "Evaluation Details"],
@@ -1665,9 +1671,101 @@ function buildReportData(reportId, jobs, reqs) {
       pData.sort((a,b) => b.lastActMs - a.lastActMs);
       
       return {
-        cols: ["Prospect Name", "Quotes Provided", "Historical Activity Trail", "Last Activity", "RFQ Count", "Open Quotes"],
-        rows: pData.map(p => [p.name, p.qCount, p.hist, p.lastAct, p.rfqCount, p.openEsts]),
-        summary: `${prospects.length} prospects identified (quoted but never won)`
+      };
+    }
+    case "quote-to-award-by-type": {
+      const m = {};
+      jobs.forEach(q => {
+        const t = q.type || "Other";
+        if (!m[t]) m[t] = { sub:0, won:0, valSub:0, valWon:0 };
+        m[t].sub++; m[t].valSub += (q.total || 0);
+        if (q.status === "Won") { m[t].won++; m[t].valWon += (q.total || 0); }
+      });
+      return {
+        cols: ["Job Type", "Quotes Submitted", "Quotes Won", "Win Rate %", "Avg Estimate Value", "Avg Won Value"],
+        rows: Object.entries(m).sort((a,b)=>b[1].sub - a[1].sub).map(([t, b]) => [
+          t, b.sub, b.won, (b.sub > 0 ? (b.won/b.sub*100).toFixed(1) + "%" : "0%"),
+          fmt2(b.sub > 0 ? b.valSub/b.sub : 0), fmt2(b.won > 0 ? b.valWon/b.won : 0)
+        ]),
+        summary: "Win performance segmented by work category"
+      };
+    }
+    case "customer-yoy": {
+      const m = {};
+      jobs.forEach(q => {
+        if (!m[q.client]) m[q.client] = { name: q.client, cur: 0, pri: 0 };
+        const yr = new Date(q.date || Date.now()).getFullYear();
+        if (yr === new Date().getFullYear()) m[q.client].cur += (q.total || 0);
+        else if (yr === new Date().getFullYear() - 1) m[q.client].pri += (q.total || 0);
+      });
+      const data = Object.values(m).sort((a,b)=>b.cur - a.cur);
+      return {
+        cols: ["Customer", "Current Year $", "Prior Year $", "Delta $", "Delta %", "Status"],
+        rows: data.map(c => {
+          const dVal = c.cur - c.pri;
+          const dPct = c.pri > 0 ? (dVal / c.pri * 100) : 0;
+          let status = "STABLE";
+          if (c.pri === 0 && c.cur > 0) status = "NEW";
+          else if (c.cur === 0 && c.pri > 0) status = "LOST";
+          else if (dPct > 10) status = "GROWING";
+          else if (dPct < -10) status = "DECLINING";
+          return [c.name, fmt2(c.cur), fmt2(c.pri), fmt2(dVal), (c.pri > 0 ? (dPct > 0 ? "+" : "") + dPct.toFixed(1) + "%" : "N/A"), status];
+        }),
+        summary: "Year-over-year revenue comparison per account"
+      };
+    }
+    case "customer-health-score": {
+      const m = {};
+      const now = Date.now();
+      jobs.forEach(q => {
+        if (!m[q.client]) m[q.client] = { name:q.client, last:0, cur:0, pri:0, wins:0, total:0, rfqs:0 };
+        const dt = new Date(q.date || 0).getTime();
+        if (dt > m[q.client].last) m[q.client].last = dt;
+        const yr = new Date(q.date || 0).getFullYear();
+        if (yr === new Date().getFullYear()) m[q.client].cur += (q.total || 0);
+        else if (yr === new Date().getFullYear() - 1) m[q.client].pri += (q.total || 0);
+        m[q.client].total++;
+        if (q.status === "Won") m[q.client].wins++;
+      });
+      reqs.forEach(r => {
+        if (m[r.company] && ["New", "In Progress"].includes(r.status)) m[r.company].rfqs++;
+      });
+      return {
+        cols: ["Customer", "Health Score", "Recency (30%)", "Trend (30%)", "Open RFQs (20%)", "Win Rate (20%)"],
+        rows: Object.values(m).map(c => {
+          const days = (now - c.last) / 86400000;
+          const sRec = Math.max(0, Math.min(100, (1 - days/365) * 100));
+          const tPct = c.pri > 0 ? ((c.cur - c.pri) / c.pri * 100) : 0;
+          const sTrend = Math.max(0, Math.min(100, (tPct + 10) * 5)); 
+          const sRfq = c.rfqs > 0 ? 100 : 0;
+          const wRate = c.total > 0 ? (c.wins / c.total * 100) : 0;
+          const sWin = Math.max(0, Math.min(100, (wRate / 30) * 100)); 
+          const score = Math.round(sRec*0.3 + sTrend*0.3 + sRfq*0.2 + sWin*0.2);
+          let band = "Healthy";
+          if (score < 50) band = "At Risk";
+          else if (score < 75) band = "Monitor";
+          return [c.name, score + " (" + band + ")", Math.round(sRec), Math.round(sTrend), sRfq, Math.round(sWin)];
+        }).sort((a,b)=>a[1]-b[1]),
+        summary: "Composite relationship health indicators"
+      };
+    }
+    case "estimator-response-time": {
+      const m = {};
+      jobs.forEach(q => {
+        const k = q.salesAssoc || "Unassigned";
+        if (!m[k]) m[k] = { name:k, hrs:0, count:0 };
+        if (q.fromReqId) {
+          const r = reqs.find(rq => rq.id === q.fromReqId);
+          if (r && r.date && q.date) {
+            const diff = (new Date(q.date) - new Date(r.date)) / 3600000;
+            if (diff >= 0) { m[k].hrs += diff; m[k].count++; }
+          }
+        }
+      });
+      return {
+        cols: ["Estimator", "Avg Response Hours", "Total Linked RFQs"],
+        rows: Object.values(m).map(e => [e.name, (e.count > 0 ? (e.hrs/e.count).toFixed(1) : "—"), e.count]).sort((a,b)=>a[1]-b[1]),
+        summary: "Speed performance from RFQ to first estimate"
       };
     }
     default: {
@@ -2079,10 +2177,16 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
         {/* Report list */}
         {filtered.map((r, i) => {
           const isCustom = !BUILT_IN_REPORTS.find(b=>b.id===r.id);
+          const isNew = [
+            "executive-dashboard", "investor-dashboard", "quote-to-award-by-type", 
+            "customer-yoy", "customer-health-score", "estimator-response-time",
+            "prospect-report", "pipeline-summary", "estimator-activity", 
+            "inactive-reqs", "lost-quotes", "discounts-given", "historical-dashboard"
+          ].includes(r.id);
           return (
-            <div key={listKey("report", r, i)} onClick={()=>setActiveReport(r)} style={{ background:C.sur, border:`1px solid ${C.bdr}`, borderRadius:8, padding:"14px 16px", cursor:"pointer", position:"relative", transition:"all 0.15s", boxShadow:"0 2px 5px rgba(0,0,0,0.02)" }}
-              onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.accB; e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.06)"; }}
-              onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.bdr; e.currentTarget.style.boxShadow="0 2px 5px rgba(0,0,0,0.02)"; }}>
+            <div key={listKey("report", r, i)} onClick={()=>setActiveReport(r)} style={{ background:isNew?C.grnB:C.sur, border:`1px solid ${isNew?C.grnBdr:C.bdr}`, borderRadius:8, padding:"14px 16px", cursor:"pointer", position:"relative", transition:"all 0.15s", boxShadow:"0 2px 5px rgba(0,0,0,0.02)" }}
+              onMouseEnter={e=>{ if(!isNew) e.currentTarget.style.borderColor=C.accB; e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.06)"; }}
+              onMouseLeave={e=>{ e.currentTarget.style.borderColor=isNew?C.grnBdr:C.bdr; e.currentTarget.style.boxShadow="0 2px 5px rgba(0,0,0,0.02)"; }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
                 <div>
                   <div style={{ fontWeight:700, fontSize:15, color:C.txt }}>{r.name}</div>
@@ -2121,6 +2225,8 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                 <RigPro3ExecutiveDashboard jobs={jobs} reqs={reqs} token={username} />
               ) : activeReport.id === "finance-dashboard" ? (
                 <RigPro3FinanceDashboard jobs={jobs} />
+              ) : activeReport.id === "investor-dashboard" ? (
+                <RigPro3InvestorDashboard />
               ) : (
                 <>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16, flexWrap:"wrap", gap:12 }}>
