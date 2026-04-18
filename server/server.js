@@ -145,18 +145,13 @@ async function ensureUserProfileColumns() {
     const [qRows] = await db.query(`SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quotes' AND COLUMN_NAME = 'quote_data'`);
     if (qRows.length === 0) {
       await db.query(`ALTER TABLE quotes ADD COLUMN quote_data LONGTEXT`);
-      // Update leads schema if needed
-      const [leadsCols] = await db.query('SHOW COLUMNS FROM leads');
-      const leadsColNames = leadsCols.map(c => c.Field);
-      if (!leadsColNames.includes('company_name')) await db.query('ALTER TABLE leads ADD COLUMN company_name VARCHAR(255) DEFAULT "" AFTER customer_number');
-      if (!leadsColNames.includes('contact_phone')) await db.query('ALTER TABLE leads ADD COLUMN contact_phone VARCHAR(50) DEFAULT "" AFTER last_name');
-      if (!leadsColNames.includes('contact_email')) await db.query('ALTER TABLE leads ADD COLUMN contact_email VARCHAR(100) DEFAULT "" AFTER contact_phone');
-      if (leadsColNames.includes('street1')) await db.query('ALTER TABLE leads CHANGE COLUMN street1 street VARCHAR(255) DEFAULT ""');
-      if (leadsColNames.includes('zip')) await db.query('ALTER TABLE leads CHANGE COLUMN zip zipcode VARCHAR(20) DEFAULT ""');
     }
   } catch (e) {
     console.warn('[Schema] Ignoring quote_data column check:', e.message);
   }
+
+  // Ensure leads schema is up to date
+  await ensureLeadsTable();
 }
 
 
@@ -1970,7 +1965,7 @@ app.post('/api/search/vector', authenticateToken, async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-const ensureLeadsTable = async () => {
+async function ensureLeadsTable() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS leads (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1991,20 +1986,49 @@ const ensureLeadsTable = async () => {
       estimator_id VARCHAR(100) DEFAULT ''
     )
   `);
-  // Ensure site_type column exists on older tables
+
+  // Migration for existing tables
   try {
-    const [cols] = await db.query(`SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'leads' AND COLUMN_NAME = 'site_type'`);
-    if (cols.length === 0) {
-      await db.query(`ALTER TABLE leads ADD COLUMN site_type VARCHAR(50) DEFAULT 'master_billing' AFTER zipcode`);
-      console.log('[Schema] Added site_type column to leads');
+    const [leadsCols] = await db.query('SHOW COLUMNS FROM leads');
+    const leadsColNames = leadsCols.map(c => c.Field);
+
+    const checkAndAdd = async (colName, definition, after) => {
+      if (!leadsColNames.includes(colName)) {
+        await db.query(`ALTER TABLE leads ADD COLUMN ${colName} ${definition} ${after ? `AFTER ${after}` : ''}`);
+        console.log(`[Schema] Added ${colName} column to leads`);
+        return true;
+      }
+      return false;
+    };
+
+    await checkAndAdd('company_name', 'VARCHAR(255) DEFAULT ""', 'customer_number');
+    await checkAndAdd('status_number', 'INT DEFAULT 1', 'company_name');
+    await checkAndAdd('first_name', 'VARCHAR(100) DEFAULT ""', 'status_number');
+    await checkAndAdd('last_name', 'VARCHAR(100) DEFAULT ""', 'first_name');
+    await checkAndAdd('contact_phone', 'VARCHAR(50) DEFAULT ""', 'last_name');
+    await checkAndAdd('contact_email', 'VARCHAR(100) DEFAULT ""', 'contact_phone');
+    await checkAndAdd('street', 'VARCHAR(255) DEFAULT ""', 'contact_email');
+    await checkAndAdd('city', 'VARCHAR(100) DEFAULT ""', 'street');
+    await checkAndAdd('state', 'VARCHAR(50) DEFAULT ""', 'city');
+    await checkAndAdd('zipcode', 'VARCHAR(20) DEFAULT ""', 'state');
+    await checkAndAdd('site_type', 'VARCHAR(50) DEFAULT "master_billing"', 'zipcode');
+    await checkAndAdd('estimator_id', 'VARCHAR(100) DEFAULT ""', 'site_type');
+
+    if (leadsColNames.includes('street1') && !leadsColNames.includes('street')) {
+      await db.query('ALTER TABLE leads CHANGE COLUMN street1 street VARCHAR(255) DEFAULT ""');
+      console.log('[Schema] Renamed leads.street1 to street');
+    }
+    if (leadsColNames.includes('zip') && !leadsColNames.includes('zipcode')) {
+      await db.query('ALTER TABLE leads CHANGE COLUMN zip zipcode VARCHAR(20) DEFAULT ""');
+      console.log('[Schema] Renamed leads.zip to zipcode');
     }
   } catch (e) {
-    console.warn('[Schema] site_type check:', e.message);
+    console.warn('[Schema] leads column check:', e.message);
   }
 };
 
 // Ensure every managed table has a `description` column.
-const ensureDescriptionColumns = async () => {
+async function ensureDescriptionColumns() {
   const tables = [
     'users', 'admin_tasks', 'customers', 'customer_contacts', 'base_labor',
     'equipment', 'estimators', 'status', 'Quote_Status_History', 'sites',
@@ -2026,7 +2050,7 @@ const ensureDescriptionColumns = async () => {
   }
 };
 
-const ensureSitesTable = async () => {
+async function ensureSitesTable() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS sites (
       id INT AUTO_INCREMENT PRIMARY KEY,
