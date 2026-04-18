@@ -8411,6 +8411,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
   const [loading, setLoading] = useState(false);
   const [tableSearch, setTableSearch] = useState("");
   const [siteTypeFilter, setSiteTypeFilter] = useState("");
+  const [quoteStatusFilter, setQuoteStatusFilter] = useState("");
   const [editingRow, setEditingRow] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -8419,6 +8420,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
 
   const [tableList, setTableList] = useState([]);
   const [customersList, setCustomersList] = useState([]);
+  const [statusList, setStatusList] = useState([]);
 
   useEffect(() => {
     if (!token) return;
@@ -8426,6 +8428,16 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
       .then(r => r.json())
       .then(d => setCustomersList(Array.isArray(d) ? d : []))
       .catch(e => console.error("Customers fallback load err:", e));
+      
+    fetch('/api/admin/tables/status', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => {
+         let arr = [];
+         if (d && d.data && Array.isArray(d.data)) arr = d.data;
+         else if (Array.isArray(d)) arr = d;
+         setStatusList(arr);
+      })
+      .catch(e => console.error("Status list load err:", e));
   }, [token]);
 
   useEffect(() => {
@@ -8462,8 +8474,19 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
     return Array.from(new Set(data.map(r => r.site_type).filter(x => x !== null && x !== undefined && x !== ''))).sort();
   }, [data, selectedTable]);
 
+  const uniqueQuoteStatuses = useMemo(() => {
+    if (selectedTable !== 'quotes' && selectedTable !== 'Quotes') return [];
+    return Array.from(new Set(data.map(r => r.status).filter(x => x !== null && x !== undefined && x !== ''))).sort();
+  }, [data, selectedTable]);
+
+  const getStatusName = (val) => {
+    const s = statusList.find(x => String(x.id) === String(val) || String(x.name).toLowerCase() === String(val).toLowerCase());
+    return s ? s.name : String(val);
+  };
+
   const filteredData = data.filter((row) => {
     if ((selectedTable === 'sites' || selectedTable === 'Sites') && siteTypeFilter && String(row.site_type) !== siteTypeFilter) return false;
+    if ((selectedTable === 'quotes' || selectedTable === 'Quotes') && quoteStatusFilter && String(row.status) !== quoteStatusFilter) return false;
     if (!searchTerm) return true;
     return headers.some((h) => {
       const val = row[h];
@@ -8478,7 +8501,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [tableSearch, siteTypeFilter]);
+  }, [tableSearch, siteTypeFilter, quoteStatusFilter]);
 
   useEffect(() => {
     setSortKey('id');
@@ -8678,6 +8701,18 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
                       ))}
                     </select>
                   )}
+                  {(selectedTable === 'quotes' || selectedTable === 'Quotes') && (
+                    <select
+                      value={quoteStatusFilter}
+                      onChange={(e) => setQuoteStatusFilter(e.target.value)}
+                      style={{ ...inp, width: 140, fontSize: 12, padding: "6px 10px" }}
+                    >
+                      <option value="">All Statuses</option>
+                      {uniqueQuoteStatuses.map(st => (
+                        <option key={st} value={st}>{getStatusName(st)}</option>
+                      ))}
+                    </select>
+                  )}
                   <div style={{position:"relative"}}>
                     <input
                       value={tableSearch}
@@ -8740,11 +8775,17 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
                             Edit
                           </button>
                         </td>
-                        {headers.map(h => (
-                          <td key={h} style={{ ...tdS, padding:"8px 12px", whiteSpace:"nowrap", maxWidth:250, overflow:"hidden", textOverflow:"ellipsis" }}>
-                            {row[h] === null ? <em style={{ color:C.txtS }}>null</em> : String(row[h])}
-                          </td>
-                        ))}
+                        {headers.map(h => {
+                          let displayVal = row[h] === null ? <em style={{ color:C.txtS }}>null</em> : String(row[h]);
+                          if ((selectedTable === 'quotes' || selectedTable === 'Quotes') && h === 'status' && row[h] !== null && row[h] !== undefined) {
+                            displayVal = getStatusName(row[h]);
+                          }
+                          return (
+                            <td key={h} style={{ ...tdS, padding:"8px 12px", whiteSpace:"nowrap", maxWidth:250, overflow:"hidden", textOverflow:"ellipsis" }} title={h === 'status' ? `Raw ID: ${row[h]}` : undefined}>
+                              {displayVal}
+                            </td>
+                          );
+                        })}
                       </tr>
                     )) : !loading && (
                       <tr><td colSpan={headers.length + 1} style={{ ...tdS, textAlign:"center", padding:40, color:C.txtS }}>{searchTerm ? "No matching records found." : "No records found in this table."}</td></tr>
