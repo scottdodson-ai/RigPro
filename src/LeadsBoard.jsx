@@ -32,25 +32,26 @@ function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, c
 }
 
 const LeadsBoard = (props) => {
-  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead } = props;
+  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel } = props;
   const [search, setSearch] = useState("");
   const [leadView, setLeadView] = useState("list");
   const [selLead, setSelLead] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [newLeadForm, setNewLeadForm] = useState({ first_name:'', last_name:'', customer_name:'', description:'' });
+  const uNew = (f, v) => setNewLeadForm(p => ({ ...p, [f]: v }));
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const fd = new FormData(e.target);
       const payload = {
-        first_name: fd.get('first_name') || '',
-        last_name: fd.get('last_name') || '',
-        company_name: fd.get('company_name') || '',
-        description: fd.get('description') || '',
+        ...newLeadForm,
         status_number: 1
       };
+      if (newLeadForm.customer_name && custData[newLeadForm.customer_name]) {
+        payload.customer_id = custData[newLeadForm.customer_name].id;
+      }
       const res = await fetch(`${fmt.api || "/api"}/admin/tables/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -60,7 +61,7 @@ const LeadsBoard = (props) => {
       const newLead = await res.json();
       if (setLeads) setLeads(prev => [{ ...newLead, status_number: Number(newLead.status_number) }, ...prev]);
       setShowAddModal(false);
-      e.target.reset();
+      setNewLeadForm({ first_name:'', last_name:'', customer_name:'', description:'' });
     } catch (err) {
       console.error(err);
       alert("Error creating lead: " + err.message);
@@ -110,7 +111,7 @@ const LeadsBoard = (props) => {
       return (
         (l.first_name || "").toLowerCase().includes(s) ||
         (l.last_name || "").toLowerCase().includes(s) ||
-        (l.company_name || "").toLowerCase().includes(s) ||
+        (l.customer_name || "").toLowerCase().includes(s) ||
         (l.description || "").toLowerCase().includes(s)
       );
     });
@@ -128,11 +129,6 @@ const LeadsBoard = (props) => {
     return st ? st.name : `Status ${statusNum}`;
   };
 
-  React.useEffect(() => {
-    if (!selLead && sortedItems.length > 0 && leadView === "list") {
-      setSelLead(sortedItems[0]);
-    }
-  }, [selLead, sortedItems, leadView]);
 
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
@@ -181,12 +177,7 @@ const LeadsBoard = (props) => {
             </div>
             <div style={{ display:"flex", flexDirection:"column" }}>
                <div style={{fontSize:11, fontWeight:800, color:C.txtS, marginBottom:6, letterSpacing:0.8, opacity:0}}>ACTION</div>
-               <button 
-                  onClick={() => setShowAddModal(true)}
-                  style={{ background:C.acc, color:"#fff", border:"none", borderRadius:10, padding:"10px 20px", fontSize:14, fontWeight:800, cursor:"pointer", boxShadow:"0 4px 12px rgba(14,165,233,0.3)", height:42 }}
-               >
-                 + ADD NEW LEAD
-               </button>
+               <button onClick={() => setShowAddModal(true)} style={{ ...mkBtn("blue"), background:C.acc, color:"#fff" }}>+ New Lead</button>
             </div>
           </div>
         </div>
@@ -202,20 +193,20 @@ const LeadsBoard = (props) => {
                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                     <div>
                       <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>FIRST NAME</div>
-                      <input name="first_name" style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} required />
+                      <input value={newLeadForm.first_name} onChange={e=>uNew("first_name", e.target.value)} style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} required />
                     </div>
                     <div>
                       <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>LAST NAME</div>
-                      <input name="last_name" style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} required />
+                      <input value={newLeadForm.last_name} onChange={e=>uNew("last_name", e.target.value)} style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} required />
                     </div>
                  </div>
                  <div>
-                    <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>COMPANY NAME</div>
-                    <input name="company_name" style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14 }} placeholder="Leave blank if unknown" />
+                    <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>CUSTOMER NAME</div>
+                    <AutoInput val={newLeadForm.customer_name} on={v => uNew("customer_name", v)} list={Object.keys(custData || {})} ph="Search existing customers..." />
                  </div>
                  <div>
                     <div style={{ fontSize:10, fontWeight:800, color:C.txtS, marginBottom:4 }}>PROJECT DESCRIPTION</div>
-                    <textarea name="description" style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14, minHeight:100, fontFamily:"inherit" }} required placeholder="Brief summary of requirements..." />
+                    <textarea value={newLeadForm.description} onChange={e=>uNew("description", e.target.value)} style={{ width:"100%", padding:"10px", borderRadius:8, border:`1px solid ${C.bdr}`, fontSize:14, minHeight:100, fontFamily:"inherit" }} required placeholder="Brief summary of requirements..." />
                  </div>
                  <button 
                    type="submit" 
@@ -241,7 +232,7 @@ const LeadsBoard = (props) => {
                   <table style={{ width:"100%", borderCollapse:"collapse" }}>
                     <thead>
                       <tr>
-                        <SortTh style={{ ...thS, width: "45%" }} label="Company" sortKey="company_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "45%" }} label="Customer" sortKey="customer_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                         <SortTh style={{ ...thS, width: "55%" }} label="Contact" sortKey="last_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                       </tr>
                     </thead>
@@ -250,9 +241,9 @@ const LeadsBoard = (props) => {
                         const isSel = selLead && selLead.id === l.id;
                         return (
                           <tr key={l.id} style={{ background: isSel ? C.accL : "transparent", cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
-                            <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 180, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={l.company_name || ""}>{l.company_name || "—"}</td>
+                            <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 180, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={l.customer_name || ""}>{l.customer_name || "—"}</td>
                             <td style={{ ...tdS, color:C.txtM, fontSize:13, maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.company_name || `Lead #${l.id}`}
+                              {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.customer_name || `Lead #${l.id}`}
                             </td>
                           </tr>
                         );
@@ -270,11 +261,11 @@ const LeadsBoard = (props) => {
                     <div key={l.id} style={{ cursor:"pointer", padding:20, borderRadius:16, transition:"0.2s", background: "#fff", border: `1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
                         <div style={{ fontWeight:900, fontSize:16, color: C.txt }}>
-                          {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.company_name || `Lead #${l.id}`}
+                          {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.customer_name || `Lead #${l.id}`}
                         </div>
                         <span style={{ background:C.accL, color:C.acc, borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>{formatStatusName(l.status_number)}</span>
                       </div>
-                      <div style={{ fontSize:14, fontWeight:600, color:C.txtM, marginBottom:10 }}>{l.company_name || "—"}</div>
+                      <div style={{ fontSize:14, fontWeight:600, color:C.txtM, marginBottom:10 }}>{l.customer_name || "—"}</div>
                       <div style={{ display:"flex", gap:15, borderTop:`1px solid ${C.bdr}`, paddingTop:10, fontSize: 12, color: C.txtS }}>
                         <div>{l.city ? `${l.city}${l.state ? `, ${l.state}` : ""}` : "No Location"}</div>
                         <div style={{marginLeft:"auto"}}>{new Date(l.create_date).toLocaleDateString()}</div>
@@ -324,7 +315,7 @@ const LeadsBoard = (props) => {
                     </div>
 
                     <div>
-                      <div style={{ fontSize:44, fontWeight:900, color:C.txt, letterSpacing:"-1px", lineHeight:1 }}>{selLead.company_name || `Lead #${selLead.id}`}</div>
+                      <div style={{ fontSize:44, fontWeight:900, color:C.txt, letterSpacing:"-1px", lineHeight:1 }}>{selLead.customer_name || `Lead #${selLead.id}`}</div>
                       <div style={{ display:"flex", gap:20, marginTop:18 }}>
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>Contact: {selLead.first_name || selLead.last_name ? `${selLead.first_name||""} ${selLead.last_name||""}` : 'N/A'}</div>
                         {(selLead.contact_phone || selLead.contact_email) && (
@@ -363,7 +354,7 @@ const LeadsBoard = (props) => {
                         <Sec c="Authorized Personnel Directory"/>
                         <div style={{ display:"flex", flexDirection:"column", gap:15, marginTop:20, marginBottom:50 }}>
                           {(() => {
-                            const contacts = (custData && selLead.company_name && custData[selLead.company_name]?.contacts) || [];
+                            const contacts = (custData && selLead.customer_name && custData[selLead.customer_name]?.contacts) || [];
                             return contacts.length > 0 ? contacts.map((con, idx) => (
                               <div key={idx} style={{ padding:25, border:`1px solid ${con.primary?C.grnBdr:C.bdr}`, borderRadius:18, background:con.primary?"#f0fdf4":"#fff", boxShadow:con.primary?"0 5px 15px rgba(34,197,94,0.05)":"none" }}>
                                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:15 }}>

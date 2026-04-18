@@ -3838,7 +3838,7 @@ function MarkDeadModal({ itemType, itemLabel, onConfirm, onClose }) {
 function LeadRecordModal({ onClose, onSave, token, appUsers=[], custData={}, CUSTOMERS=[], jobs=[], C, fmt, mkBtn, Sec, Lbl, Card, inp, sel, AutoInput }) {
   const [isSaving, setIsSaving] = useState(false);
   const [lead, setLead] = useState({
-    company_name: "",
+    customer_name: "",
     street: "",
     city: "",
     state: "",
@@ -3854,16 +3854,33 @@ function LeadRecordModal({ onClose, onSave, token, appUsers=[], custData={}, CUS
     create_date: new Date().toISOString().split('T')[0]
   });
 
-  const u = (f, v) => setLead(p => ({ ...p, [f]: v }));
+    const u = (f, v) => {
+    if (f === "customer_name") {
+      const c = custData && custData[v];
+      if (c) {
+        setLead(p => ({
+          ...p,
+          customer_name: v,
+          street: c.street || p.street,
+          city: c.city || p.city,
+          state: c.state || p.state,
+          zipcode: c.zip || p.zipcode,
+          customer_id: c.id
+        }));
+        return;
+      }
+    }
+    setLead(p => ({ ...p, [f]: v }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      // Resolve customer_number from custData if company matches
+      // Resolve customer_id from custData if company matches
       const payload = { ...lead };
-      if (lead.company_name && custData[lead.company_name]) {
-        payload.customer_number = custData[lead.company_name].id;
+      if (lead.customer_name && custData[lead.customer_name]) {
+        payload.customer_id = custData[lead.customer_name].id;
       }
       const res = await fetch("/api/admin/tables/leads", {
         method: "POST",
@@ -3894,12 +3911,12 @@ function LeadRecordModal({ onClose, onSave, token, appUsers=[], custData={}, CUS
                <Sec c="Customer Information" />
                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:10 }}>
                  <div style={{ gridColumn:"span 2" }}>
-                   <Lbl c="CLIENT *" />
+                   <Lbl c="CUSTOMER *" />
                    <AutoInput 
-                     val={lead.company_name} 
-                     on={v => u("company_name", v)} 
+                     val={lead.customer_name} 
+                     on={v => u("customer_name", v)} 
                      list={[...new Set([...CUSTOMERS, ...Object.keys(custData||{}), ...jobs.map(q=>q.client).filter(Boolean)])].sort()} 
-                     ph="Company name"
+                     ph="Customer name"
                    />
                  </div>
                  <div style={{ gridColumn:"span 2", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:10 }}>
@@ -4188,7 +4205,7 @@ function RFQModal({ init, onSave, onClose, appUsers=[], custData={}, setCustData
             <AutoInput val={f.company} on={v => {
               let val = v.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
               u("company",val);
-            }} list={allCompanies} ph="Company name"/>
+            }} list={allCompanies} ph="Customer name"/>
             {/* New company notice */}
             {isNewCompany && (
               <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5, background:C.bluB, border:`1px solid ${C.bluBdr}`, borderRadius:5, padding:"5px 10px", fontSize:11, color:C.blue }}>
@@ -11108,12 +11125,12 @@ export default function App() {
             <Sec c="Customer Information" />
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:10 }}>
               <div style={{ gridColumn:"span 2" }}>
-                <Lbl c="CLIENT *" />
+                <Lbl c="CUSTOMER *" />
                 <AutoInput 
                   val={active.client||""} 
                   on={handleClientChange} 
                   list={[...new Set([...CUSTOMERS, ...Object.keys(custData||{}), ...jobs.map(q=>q.client).filter(Boolean)])].sort()} 
-                  ph="Company name"
+                  ph="Customer name"
                 />
                 {customerRates[active.client] && <div style={{ fontSize:11, color:C.yel, marginTop:2 }}>⚡ Special labor rates saved for this client</div>}
               </div>

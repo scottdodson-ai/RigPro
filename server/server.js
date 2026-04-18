@@ -490,8 +490,12 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     });
     const estimators = await safeQuery('SELECT * FROM estimators');
     const status = await safeQuery('SELECT * FROM status ORDER BY sort_order ASC');
-    const leadsRaw = await safeQuery('SELECT l.*, c.name AS company_name FROM leads l LEFT JOIN customers c ON l.customer_number = c.id WHERE l.status_number != 2 ORDER BY l.id DESC');
-    const leads = leadsRaw.map(l => ({ ...l, status_number: Number(l.status_number) }));
+    const leadsRaw = await safeQuery('SELECT l.*, c.name AS c_name FROM leads l LEFT JOIN customers c ON l.customer_id = c.id WHERE l.status_number != 2 ORDER BY l.id DESC');
+    const leads = leadsRaw.map(l => ({ 
+      ...l, 
+      customer_name: l.c_name || l.customer_name,
+      status_number: Number(l.status_number) 
+    }));
 
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
@@ -913,6 +917,32 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
 
+  if (table === 'leads') {
+    const name = (data.customer_name || "").trim();
+    if (name) data.customer_name = name;
+    
+    // Check if customer_id is conceptually missing
+    const cid = data.customer_id;
+    const cidMissing = !cid || cid === "0" || cid === 0 || cid === "null" || cid === "undefined";
+    
+    if (cidMissing && name) {
+      try {
+        const [existing] = await db.query('SELECT id FROM customers WHERE name = ?', [name]);
+        if (existing.length > 0) {
+          data.customer_id = existing[0].id;
+          console.log(`[API] Lead: linked to existing customer "${name}" (ID: ${data.customer_id})`);
+        } else {
+          console.log(`[API] Lead: creating new customer "${name}"`);
+          const [resCust] = await db.query('INSERT INTO customers (name, street, city, state, zip) VALUES (?, ?, ?, ?, ?)', [name, data.street||'', data.city||'', data.state||'', data.zipcode||'']);
+          data.customer_id = resCust.insertId;
+          console.log(`[API] Lead: auto-created customer "${name}" (New ID: ${data.customer_id})`);
+        }
+      } catch (err) {
+        console.warn('[API] Lead customer automated resolution error:', err.message);
+      }
+    }
+  }
+
   try {
     const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at');
     if (keys.length === 0) return res.status(400).json({ error: 'No data provided' });
@@ -944,11 +974,11 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
     }
 
     // When creating a lead with address data, auto-create a master_billing site record
-    if (table === 'leads' && (data.street || data.street1) && data.customer_number) {
+    if (table === 'leads' && (data.street || data.street1) && data.customer_id) {
       try {
         const [siteResult] = await db.query(
           `INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)`,
-          [data.customer_number, data.site_type || 'master_billing', data.street || data.street1 || '', data.city || '', data.state || '', data.zipcode || data.zip || '']
+          [data.customer_id, data.site_type || 'master_billing', data.street || data.street1 || '', data.city || '', data.state || '', data.zipcode || data.zip || '']
         );
         triggerGeocodeUpdate(siteResult.insertId, data.street || data.street1, data.city, data.state, data.zipcode || data.zip);
       } catch (siteErr) {
@@ -1971,8 +2001,8 @@ async function ensureLeadsTable() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       description TEXT,
       create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      customer_number INT,
-      company_name VARCHAR(255) DEFAULT '',
+      customer_id INT,
+      customer_name VARCHAR(255) DEFAULT '',
       status_number INT DEFAULT 1,
       first_name VARCHAR(100) DEFAULT '',
       last_name VARCHAR(100) DEFAULT '',
@@ -1983,7 +2013,8 @@ async function ensureLeadsTable() {
       state VARCHAR(50) DEFAULT '',
       zipcode VARCHAR(20) DEFAULT '',
       site_type VARCHAR(50) DEFAULT 'master_billing',
-      estimator_id VARCHAR(100) DEFAULT ''
+      estimator_id VARCHAR(100) DEFAULT '',
+      FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
     )
   `);
 
@@ -2001,8 +2032,17 @@ async function ensureLeadsTable() {
       return false;
     };
 
-    await checkAndAdd('company_name', 'VARCHAR(255) DEFAULT ""', 'customer_number');
-    await checkAndAdd('status_number', 'INT DEFAULT 1', 'company_name');
+    if (leadsColNames.includes('company_name') && !leadsColNames.includes('customer_name')) {
+      await db.query('ALTER TABLE leads CHANGE COLUMN company_name customer_name VARCHAR(255) DEFAULT ""');
+      console.log('[Schema] Renamed leads.company_name to customer_name');
+    }
+    if (leadsColNames.includes('customer_number') && !leadsColNames.includes('customer_id')) {
+      await db.query('ALTER TABLE leads CHANGE COLUMN customer_number customer_id INT');
+      console.log('[Schema] Renamed leads.customer_number to customer_id');
+    }
+
+    await checkAndAdd('customer_name', 'VARCHAR(255) DEFAULT ""', 'customer_id');
+    await checkAndAdd('status_number', 'INT DEFAULT 1', 'customer_name');
     await checkAndAdd('first_name', 'VARCHAR(100) DEFAULT ""', 'status_number');
     await checkAndAdd('last_name', 'VARCHAR(100) DEFAULT ""', 'first_name');
     await checkAndAdd('contact_phone', 'VARCHAR(50) DEFAULT ""', 'last_name');
