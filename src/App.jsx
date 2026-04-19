@@ -261,7 +261,7 @@ const SAMPLE_QUOTES = [
 ];
 
 const SAMPLE_REQS = [
-  // ── 2024 RFQs ─────────────────────────────────────────────────────────────
+  // ── 2024 Leads ─────────────────────────────────────────────────────────────
   { id: 201, rn: "REQ-2024-001", company: "Apex Industrial LLC", requester: "James Whitfield", email: "j.whitfield@apexind.com", phone: "330-555-0182", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Relocate press line from Bay 3 to Bay 4, approx. 150ft.", notes: "Urgent – production line down.", date: "2024-01-28", status: "Quoted", salesAssoc: "Dan M" },
   { id: 202, rn: "REQ-2024-002", company: "Beacon Manufacturing Co.", requester: "Carolyn Marsh", email: "c.marsh@beaconmfg.com", phone: "937-555-0244", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Install new 500-ton hydraulic press, ground floor dock access.", notes: "Need by end of Q1.", date: "2024-01-10", status: "Quoted", salesAssoc: "Sarah K" },
   { id: 203, rn: "REQ-2024-003", company: "Cornerstone Plastics Inc.", requester: "Pat Gilmore", email: "p.gilmore@cornerstone.com", phone: "614-555-0312", jobSite: "800 Factory Dr, Columbus, OH 43219", desc: "Dismantle and reinstall kiln, same building different bay.", notes: "", date: "2024-03-05", status: "Quoted", salesAssoc: "Dan M" },
@@ -281,7 +281,7 @@ const SAMPLE_REQS = [
   { id: 217, rn: "REQ-2024-017", company: "Icon Rubber Products", requester: "Greg Owens", email: "g.owens@iconrubber.com", phone: "330-555-0821", jobSite: "5100 Rubber Ln, Barberton, OH 44203", desc: "Banbury mixer overhaul lift.", notes: "", date: "2024-11-04", status: "Quoted", salesAssoc: "Dan M" },
   { id: 218, rn: "REQ-2024-018", company: "Delta Fabrication Group", requester: "Sandra Voss", email: "s.voss@deltafab.com", phone: "216-555-0415", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Install welding robot in south bay.", notes: "Coordinate with automation vendor.", date: "2024-11-20", status: "Quoted", salesAssoc: "Mike R" },
 
-  // ── 2025 RFQs ─────────────────────────────────────────────────────────────
+  // ── 2025 Leads ─────────────────────────────────────────────────────────────
   { id: 219, rn: "REQ-2025-001", company: "Apex Industrial LLC", requester: "James Whitfield", email: "j.whitfield@apexind.com", phone: "330-555-0182", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Relocate 40-ton hydraulic press from Bay 3 to Bay 7, 200ft.", notes: "", date: "2025-01-06", status: "Quoted", salesAssoc: "Dan M" },
   { id: 220, rn: "REQ-2025-002", company: "Beacon Manufacturing Co.", requester: "Carolyn Marsh", email: "c.marsh@beaconmfg.com", phone: "937-555-0244", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Install transformer 15,000 lbs, second floor.", notes: "Need quote by end of week.", date: "2025-01-15", status: "Quoted", salesAssoc: "Mike R" },
   { id: 221, rn: "REQ-2025-003", company: "Overland Transport Mfg.", requester: "Walt Simmons", email: "w.simmons@overlandmfg.com", phone: "937-555-1488", jobSite: "2800 Axle Dr, Springfield, OH 45505", desc: "Frame assembly jig installation, new building.", notes: "New account – strong relationship.", date: "2025-02-10", status: "Quoted", salesAssoc: "Dan M" },
@@ -303,7 +303,7 @@ const SAMPLE_REQS = [
   { id: 237, rn: "REQ-2025-019", company: "Overland Transport Mfg.", requester: "Walt Simmons", email: "w.simmons@overlandmfg.com", phone: "937-555-1488", jobSite: "2800 Axle Dr, Springfield, OH 45505", desc: "Wheel end machining center relocation.", notes: "", date: "2025-08-25", status: "Quoted", salesAssoc: "Dan M" },
   { id: 238, rn: "REQ-2025-020", company: "Delta Fabrication Group", requester: "Sandra Voss", email: "s.voss@deltafab.com", phone: "216-555-0415", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Press room HVAC unit lift and set.", notes: "", date: "2025-09-03", status: "Quoted", salesAssoc: "Mike R" },
 
-  // ── 2026 RFQs (active) ────────────────────────────────────────────────────
+  // ── 2026 Leads (active) ────────────────────────────────────────────────────
   { id: 239, rn: "REQ-2026-001", company: "Apex Industrial LLC", requester: "James Whitfield", email: "j.whitfield@apexind.com", phone: "330-555-0182", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Injection mold press Bay 10 – 350-ton unit relocation.", notes: "Follow up on 2025 approval.", date: "2026-02-05", status: "Quoted", salesAssoc: "Sarah K" },
   { id: 240, rn: "REQ-2026-002", company: "Keystone Die Casting", requester: "Helen Marsh", email: "h.marsh@keystonedc.com", phone: "330-555-1044", jobSite: "620 Die Cast Dr, Massillon, OH 44646", desc: "1000-ton press acquisition – full install, new bay.", notes: "Largest project to date.", date: "2026-02-20", status: "Quoted", salesAssoc: "Mike R" },
   { id: 241, rn: "REQ-2026-003", company: "Titan Manufacturing LLC", requester: "Steve Dolan", email: "s.dolan@titanmfg.com", phone: "440-555-1943", jobSite: "8800 Titan Blvd, Lorain, OH 44052", desc: "Secondary press bay equipment set – follow-on from J-2025-112.", notes: "", date: "2026-02-26", status: "Quoted", salesAssoc: "Mike R" },
@@ -385,7 +385,7 @@ function nextQN(quotes) {
 function nextRN(reqs) {
   const year = String(new Date().getFullYear());
   const maxSeq = (reqs || []).reduce((mx, r) => {
-    const raw = String(r?.rn || r?.rfq_number || "").trim();
+    const raw = String(r?.rn || r?.lead_number || "").trim();
     const m = raw.match(/^REQ-(\d{4})-(\d{3,})$/);
     if (!m || m[1] !== year) return mx;
     const seq = Number(m[2]);
@@ -1098,8 +1098,8 @@ const BUILT_IN_REPORTS = [
   { id: "rev-by-month", name: "Sales by Month", category: "Sales", desc: "Historical month-over-month revenue trends", scope: "org" },
 
   // 2. Pipeline
-  { id: "pipeline-dashboard", name: "Pipeline Dashboard", category: "Pipeline", desc: "RFQ flow and conversion performance metrics", scope: "org" },
-  { id: "open-rfqs", name: "Open Requests for Quotes", category: "Pipeline", desc: "All currently active RFQs by status", scope: "org" },
+  { id: "pipeline-dashboard", name: "Pipeline Dashboard", category: "Pipeline", desc: "Lead flow and conversion performance metrics", scope: "org" },
+  { id: "open-leads", name: "Open Leads", category: "Pipeline", desc: "All currently active Leads by status", scope: "org" },
   { id: "pipeline-summary", name: "Pipeline Summary", category: "Pipeline", desc: "Open jobs by status with total weighted value", scope: "org" },
   { id: "win-loss", name: "Win / Loss Analysis", category: "Pipeline", desc: "Success rates by estimator and quote type", scope: "org" },
   { id: "quote-aging", name: "Quote Aging", category: "Pipeline", desc: "Open opportunities ranked by days since creation", scope: "org" },
@@ -1109,7 +1109,7 @@ const BUILT_IN_REPORTS = [
 
   // 3. Historical
   { id: "historical-dashboard", name: "Historical Dashboard", category: "Historical", desc: "Operational history and performance summary", scope: "org" },
-  { id: "inactive-reqs", name: "Inactive Requests", category: "Historical", desc: "Summary of all RFQs marked as Dead/Complete", scope: "org" },
+  { id: "inactive-reqs", name: "Inactive Requests", category: "Historical", desc: "Summary of all Leads marked as Dead/Complete", scope: "org" },
   { id: "lost-quotes", name: "Lost Quotes", category: "Historical", desc: "Rejected quotes analyzed by customer and reason", scope: "org" },
 
   // 4. Finance
@@ -1126,10 +1126,10 @@ const BUILT_IN_REPORTS = [
 
   // 5. Activity
   { id: "activity-dashboard", name: "Activity Dashboard", category: "Activity", desc: "Overall team performance and system activity", scope: "org" },
-  { id: "rfq-response", name: "RFQ Response Time", category: "Activity", desc: "Days from RFQ received to formal submission", scope: "org" },
+  { id: "lead-response", name: "Lead Response Time", category: "Activity", desc: "Days from Lead received to formal submission", scope: "org" },
   { id: "avg-quote-cycle", name: "Average Quote Cycle", category: "Activity", desc: "Duration from intake to 'Won' status", scope: "org" },
   { id: "estimator-activity", name: "Estimator Activity", category: "Activity", desc: "Quotes created, submitted, and won per user", scope: "org" },
-  { id: "estimator-response-time", name: "Estimator Response Time", category: "Activity", desc: "Avg hours RFQ received to first estimate submitted", scope: "org" },
+  { id: "estimator-response-time", name: "Estimator Response Time", category: "Activity", desc: "Avg hours Lead received to first estimate submitted", scope: "org" },
 
   // 6. Customers
   { id: "customer-activity-dash", name: "Customer Activity Dash", category: "Customers", desc: "Dynamic dashboard of activity for specific client", scope: "org" },
@@ -1161,7 +1161,7 @@ function buildReportData(reportId, jobs, reqs) {
           ["Volume Consistency", "Actual / Target Base", "Monitored against standard 30-day run rate expected volume"],
           ["Gross Margin", "Deviation from Target", "Aims to maintain floor of expected quoting targets"],
           ["Aging/Stale Quote %", "Penalty multiple applied", "Scores down drastically if quotes age beyond threshold limit"],
-          ["Response Speed", "Difference to SLA Target", "Rewards quick turnaround time from RFQ to quoted submission"]
+          ["Response Speed", "Difference to SLA Target", "Rewards quick turnaround time from Lead to quoted submission"]
         ],
         summary: "Pipeline Health Index architecture details"
       };
@@ -1229,7 +1229,7 @@ function buildReportData(reportId, jobs, reqs) {
         cols: ["Engine Component", "Description", "Standard Impact"],
         rows: [
           ["Win Rate Gap", "Absolute deviation from strategic target", "25%"],
-          ["Volume Ratio", "Current RFQs compared to standard run rate", "20%"],
+          ["Volume Ratio", "Current Leads compared to standard run rate", "20%"],
           ["Margin Deviation", "Deviation from expected profitability GM%", "15%"],
           ["Aging Factor", "Risk coefficient for idle active pipeline", "30%"],
           ["Speed Penalty", "Deductions for delayed quote turnaround", "10%"]
@@ -1295,22 +1295,22 @@ function buildReportData(reportId, jobs, reqs) {
       return {
         cols: ["Metric", "Value"],
         rows: [
-          ["Total RFQs Received", reqs.length],
-          ["RFQ to Quote Conversion", conversion],
+          ["Total Leads Received", reqs.length],
+          ["Lead to Quote Conversion", conversion],
           ["Quote Win Rate", winRate],
-          ["Active Open RFQs", reqs.filter(r => r.status !== "Dead" && r.status !== "Completed").length],
+          ["Active Open Leads", reqs.filter(r => r.status !== "Dead" && r.status !== "Completed").length],
           ["Open Quotes", jobs.filter(q => !["Won", "Lost", "Dead"].includes(q.status)).length]
         ],
         summary: "Pipeline throughput and conversion summary"
       };
     }
-    case "open-rfqs": {
+    case "open-leads": {
       const data = reqs.filter(r => r.status !== "Dead" && r.status !== "Completed").sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
       return {
-        cols: ["RFQ #", "Customer", "Date Received", "Estimator", "Status"],
+        cols: ["Lead #", "Customer", "Date Received", "Estimator", "Status"],
         rows: data.map(r => [r.rn, r.company, r.date || "—", r.salesAssoc || "Unassigned", r.status]),
-        rawRefs: data.map(r => ({ type: "rfq", req: r })),
-        summary: `${data.length} active open RFQs`
+        rawRefs: data.map(r => ({ type: "lead", req: r })),
+        summary: `${data.length} active open Leads`
       };
     }
     case "pipeline-summary": {
@@ -1379,8 +1379,8 @@ function buildReportData(reportId, jobs, reqs) {
       return {
         cols: ["Metric", "Value"],
         rows: [
-          ["Total Dead RFQs", deadReqs.length],
-          ["RFQ Attrition Rate", deadRatio],
+          ["Total Dead Leads", deadReqs.length],
+          ["Lead Attrition Rate", deadRatio],
           ["Total Historical Jobs", jobs.length],
           ["Completed Jobs", won.length],
           ["Avg Response Time", "Calculated Historically"]
@@ -1390,20 +1390,20 @@ function buildReportData(reportId, jobs, reqs) {
     }
     case "inactive-reqs": {
       return {
-        cols: ["RFQ #", "Customer", "Date", "Estimator", "Dead Note", "Reason Marked Dead"],
+        cols: ["Lead #", "Customer", "Date", "Estimator", "Dead Note", "Reason Marked Dead"],
         rows: deadReqs.map(r => [r.rn, r.company, r.date || "—", r.salesAssoc || "Unassigned", r.deadNote || "No note", r.lossReason || "Other"]),
-        rawRefs: deadReqs.map(r => ({ type: "rfq", req: r })),
+        rawRefs: deadReqs.map(r => ({ type: "lead", req: r })),
         summary: `${deadReqs.length} inactive/dead requests recorded`
       };
     }
-    case "rfq-response": {
+    case "lead-response": {
       const data = reqs.filter(r => r.date).map(r => { const linked = jobs.find(q => q.fromReqId === r.id); const days = linked ? Math.floor((new Date(linked.date) - new Date(r.date)) / 86400000) : null; return { r, linked, days }; }).sort((a, b) => { if (a.days === null) return 1; if (b.days === null) return -1; return a.days - b.days; });
       const withResp = data.filter(d => d.days !== null); const avg = withResp.length ? Math.round(withResp.reduce((s, d) => s + d.days, 0) / withResp.length) : 0;
       return {
-        cols: ["RFQ #", "Customer", "RFQ Date", "Est. Date", "Response Time"], clickHint: "Click an RFQ to open its Job Folder · Click quote column to open the quote",
+        cols: ["Lead #", "Customer", "Lead Date", "Est. Date", "Response Time"], clickHint: "Click an Lead to open its Job Folder · Click quote column to open the quote",
         rows: data.map(({ r, linked, days }) => [r.rn, r.company, r.date, linked ? linked.date : "No quote", days !== null ? days + " days" : "—"]),
-        rawRefs: data.map(({ r, linked }) => ({ type: "rfq", req: r, quote: linked || null })),
-        summary: `${withResp.length} of ${data.length} RFQs have quotes · Avg response: ${avg} days`
+        rawRefs: data.map(({ r, linked }) => ({ type: "lead", req: r, quote: linked || null })),
+        summary: `${withResp.length} of ${data.length} Leads have quotes · Avg response: ${avg} days`
       };
     }
     case "job-schedule": {
@@ -1436,7 +1436,7 @@ function buildReportData(reportId, jobs, reqs) {
       }).filter(d => d.cycle !== null);
       const avg = data.length ? Math.round(data.reduce((s, d) => s + d.cycle, 0) / data.length) : 0;
       return {
-        cols: ["Job #", "Customer", "RFQ Date", "Won Date", "Cycle (Days)"],
+        cols: ["Job #", "Customer", "Lead Date", "Won Date", "Cycle (Days)"],
         rows: data.map(d => [d.q.job_num, d.q.client, d.req.date, d.q.date, d.cycle + " days"]),
         summary: `Average Intake-to-Won Cycle: ${avg} days`
       };
@@ -1687,8 +1687,8 @@ function buildReportData(reportId, jobs, reqs) {
         pReqs.forEach(r => { if (new Date(r.date) > lastActivity) lastActivity = new Date(r.date); });
 
         const openEsts = pJobs.filter(q => !["Won", "Lost", "Dead"].includes(q.status)).length;
-        const rfqCount = pReqs.length;
-        return { name: p, qCount: pJobs.length, hist: pJobs.map(q => q.status).join(", "), lastAct: lastActivity ? new Date(lastActivity).toISOString().split('T')[0] : "—", lastActMs: lastActivity ? new Date(lastActivity).getTime() : 0, rfqCount, openEsts };
+        const leadCount = pReqs.length;
+        return { name: p, qCount: pJobs.length, hist: pJobs.map(q => q.status).join(", "), lastAct: lastActivity ? new Date(lastActivity).toISOString().split('T')[0] : "—", lastActMs: lastActivity ? new Date(lastActivity).getTime() : 0, leadCount, openEsts };
       });
       pData.sort((a, b) => b.lastActMs - a.lastActMs);
 
@@ -1740,7 +1740,7 @@ function buildReportData(reportId, jobs, reqs) {
       const m = {};
       const now = Date.now();
       jobs.forEach(q => {
-        if (!m[q.client]) m[q.client] = { name: q.client, last: 0, cur: 0, pri: 0, wins: 0, total: 0, rfqs: 0 };
+        if (!m[q.client]) m[q.client] = { name: q.client, last: 0, cur: 0, pri: 0, wins: 0, total: 0, leads: 0 };
         const dt = new Date(q.date || 0).getTime();
         if (dt > m[q.client].last) m[q.client].last = dt;
         const yr = new Date(q.date || 0).getFullYear();
@@ -1750,23 +1750,23 @@ function buildReportData(reportId, jobs, reqs) {
         if (q.status === "Won") m[q.client].wins++;
       });
       reqs.forEach(r => {
-        if (m[r.company] && ["New", "In Progress"].includes(r.status)) m[r.company].rfqs++;
+        if (m[r.company] && ["New", "In Progress"].includes(r.status)) m[r.company].leads++;
       });
       return {
-        cols: ["Customer", "Health Score", "Recency (30%)", "Trend (30%)", "Open RFQs (20%)", "Win Rate (20%)"],
+        cols: ["Customer", "Health Score", "Recency (30%)", "Trend (30%)", "Open Leads (20%)", "Win Rate (20%)"],
         rows: Object.values(m).map(c => {
           const days = (now - c.last) / 86400000;
           const sRec = Math.max(0, Math.min(100, (1 - days / 365) * 100));
           const tPct = c.pri > 0 ? ((c.cur - c.pri) / c.pri * 100) : 0;
           const sTrend = Math.max(0, Math.min(100, (tPct + 10) * 5));
-          const sRfq = c.rfqs > 0 ? 100 : 0;
+          const sLead = c.leads > 0 ? 100 : 0;
           const wRate = c.total > 0 ? (c.wins / c.total * 100) : 0;
           const sWin = Math.max(0, Math.min(100, (wRate / 30) * 100));
-          const score = Math.round(sRec * 0.3 + sTrend * 0.3 + sRfq * 0.2 + sWin * 0.2);
+          const score = Math.round(sRec * 0.3 + sTrend * 0.3 + sLead * 0.2 + sWin * 0.2);
           let band = "Healthy";
           if (score < 50) band = "At Risk";
           else if (score < 75) band = "Monitor";
-          return [c.name, score + " (" + band + ")", Math.round(sRec), Math.round(sTrend), sRfq, Math.round(sWin)];
+          return [c.name, score + " (" + band + ")", Math.round(sRec), Math.round(sTrend), sLead, Math.round(sWin)];
         }).sort((a, b) => a[1] - b[1]),
         summary: "Composite relationship health indicators"
       };
@@ -1785,9 +1785,9 @@ function buildReportData(reportId, jobs, reqs) {
         }
       });
       return {
-        cols: ["Estimator", "Avg Response Hours", "Total Linked RFQs"],
+        cols: ["Estimator", "Avg Response Hours", "Total Linked Leads"],
         rows: Object.values(m).map(e => [e.name, (e.count > 0 ? (e.hrs / e.count).toFixed(1) : "—"), e.count]).sort((a, b) => a[1] - b[1]),
-        summary: "Speed performance from RFQ to first estimate"
+        summary: "Speed performance from Lead to first estimate"
       };
     }
     default: {
@@ -1969,28 +1969,28 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
     );
   }
 
-  // RFQ row — show RFQ info + option to open Job Folder or linked quote
-  if (rawRef.type === "rfq") {
+  // Lead row — show Lead info + option to open Job Folder or linked quote
+  if (rawRef.type === "lead") {
     const { req, quote } = rawRef;
-    const rfqDate = new Date(req.start_date || Date.now());
-    const daysOld = Math.floor((new Date() - rfqDate) / 86400000);
-    const days = quote ? Math.floor((new Date(quote.date) - rfqDate) / 86400000) : null;
+    const leadDate = new Date(req.start_date || Date.now());
+    const daysOld = Math.floor((new Date() - leadDate) / 86400000);
+    const days = quote ? Math.floor((new Date(quote.date) - leadDate) / 86400000) : null;
     return (
       <div className="app-modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 600, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 12px", overflowY: "auto" }}>
         <div className="app-modal-panel" style={{ background: C.sur, borderRadius: 12, width: "100%", maxWidth: 620, boxShadow: "0 16px 48px rgba(0,0,0,.28)" }}>
           <div style={{ padding: "16px 22px", borderBottom: `1px solid ${C.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: C.accL, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
             <div>
-              <div style={{ fontSize: 10, color: C.acc, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1 }}>RFQ Transaction Detail</div>
+              <div style={{ fontSize: 10, color: C.acc, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1 }}>Lead Transaction Detail</div>
               <div style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>{req.rn} · {req.company}</div>
             </div>
             <button className="app-modal-close" onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: C.txtS }}>×</button>
           </div>
           <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 12 }}>
-            {/* RFQ info */}
+            {/* Lead info */}
             <div style={{ background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "12px 16px" }}>
-              <div style={{ fontSize: 9, color: C.acc, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>RFQ Information</div>
+              <div style={{ fontSize: 9, color: C.acc, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Lead Information</div>
               <div className="app-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {[["RFQ #", req.rn], ["Company", req.company], ["Requester", req.requester || "—"], ["Phone", req.phone || "—"], ["Date Received", req.start_date || "—"], ["Estimator", req.salesAssoc || "Unassigned"], ["Status", req.status], ["Job Site", req.jobSite || "—"]].map(([k, v]) => (
+                {[["Lead #", req.rn], ["Company", req.company], ["Requester", req.requester || "—"], ["Phone", req.phone || "—"], ["Date Received", req.start_date || "—"], ["Estimator", req.salesAssoc || "Unassigned"], ["Status", req.status], ["Job Site", req.jobSite || "—"]].map(([k, v]) => (
                   <div key={k}>
                     <div style={{ fontSize: 10, color: C.txtS, fontWeight: 700 }}>{k}</div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: C.txt }}>{v}</div>
@@ -2003,7 +2003,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
             <div style={{ display: "flex", gap: 10 }}>
               <div style={{ flex: 1, background: daysOld > 7 ? C.redB : C.grnB, border: `1px solid ${daysOld > 7 ? C.redBdr : C.grnBdr}`, borderRadius: 8, padding: "10px 14px", textAlign: "center" }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: daysOld > 7 ? C.red : C.grn }}>{daysOld}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: daysOld > 7 ? C.red : C.grn }}>Days Since RFQ</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: daysOld > 7 ? C.red : C.grn }}>Days Since Lead</div>
               </div>
               {days !== null && (
                 <div style={{ flex: 1, background: days <= 3 ? C.grnB : days <= 7 ? C.yelB : C.redB, border: `1px solid ${days <= 3 ? C.grnBdr : days <= 7 ? C.yelBdr : C.redBdr}`, borderRadius: 8, padding: "10px 14px", textAlign: "center" }}>
@@ -2550,7 +2550,7 @@ function ReportBuilderModal({ editing, role, username, onSave, onClose }) {
 }
 
 // ── DASHBOARD METRICS COMPONENT ──────────────────────────────────────────────
-function DashboardMetrics({ jobs, reqs, onOpenReport, rfqStageFilter, setRfqStageFilter }) {
+function DashboardMetrics({ jobs, reqs, onOpenReport, leadStageFilter, setLeadStageFilter }) {
   const now = new Date();
   const thisYear = now.getFullYear();
 
@@ -2565,9 +2565,9 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, rfqStageFilter, setRfqStag
   const [period, setPeriod] = useState("ytd");
   const [showPicker, setShowPicker] = useState(false);
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
-  const [showRfqMenu, setShowRfqMenu] = useState(false);
+  const [showLeadMenu, setShowLeadMenu] = useState(false);
 
-  const STAGES_DASH = ["RFQ Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+  const STAGES_DASH = ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const [customStart, setCustomStart] = useState(() => `${thisYear}-01-01`);
   const [customEnd, setCustomEnd] = useState(() => now.toISOString().slice(0, 10));
 
@@ -2653,7 +2653,7 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, rfqStageFilter, setRfqStag
       <div className="dash-period">
         <button
           style={{ ...mkBtn("primary"), background: C.acc, color: "#fff", border: "none", width: "100%", justifyContent: "space-between", padding: "10px 14px", fontSize: 14 }}
-          onClick={() => { setShowPeriodMenu(!showPeriodMenu); setShowRfqMenu(false); }}
+          onClick={() => { setShowPeriodMenu(!showPeriodMenu); setShowLeadMenu(false); }}
         >
           <span style={{ fontWeight: 700, flex: 1, minWidth: 0, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{period === "custom" ? `Filter: ${customStart} → ${customEnd}` : `Filter: ${periodLabel}`}</span>
           <span className="filter-helper-text" style={{ fontSize: 11, opacity: 0.9, flexShrink: 0, marginLeft: 8 }}>Click to change Filter ▾</span>
@@ -2685,7 +2685,7 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, rfqStageFilter, setRfqStag
             { l: "Revenue Won", v: fmt(cur.rev), s: `${cur.wonN} jobs`, c: C.grn, cv: cur.rev, pv: prev.rev, report: "rev-by-month" },
             { l: "Pipeline", v: fmt(cur.pipe), s: `${cur.subN} open`, c: C.blue, cv: cur.pipe, pv: prev.pipe, report: "pipeline-summary" },
             { l: "Win Rate", v: cur.wr + "%", s: "closed jobs", c: C.acc, cv: cur.wr, pv: prev.wr, report: "win-loss" },
-            { l: "Open RFQs", v: cur.rn, s: "need quotes", c: C.ora, cv: cur.rn, pv: prev.rn, report: "rfq-response" },
+            { l: "Open Leads", v: cur.rn, s: "need quotes", c: C.ora, cv: cur.rn, pv: prev.rn, report: "lead-response" },
           ].map(x => (
             <Card key={x.l} style={{ marginBottom: 0, position: "relative", cursor: "pointer", transition: "box-shadow .15s", display: "flex", flexDirection: "column", height: "100%" }}
               onClick={() => onOpenReport && onOpenReport(x.report)}
@@ -2817,20 +2817,20 @@ function RecentQuotesCard({ jobs, openEdit, setView, onBack }) {
   );
 }
 
-// ── RFQ DASHBOARD CARD ────────────────────────────────────────────────────────
-function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, rfqStageFilter, onBack }) {
-  const STAGES_DASH = ["RFQ Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+// ── Lead DASHBOARD CARD ────────────────────────────────────────────────────────
+function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, leadStageFilter, onBack }) {
+  const STAGES_DASH = ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const stageColors = ["#b86b0a", "#2563eb", "#0d9488", "#7c3aed", "#16a34a"];
-  const [expandedRfq, setExpandedRfq] = useState(null);
+  const [expandedLead, setExpandedLead] = useState(null);
   const [promptInfo, setPromptInfo] = useState(null);
 
   function applyProgress() {
     if (!promptInfo) return;
-    const { rfqId, newStage, note, date } = promptInfo;
+    const { leadId, newStage, note, date } = promptInfo;
     setJobFolders(prev => {
-      const f = prev[rfqId] || { stage: 0, lastActivity: "", estimatorNotes: "", customChecks: [], timelines: [], attachments: [] };
+      const f = prev[leadId] || { stage: 0, lastActivity: "", estimatorNotes: "", customChecks: [], timelines: [], attachments: [] };
       const timelines = note.trim() ? [...(f.timelines || []), { id: Math.random().toString(36).substring(2, 9), date, note }] : (f.timelines || []);
-      return { ...prev, [rfqId]: { ...f, stage: newStage, lastActivity: date, timelines } };
+      return { ...prev, [leadId]: { ...f, stage: newStage, lastActivity: date, timelines } };
     });
     setPromptInfo(null);
   }
@@ -2841,7 +2841,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
   const filteredReqs = pendingReqs.filter(r => {
     const folder = jobFolders[r.id];
     const stage = folder ? (folder.stage ?? 0) : 0;
-    const stageOk = rfqStageFilter === "all" || String(stage) === rfqStageFilter;
+    const stageOk = leadStageFilter === "all" || String(stage) === leadStageFilter;
     return stageOk;
   });
 
@@ -2865,27 +2865,27 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
             ← Back to Performance Metrics
           </button>
         )}
-        <button style={{ ...mkBtn("ghost"), fontSize: 11, padding: "4px 10px" }} onClick={() => setView("rfqs")}>View All RFQs</button>
+        <button style={{ ...mkBtn("ghost"), fontSize: 11, padding: "4px 10px" }} onClick={() => setView("leads")}>View All Leads</button>
       </div>
       <div style={{ position: "relative", marginBottom: 15 }}>
         <button
           style={{ ...mkBtn("primary"), background: C.acc, color: "#fff", border: "none", width: "100%", justifyContent: "space-between", padding: "10px 14px", fontSize: 14 }}
-          onClick={() => { setExpandedRfq(p => p === "filterMenu" ? null : "filterMenu"); }}
+          onClick={() => { setExpandedLead(p => p === "filterMenu" ? null : "filterMenu"); }}
         >
-          <span style={{ fontWeight: 700, flex: 1, minWidth: 0, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{rfqStageFilter === "all" ? "Filter: All Requests" : `Filter: ${STAGES_DASH[Number(rfqStageFilter)]}`}</span>
+          <span style={{ fontWeight: 700, flex: 1, minWidth: 0, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{leadStageFilter === "all" ? "Filter: All Requests" : `Filter: ${STAGES_DASH[Number(leadStageFilter)]}`}</span>
           <span style={{ fontSize: 11, opacity: 0.9, flexShrink: 0, marginLeft: 8 }}>Click to change Filter ▾</span>
         </button>
-        {expandedRfq === "filterMenu" && (
+        {expandedLead === "filterMenu" && (
           <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100, background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 6, padding: 8, display: "flex", flexDirection: "column", gap: 4, width: "100%", marginTop: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
-            <button onClick={() => { setRfqStageFilter("all"); setExpandedRfq(null); }} style={{ background: rfqStageFilter === "all" ? C.bg : "transparent", color: rfqStageFilter === "all" ? C.acc : C.txtM, border: "none", borderRadius: 5, padding: "8px 11px", fontSize: 13, cursor: "pointer", fontFamily: "inherit", fontWeight: rfqStageFilter === "all" ? 700 : 500, textAlign: "left" }}>All Requests</button>
+            <button onClick={() => { setLeadStageFilter("all"); setExpandedLead(null); }} style={{ background: leadStageFilter === "all" ? C.bg : "transparent", color: leadStageFilter === "all" ? C.acc : C.txtM, border: "none", borderRadius: 5, padding: "8px 11px", fontSize: 13, cursor: "pointer", fontFamily: "inherit", fontWeight: leadStageFilter === "all" ? 700 : 500, textAlign: "left" }}>All Requests</button>
             {STAGES_DASH.map((s, i) => (
-              <button key={i} onClick={() => { setRfqStageFilter(String(i)); setExpandedRfq(null); }} style={{ background: rfqStageFilter === String(i) ? C.bg : "transparent", color: rfqStageFilter === String(i) ? C.acc : C.txtM, border: "none", borderRadius: 5, padding: "8px 11px", fontSize: 13, cursor: "pointer", fontFamily: "inherit", fontWeight: rfqStageFilter === String(i) ? 700 : 500, textAlign: "left" }}>{s}</button>
+              <button key={i} onClick={() => { setLeadStageFilter(String(i)); setExpandedLead(null); }} style={{ background: leadStageFilter === String(i) ? C.bg : "transparent", color: leadStageFilter === String(i) ? C.acc : C.txtM, border: "none", borderRadius: 5, padding: "8px 11px", fontSize: 13, cursor: "pointer", fontFamily: "inherit", fontWeight: leadStageFilter === String(i) ? 700 : 500, textAlign: "left" }}>{s}</button>
             ))}
           </div>
         )}
       </div>
 
-      {/* RFQ rows */}
+      {/* Lead rows */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {filteredReqs.length === 0 && (
           <div style={{ fontSize: 12, color: C.txtS, padding: "10px 0", textAlign: "center" }}>No requests match the selected filters.</div>
@@ -2894,18 +2894,18 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
           const folder = jobFolders[r.id];
           const stage = folder ? (folder.stage ?? 0) : 0;
           const lastAct = folder?.lastActivity || r.date || "";
-          const rfqDate = new Date(r.date || Date.now());
+          const leadDate = new Date(r.date || Date.now());
           const actDate = new Date(lastAct || Date.now());
           const todayD = new Date();
-          const daysRfq = Math.floor((todayD - rfqDate) / 86400000);
+          const daysLead = Math.floor((todayD - leadDate) / 86400000);
           const daysAct = Math.floor((todayD - actDate) / 86400000);
           const linkedQ = jobs.find(q => q.fromReqId === r.id);
-          const isExp = expandedRfq === r.id;
+          const isExp = expandedLead === r.id;
 
           return (
-            <div key={listKey("rfq-row", r, i)} style={{ background: C.bg, borderRadius: 8, border: `1px solid ${isExp ? C.accB : C.bdr}`, overflow: "hidden", transition: "border .15s" }}>
+            <div key={listKey("lead-row", r, i)} style={{ background: C.bg, borderRadius: 8, border: `1px solid ${isExp ? C.accB : C.bdr}`, overflow: "hidden", transition: "border .15s" }}>
               {/* Collapsed row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer", flexWrap: "wrap" }} onClick={() => setExpandedRfq(isExp ? null : r.id)}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer", flexWrap: "wrap" }} onClick={() => setExpandedLead(isExp ? null : r.id)}>
                 <div style={{ width: 22, height: 22, borderRadius: "50%", background: isExp ? C.acc : C.bdr, color: isExp ? "#fff" : C.txtM, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, transition: "all .15s" }}>{isExp ? "▾" : "▸"}</div>
                 <div style={{ flex: 1, minWidth: 140 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{r.company}</div>
@@ -2938,7 +2938,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
                               {i < STAGES_DASH.length - 1 && <div style={{ position: "absolute", top: 14, left: "50%", right: "-50%", height: 2, background: done ? color : C.bdr, zIndex: 0 }} />}
                               <button
                                 title={s}
-                                onClick={(e) => { e.stopPropagation(); setPromptInfo({ rfqId: r.id, newStage: i, note: `Moved to stage: ${s}`, date: new Date().toISOString().slice(0, 10) }); }}
+                                onClick={(e) => { e.stopPropagation(); setPromptInfo({ leadId: r.id, newStage: i, note: `Moved to stage: ${s}`, date: new Date().toISOString().slice(0, 10) }); }}
                                 style={{ width: 28, height: 28, borderRadius: "50%", border: `2px solid ${active || done ? color : C.bdr}`, background: active || done ? color : C.sur, color: active || done ? "#fff" : C.txtS, fontSize: 11, fontWeight: 800, zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
                               >
                                 {done ? "✓" : i + 1}
@@ -2951,7 +2951,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
                     </div>
                     {/* Day badges */}
                     <div style={{ display: "flex", gap: 8 }}>
-                      {dayBadge("Days Since RFQ", daysRfq, 7)}
+                      {dayBadge("Days Since Lead", daysLead, 7)}
                       {dayBadge("Days Since Activity", daysAct, 3)}
                     </div>
                   </div>
@@ -2969,7 +2969,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
                         <div><div style={{ fontSize: 10, color: C.txtS }}>Hauling</div><div style={{ fontWeight: 600, fontSize: 13, color: C.purp }}>{fmt(linkedQ.hauling || 0)}</div></div>
                         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
                           <button style={{ ...mkBtn("outline"), fontSize: 11, padding: "4px 10px" }} onClick={() => openEdit(linkedQ)}>Open Quote</button>
-                          <button style={{ background: "#1c1f26", color: "#9ca3af", border: "1px solid #374151", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => setDeadModal && setDeadModal({ type: "rfq", item: r })}>Mark Dead</button>
+                          <button style={{ background: "#1c1f26", color: "#9ca3af", border: "1px solid #374151", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => setDeadModal && setDeadModal({ type: "lead", item: r })}>Mark Dead</button>
                         </div>
                       </div>
                     </div>
@@ -2978,7 +2978,7 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
                       <span style={{ fontSize: 12, color: C.txtS }}>No quote yet.</span>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button style={{ ...mkBtn("blue"), fontSize: 11, padding: "4px 11px" }} onClick={() => openNew(r)}>Create Quote →</button>
-                        <button style={{ background: "#1c1f26", color: "#9ca3af", border: "1px solid #374151", borderRadius: 6, padding: "4px 11px", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => setDeadModal && setDeadModal({ type: "rfq", item: r })}>Mark Dead</button>
+                        <button style={{ background: "#1c1f26", color: "#9ca3af", border: "1px solid #374151", borderRadius: 6, padding: "4px 11px", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => setDeadModal && setDeadModal({ type: "lead", item: r })}>Mark Dead</button>
                       </div>
                     </div>
                   )}
@@ -3012,9 +3012,9 @@ function RFQDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNe
   );
 }
 
-// ── RFQ LIST VIEW ─────────────────────────────────────────────────────────────
-function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setShowRM, setDeadModal, deleteRfq, reopenRfq, persistReq }) {
-  const [rfqView, setRfqView] = useState("active"); // active | all | dead
+// ── Lead LIST VIEW ─────────────────────────────────────────────────────────────
+function LeadListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setShowRM, setDeadModal, deleteLead, reopenLead, persistReq }) {
+  const [leadView, setLeadView] = useState("active"); // active | all | dead
   const [layoutMode, setLayoutMode] = useState("list"); // list | card
   const [toggleMsg, setToggleMsg] = useState("");
 
@@ -3022,13 +3022,13 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
     const updated = { ...r, active: active ? 1 : 0 };
     setReqs(prev => prev.map(x => x.id === r.id ? updated : x));
     if (persistReq) persistReq(updated);
-    setToggleMsg(active ? "Adding this RFQ to ACTIVE status...." : "Removing this from ACTIVE status....");
+    setToggleMsg(active ? "Adding this Lead to ACTIVE status...." : "Removing this from ACTIVE status....");
     setTimeout(() => setToggleMsg(""), 2000);
   };
 
-  const filtered = (rfqView === "active"
+  const filtered = (leadView === "active"
     ? reqs.filter(r => r.active)
-    : rfqView === "dead"
+    : leadView === "dead"
       ? reqs.filter(r => !r.active)
       : reqs).sort((a, b) => new Date(b.date || "1970-01-01").getTime() - new Date(a.date || "1970-01-01").getTime());
 
@@ -3077,8 +3077,8 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
           </div>
           <div style={{ display: "flex", gap: 3, background: C.acc, border: `1px solid ${C.acc}`, borderRadius: 8, padding: 3 }}>
             {[["active", "Active"], ["all", "All"], ["dead", "Quoted / Dead"]].map(([v, l]) => (
-              <button key={v} onClick={() => setRfqView(v)}
-                style={{ background: rfqView === v ? "#fff" : "transparent", color: rfqView === v ? C.acc : "#fff", border: "none", borderRadius: 6, padding: "5px 14px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 700, whiteSpace: "nowrap" }}>
+              <button key={v} onClick={() => setLeadView(v)}
+                style={{ background: leadView === v ? "#fff" : "transparent", color: leadView === v ? C.acc : "#fff", border: "none", borderRadius: 6, padding: "5px 14px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 700, whiteSpace: "nowrap" }}>
                 {l}
               </button>
             ))}
@@ -3090,7 +3090,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
       <div style={{ display: layoutMode === "card" ? "grid" : "flex", gridTemplateColumns: layoutMode === "card" ? "repeat(auto-fill, minmax(320px, 1fr))" : undefined, flexDirection: layoutMode === "card" ? undefined : "column", gap: 10, alignItems: "stretch" }}>
         {filtered.length === 0 && (
           <Card style={{ textAlign: "center", color: C.txtS, padding: 40 }}>
-            {rfqView === "active" ? "No active RFQs — all requests have been quoted or closed." : "No requests found."}
+            {leadView === "active" ? "No active Leads — all requests have been quoted or closed." : "No requests found."}
           </Card>
         )}
         {filtered.map((r, i) => {
@@ -3100,7 +3100,7 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
           const bg = r.active ? "#f0fdf4" : (isDead ? "#111318" : C.sur);
           const bdr = r.active ? `1px solid ${C.bdr}` : (isDead ? `1px solid #374151` : `1px solid ${C.bdr}`);
           return (
-            <Card key={listKey("rfq-card", r, i)} style={{ marginBottom: 0, opacity: (!r.active && isDead) ? 0.75 : 1, background: bg, border: bdr, display: "flex", flexDirection: "column", height: "100%" }}>
+            <Card key={listKey("lead-card", r, i)} style={{ marginBottom: 0, opacity: (!r.active && isDead) ? 0.75 : 1, background: bg, border: bdr, display: "flex", flexDirection: "column", height: "100%" }}>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: layoutMode === "card" ? "stretch" : "flex-start", flex: 1, flexDirection: layoutMode === "card" ? "column" : "row" }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 3 }}>
@@ -3135,12 +3135,12 @@ function RFQListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setSh
                   {!isDead && !isQuoted && <>
                     <button style={{ ...mkBtn("ghost"), fontSize: 11, padding: "4px 9px" }} onClick={() => { setEditR(r); setShowRM(true); }}>Edit</button>
                     <button style={{ ...mkBtn("blue"), fontSize: 11, padding: "4px 9px" }} onClick={() => openNew(r)}>Create Quote →</button>
-                    <button style={{ background: "#1c1f26", color: "#9ca3af", border: "1px solid #374151", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => setDeadModal({ type: "rfq", item: r })}>Mark Dead</button>
+                    <button style={{ background: "#1c1f26", color: "#9ca3af", border: "1px solid #374151", borderRadius: 6, padding: "4px 9px", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => setDeadModal({ type: "lead", item: r })}>Mark Dead</button>
                   </>}
                   {isDead && (
-                    <button style={{ ...mkBtn("ghost"), fontSize: 11, padding: "4px 9px" }} onClick={() => reopenRfq(r)}>Reopen</button>
+                    <button style={{ ...mkBtn("ghost"), fontSize: 11, padding: "4px 9px" }} onClick={() => reopenLead(r)}>Reopen</button>
                   )}
-                  <button style={{ ...mkBtn("danger"), fontSize: 11, padding: "4px 9px" }} onClick={() => deleteRfq(r.id)}>Delete</button>
+                  <button style={{ ...mkBtn("danger"), fontSize: 11, padding: "4px 9px" }} onClick={() => deleteLead(r.id)}>Delete</button>
                 </div>
               </div>
             </Card>
@@ -3624,9 +3624,9 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
     return jobs
       .filter(q => q.is_master_job)
       .map(q => {
-        const rfq = reqs.find(r => r.id === q.fromReqId);
-        const folder = rfq ? jobFolders[rfq.id] : null;
-        const STAGES = ["RFQ Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+        const lead = reqs.find(r => r.id === q.fromReqId);
+        const folder = lead ? jobFolders[lead.id] : null;
+        const STAGES = ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
         const stage = folder?.stage ?? null;
         return {
           id: q.id,
@@ -3635,18 +3635,18 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
           quoteNum: q.qn || "",
           client: q.client || "",
           desc: q.desc || q.jobDesc || q.job_description || "",
-          jobSite: q.jobSite || rfq?.jobSite || "",
+          jobSite: q.jobSite || lead?.jobSite || "",
           estimator: q.estimator || q.salesAssoc || "—",
           startDate: q.startDate || q.start_date || "",
           compDate: q.compDate || q.end_date || "",
           date: q.date || "",
           total: parseFloat(q.total) || 0,
-          rfqId: rfq?.id || null,
+          leadId: lead?.id || null,
           stageName: stage !== null ? STAGES[stage] : "—",
           attachments: q.attachments || [],
           folderAttachments: folder?.attachments || [],
           quote: q,
-          rfq: rfq || null,
+          lead: lead || null,
         };
       });
   }, [jobs, reqs, jobFolders]);
@@ -3808,9 +3808,9 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
                           onClick={() => openEdit(j.quote)}>
                           📋 Quote
                         </button>
-                        {j.rfq && (
+                        {j.lead && (
                           <button style={{ ...mkBtn("outline"), fontSize: 10, padding: "3px 8px", whiteSpace: "nowrap" }}
-                            onClick={() => setShowJFM(j.rfq)}>
+                            onClick={() => setShowJFM(j.lead)}>
                             📁 Job Folder
                           </button>
                         )}
@@ -3897,7 +3897,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
             </div>
             <div style={{ padding: "16px 20px", borderTop: `1px solid ${C.bdr}`, display: "flex", gap: 12, background: "#f8fafc" }}>
               <button style={{ ...mkBtn("outline"), flex: 1, padding: "12px", borderRadius: 10 }} onClick={() => { setMobileModalJob(null); openEdit(mobileModalJob.quote); }}>📋 Quote</button>
-              {mobileModalJob.rfq && <button style={{ ...mkBtn("primary"), flex: 1, padding: "12px", borderRadius: 10 }} onClick={() => { setMobileModalJob(null); setShowJFM(mobileModalJob.rfq); }}>📁 Job Folder</button>}
+              {mobileModalJob.lead && <button style={{ ...mkBtn("primary"), flex: 1, padding: "12px", borderRadius: 10 }} onClick={() => { setMobileModalJob(null); setShowJFM(mobileModalJob.lead); }}>📁 Job Folder</button>}
             </div>
           </div>
         </div>
@@ -4179,7 +4179,7 @@ function ActionBtns({ onFromReq, onNew, onNewLead, onAddLead }) {
 }
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
-function RFQModal({ init, onSave, onClose, appUsers = [], custData = {}, setCustData, jobs = [], profileUser, role, reqs = [] }) {
+function LeadModal({ init, onSave, onClose, appUsers = [], custData = {}, setCustData, jobs = [], profileUser, role, reqs = [] }) {
   const blank = useMemo(() => {
     let estimator = "";
     if (profileUser && (profileUser.roles || [profileUser.role]).includes("estimator")) {
@@ -4376,7 +4376,7 @@ function RFQModal({ init, onSave, onClose, appUsers = [], custData = {}, setCust
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div><div style={{ fontSize: 11, color: C.txtS, textTransform: "uppercase", letterSpacing: 1 }}>New Lead / RFQ</div><div style={{ fontSize: 17, fontWeight: 700 }}>{f.rn}</div></div>
+          <div><div style={{ fontSize: 11, color: C.txtS, textTransform: "uppercase", letterSpacing: 1 }}>New Lead / Lead</div><div style={{ fontSize: 17, fontWeight: 700 }}>{f.rn}</div></div>
           <button className="app-modal-close" onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: C.txtS }}>×</button>
         </div>
 
@@ -4637,11 +4637,11 @@ function ClockBadge({ label, days, alertThresh }) {
   );
 }
 
-function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq, onCreateEstimate, appUsers = [], globalChecklist, onUpdateGlobalChecklist, linkedQuote = null, liftTonThreshold = 10 }) {
+function JobFolderModal({ lead, folder, onSave, onClose, onMarkDead, onUpdateLead, onCreateEstimate, appUsers = [], globalChecklist, onUpdateGlobalChecklist, linkedQuote = null, liftTonThreshold = 10 }) {
   const today = new Date();
-  const rfqDate = new Date(rfq.start_date || today);
-  const daysSinceRfq = Math.floor((today - rfqDate) / 86400000);
-  const blank = { estimatorNotes: "", timelines: [], stage: 0, customChecks: globalChecklist.map(c => ({ ...c, checked: false })), lastActivity: rfq.start_date || today.toISOString().slice(0, 10), attachments: [] };
+  const leadDate = new Date(lead.start_date || today);
+  const daysSinceLead = Math.floor((today - leadDate) / 86400000);
+  const blank = { estimatorNotes: "", timelines: [], stage: 0, customChecks: globalChecklist.map(c => ({ ...c, checked: false })), lastActivity: lead.start_date || today.toISOString().slice(0, 10), attachments: [] };
   const init = folder || blank;
   const [estimatorNotes, setEstimatorNotes] = useState(init.estimatorNotes || "");
   const [timelines, setTimelines] = useState(init.timelines || []);
@@ -4650,12 +4650,12 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
   const [attachments, setAttachments] = useState(init.attachments || []);
   const [newTL, setNewTL] = useState({ date: today.toISOString().slice(0, 10), note: "" });
   const fileInputRef = useRef();
-  const lastActivityDate = new Date(init.lastActivity || rfq.start_date || today);
+  const lastActivityDate = new Date(init.lastActivity || lead.start_date || today);
   const daysSinceActivity = Math.floor((today - lastActivityDate) / 86400000);
-  const STAGES = ["RFQ Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+  const STAGES = ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const stageColors = ["#b86b0a", "#2563eb", "#0d9488", "#7c3aed", "#16a34a"];
-  const [editingRfq, setEditingRfq] = useState(false);
-  const [rfqEdits, setRfqEdits] = useState({ requester: rfq.requester || "", phone: rfq.phone || "", email: rfq.email || "", jobSite: rfq.jobSite || "", desc: rfq.job_description || "", salesAssoc: rfq.salesAssoc || "", date: rfq.start_date || "" });
+  const [editingLead, setEditingLead] = useState(false);
+  const [leadEdits, setLeadEdits] = useState({ requester: lead.requester || "", phone: lead.phone || "", email: lead.email || "", jobSite: lead.jobSite || "", desc: lead.job_description || "", salesAssoc: lead.salesAssoc || "", date: lead.start_date || "" });
   const [promptInfo, setPromptInfo] = useState(null);
   const [mobilePage, setMobilePage] = useState(1);
 
@@ -4667,11 +4667,11 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
     }
     setPromptInfo(null);
   };
-  const ue = (k, v) => setRfqEdits(p => ({ ...p, [k]: v }));
-  const saveRfqEdits = () => { if (onUpdateRfq) onUpdateRfq({ ...rfq, ...rfqEdits }); setEditingRfq(false); };
+  const ue = (k, v) => setLeadEdits(p => ({ ...p, [k]: v }));
+  const saveLeadEdits = () => { if (onUpdateLead) onUpdateLead({ ...lead, ...leadEdits }); setEditingLead(false); };
   const addTimeline = () => { if (!newTL.note.trim()) return; setTimelines(prev => [...prev, { id: uid(), ...newTL }]); setNewTL({ date: today.toISOString().slice(0, 10), note: "" }); };
   const toggleCheck = (id) => setCustomChecks(prev => prev.map(c => c.id === id ? { ...c, checked: !c.checked } : c));
-  const handleSave = () => onSave(rfq.id, { estimatorNotes, timelines, stage, customChecks, attachments, lastActivity: today.toISOString().slice(0, 10) });
+  const handleSave = () => onSave(lead.id, { estimatorNotes, timelines, stage, customChecks, attachments, lastActivity: today.toISOString().slice(0, 10) });
 
   const addAttachments = (e) => {
     const files = Array.from(e.target.files);
@@ -4688,7 +4688,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
     if (!printDiv) return;
     const w = window.open("", "_blank", "width=900,height=700");
     w.document.write(`
-      <html><head><title>Job Folder - ${rfq.company}</title>
+      <html><head><title>Job Folder - ${lead.company}</title>
       <style>
         @page { size: letter; margin: 0.5in; }
         body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1c1f26; margin:0; }
@@ -4733,11 +4733,11 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
         <div style={{ padding: "16px 24px", borderBottom: `1px solid ${C.bdr}`, background: C.accL, borderTopLeftRadius: 12, borderTopRightRadius: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: 10, color: C.acc, textTransform: "uppercase", fontWeight: 800, letterSpacing: 1.2 }}>Job Folder — Estimator Prep Form</div>
-            <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>{rfq.company}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>{lead.company}</div>
           </div>
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
             {/* Clock badges in top-right */}
-            <ClockBadge label="Since RFQ" days={daysSinceRfq} alertThresh={7} />
+            <ClockBadge label="Since Lead" days={daysSinceLead} alertThresh={7} />
             <ClockBadge label="Since Activity" days={daysSinceActivity} alertThresh={3} />
             <div style={{ width: 1, height: 40, background: C.bdr, margin: "0 4px" }} />
             <button style={{ ...mkBtn("ghost"), padding: "5px 12px", fontSize: 12 }} onClick={handlePrint}>Print</button>
@@ -4782,22 +4782,22 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
           </div>
 
           <div className={`jfm-page1 ${mobilePage !== 1 ? "jfm-hide-mobile" : ""}`} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {/* ROW 1: RFQ Info + Description side by side */}
+            {/* ROW 1: Lead Info + Description side by side */}
             <div className="jfm-grid-responsive" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 18 }}>
-              {/* LEFT: RFQ Info — view or edit mode */}
+              {/* LEFT: Lead Info — view or edit mode */}
               <div style={{ background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "12px 14px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 9, color: C.acc, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1 }}>RFQ Information</div>
-                  {!editingRfq
-                    ? <button onClick={() => setEditingRfq(true)} style={{ background: "none", border: `1px solid ${C.bdr}`, borderRadius: 4, padding: "2px 8px", fontSize: 10, color: C.txtS, cursor: "pointer", fontFamily: "inherit" }}>✏ Edit</button>
+                  <div style={{ fontSize: 9, color: C.acc, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1 }}>Lead Information</div>
+                  {!editingLead
+                    ? <button onClick={() => setEditingLead(true)} style={{ background: "none", border: `1px solid ${C.bdr}`, borderRadius: 4, padding: "2px 8px", fontSize: 10, color: C.txtS, cursor: "pointer", fontFamily: "inherit" }}>✏ Edit</button>
                     : <div style={{ display: "flex", gap: 5 }}>
-                      <button onClick={saveRfqEdits} style={{ ...mkBtn("primary"), padding: "2px 9px", fontSize: 10 }}>Save</button>
-                      <button onClick={() => setEditingRfq(false)} style={{ ...mkBtn("ghost"), padding: "2px 8px", fontSize: 10 }}>Cancel</button>
+                      <button onClick={saveLeadEdits} style={{ ...mkBtn("primary"), padding: "2px 9px", fontSize: 10 }}>Save</button>
+                      <button onClick={() => setEditingLead(false)} style={{ ...mkBtn("ghost"), padding: "2px 8px", fontSize: 10 }}>Cancel</button>
                     </div>
                   }
                 </div>
 
-                {editingRfq ? (
+                {editingLead ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {[
                       { k: "Date", field: "date", type: "date" },
@@ -4808,13 +4808,13 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
                     ].map(({ k, field, type }) => (
                       <div key={field} style={{ display: "flex", gap: 6, alignItems: "center" }}>
                         <div style={{ fontSize: 10, color: C.txtS, fontWeight: 700, width: 72, flexShrink: 0 }}>{k}</div>
-                        <input type={type} value={rfqEdits[field] || ""} onChange={e => ue(field, e.target.value)}
+                        <input type={type} value={leadEdits[field] || ""} onChange={e => ue(field, e.target.value)}
                           style={{ ...inp, fontSize: 11, padding: "4px 7px", flex: 1 }} />
                       </div>
                     ))}
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <div style={{ fontSize: 10, color: C.txtS, fontWeight: 700, width: 72, flexShrink: 0 }}>Estimator</div>
-                      <select value={rfqEdits.salesAssoc || ""} onChange={e => ue("salesAssoc", e.target.value)}
+                      <select value={leadEdits.salesAssoc || ""} onChange={e => ue("salesAssoc", e.target.value)}
                         style={{ ...sel, flex: 1, fontSize: 11, padding: "4px 7px" }}>
                         <option value="">Unassigned</option>
                         {appUsers.filter(u => u.role === "estimator").map(u => (
@@ -4824,19 +4824,19 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
                     </div>
                     <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
                       <div style={{ fontSize: 10, color: C.txtS, fontWeight: 700, width: 72, flexShrink: 0, marginTop: 5 }}>Description</div>
-                      <textarea value={rfqEdits.desc || ""} onChange={e => ue("desc", e.target.value)}
+                      <textarea value={leadEdits.desc || ""} onChange={e => ue("desc", e.target.value)}
                         style={{ ...inp, fontSize: 11, padding: "4px 7px", flex: 1, height: 64, resize: "vertical" }} />
                     </div>
                   </div>
                 ) : (
                   <div>
                     {[
-                      ["RFQ #", rfq.rn],
-                      ["Date", rfq.start_date || "—"],
-                      ["Requester", rfq.requester || "—"],
-                      ["Phone", rfq.phone || "—"],
-                      ["Job Site", rfq.jobSite || "—"],
-                      ["Estimator", rfq.salesAssoc || "Unassigned"],
+                      ["Lead #", lead.rn],
+                      ["Date", lead.start_date || "—"],
+                      ["Requester", lead.requester || "—"],
+                      ["Phone", lead.phone || "—"],
+                      ["Job Site", lead.jobSite || "—"],
+                      ["Estimator", lead.salesAssoc || "Unassigned"],
                     ].map(([k, v]) => (
                       <div key={k} style={{ display: "flex", gap: 6, marginBottom: 5, alignItems: "flex-start" }}>
                         <div style={{ fontSize: 10, color: C.txtS, fontWeight: 700, width: 76, flexShrink: 0 }}>{k}</div>
@@ -4848,12 +4848,12 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
                       </div>
                     ))}
                     {/* Email requester button */}
-                    {rfq.email && (
+                    {lead.email && (
                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.bdr}` }}>
-                        <a href={`mailto:${rfq.email}?subject=Re: ${encodeURIComponent(rfq.rn + " – " + rfq.company)}`}
+                        <a href={`mailto:${lead.email}?subject=Re: ${encodeURIComponent(lead.rn + " – " + lead.company)}`}
                           onClick={e => e.stopPropagation()}
                           style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.blue, color: "#fff", borderRadius: 6, padding: "5px 13px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
-                          ✉ Email {rfq.requester || "Requester"}
+                          ✉ Email {lead.requester || "Requester"}
                         </a>
                       </div>
                     )}
@@ -4863,7 +4863,7 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
               {/* RIGHT: Description — read-only in view mode, edit handled in left panel */}
               <div style={{ background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "12px 14px" }}>
                 <div style={{ fontSize: 9, color: C.txtS, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Description</div>
-                <div style={{ fontSize: 13, color: C.txtM, lineHeight: 1.7 }}>{editingRfq ? rfqEdits.desc || "No description." : rfq.job_description || "No description."}</div>
+                <div style={{ fontSize: 13, color: C.txtM, lineHeight: 1.7 }}>{editingLead ? leadEdits.desc || "No description." : lead.job_description || "No description."}</div>
               </div>
             </div>
 
@@ -4989,18 +4989,18 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
         {/* HIDDEN PRINT AREA */}
         <div id="jfm-printable" style={{ display: "none" }}>
           <div class="header">
-            <div><div class="h1">Job Folder — {rfq.company}</div><div class="h2">{rfq.rn} · {rfq.jobSite || "No site"} · {rfq.start_date || ""}{rfq.salesAssoc ? ` · Sales: ${rfq.salesAssoc}` : ""}</div></div>
-            <div style={{ textAlign: "right" }}><div style={{ fontSize: "10px", color: "#8a93a2" }}>Printed: {today.toLocaleDateString()}</div><div style={{ fontSize: "10px", color: "#8a93a2" }}>Days since RFQ: {daysSinceRfq}</div></div>
+            <div><div class="h1">Job Folder — {lead.company}</div><div class="h2">{lead.rn} · {lead.jobSite || "No site"} · {lead.start_date || ""}{lead.salesAssoc ? ` · Sales: ${lead.salesAssoc}` : ""}</div></div>
+            <div style={{ textAlign: "right" }}><div style={{ fontSize: "10px", color: "#8a93a2" }}>Printed: {today.toLocaleDateString()}</div><div style={{ fontSize: "10px", color: "#8a93a2" }}>Days since Lead: {daysSinceLead}</div></div>
           </div>
           <div class="grid2">
             <div>
-              <div class="section"><div class="section-title">RFQ Information</div>
+              <div class="section"><div class="section-title">Lead Information</div>
                 <div class="grid3">
-                  {[["Requester", rfq.requester || "—"], ["Phone", rfq.phone || "—"], ["Job Site", rfq.jobSite || "—"]].map(([k, v]) => (
+                  {[["Requester", lead.requester || "—"], ["Phone", lead.phone || "—"], ["Job Site", lead.jobSite || "—"]].map(([k, v]) => (
                     <div class="box" key={k}><div class="lbl">{k}</div><div class="val">{v}</div></div>
                   ))}
                 </div>
-                <div style={{ marginTop: "8px" }} class="box"><div class="lbl">Description</div><div class="val" style={{ fontWeight: 400, fontSize: "11px", lineHeight: "1.5" }}>{rfq.job_description || "—"}</div></div>
+                <div style={{ marginTop: "8px" }} class="box"><div class="lbl">Description</div><div class="val" style={{ fontWeight: 400, fontSize: "11px", lineHeight: "1.5" }}>{lead.job_description || "—"}</div></div>
               </div>
               <div class="section"><div class="section-title">Custom Checklist</div>
                 <div class="checks">
@@ -5041,22 +5041,22 @@ function JobFolderModal({ rfq, folder, onSave, onClose, onMarkDead, onUpdateRfq,
         <div style={{ padding: "14px 24px", borderTop: `1px solid ${C.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: C.bg, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ fontSize: 12, color: C.txtS }}>Last saved: {init.lastActivity || "Never"}</div>
-            {rfq.status !== "Dead" && onMarkDead && (
+            {lead.status !== "Dead" && onMarkDead && (
               <button
                 style={{ background: "#1c1f26", color: "#9ca3af", border: "1px solid #374151", borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}
-                onClick={() => onMarkDead(rfq)}>
-                💀 Mark RFQ Dead
+                onClick={() => onMarkDead(lead)}>
+                💀 Mark Lead Dead
               </button>
             )}
-            {rfq.status === "Dead" && (
-              <span style={{ fontSize: 11, color: "#9ca3af", fontStyle: "italic" }}>💀 This RFQ is Dead</span>
+            {lead.status === "Dead" && (
+              <span style={{ fontSize: 11, color: "#9ca3af", fontStyle: "italic" }}>💀 This Lead is Dead</span>
             )}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
 
             {/* Create Quote button — only if no quote yet */}
-            {!linkedQuote && onCreateEstimate && rfq.status !== "Dead" && (
-              <button style={{ ...mkBtn("blue"), padding: "5px 14px", fontSize: 12 }} onClick={() => { handleSave(); onCreateEstimate(rfq); }}>
+            {!linkedQuote && onCreateEstimate && lead.status !== "Dead" && (
+              <button style={{ ...mkBtn("blue"), padding: "5px 14px", fontSize: 12 }} onClick={() => { handleSave(); onCreateEstimate(lead); }}>
                 Create Quote →
               </button>
             )}
@@ -5842,7 +5842,7 @@ function SearchResultsModal({ search, jobs, reqs, custData, onClose, onOpenQuote
         req.notes                // Additional Notes
       ].some(s => s?.toLowerCase().includes(q));
 
-      if (match) res.push({ type: 'RFQ', data: req, label: req.rn, sub: req.company, desc: `${req.job_description || req.notes} @ ${req.jobSite}` });
+      if (match) res.push({ type: 'Lead', data: req, label: req.rn, sub: req.company, desc: `${req.job_description || req.notes} @ ${req.jobSite}` });
     });
 
     // Customers
@@ -5869,7 +5869,7 @@ function SearchResultsModal({ search, jobs, reqs, custData, onClose, onOpenQuote
     return res;
   }, [q, jobs, reqs, custData]);
 
-  const T_COLORS = { Quote: C.acc, RFQ: C.blue, Customer: C.purp };
+  const T_COLORS = { Quote: C.acc, Lead: C.blue, Customer: C.purp };
 
   return (
     <div className="app-modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 800, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" }}>
@@ -5899,13 +5899,13 @@ function SearchResultsModal({ search, jobs, reqs, custData, onClose, onOpenQuote
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.bdr; e.currentTarget.style.background = C.sur; }}
                   onClick={() => {
                     if (r.type === 'Quote') onOpenQuote(r.data);
-                    else if (r.type === 'RFQ') onOpenReq(r.data);
+                    else if (r.type === 'Lead') onOpenReq(r.data);
                     else if (r.type === 'Customer') onOpenCust(r.data.name);
                     onClose();
                   }}
                 >
                   <div style={{ width: 40, height: 40, background: C.bg, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, color: T_COLORS[r.type], border: `1px solid ${C.bdr}` }}>
-                    {r.type === 'Quote' ? '📋' : r.type === 'RFQ' ? '📥' : '🏢'}
+                    {r.type === 'Quote' ? '📋' : r.type === 'Lead' ? '📥' : '🏢'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
@@ -6630,7 +6630,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("overview");
   const [showSummary, setShowSummary] = useState(false);
-  const [showDeadRfqs, setShowDeadRfqs] = useState(false);
+  const [showDeadLeads, setShowDeadLeads] = useState(false);
   const [selLoc, setSelLoc] = useState("ALL");        // "ALL" or locationId
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddLoc, setShowAddLoc] = useState(false);
@@ -6751,7 +6751,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
           {/* Summary pills */}
           {(() => {
             const custReqs = reqs.filter(r => r.company === custName);
-            const openRfqs = custReqs.filter(r => r.status !== "Dead" && r.status !== "Quoted").length;
+            const openLeads = custReqs.filter(r => r.status !== "Dead" && r.status !== "Quoted").length;
             return (
               <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
                 {[
@@ -6759,7 +6759,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
                   { l: "Won", v: won.length, c: "#16a34a" },
                   { l: "In Pipeline", v: submitted.length, c: "#2563eb" },
                   { l: "Total Billings", v: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(revenue), c: "#059669" },
-                  { l: "Open RFQs", v: openRfqs, c: openRfqs > 0 ? "#2563eb" : "#8a93a2" },
+                  { l: "Open Leads", v: openLeads, c: openLeads > 0 ? "#2563eb" : "#8a93a2" },
                   { l: "Locations", v: locations.length, c: "#7c3aed" },
                 ].map(x => (
                   <div key={x.l} style={{ background: "#f5f6f8", borderRadius: 6, padding: "5px 11px", fontSize: 12 }}>
@@ -6774,7 +6774,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
           <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
             {tabBtn("overview", "Overview", null)}
             {tabBtn("locations", "Locations", locations.length)}
-            {tabBtn("rfqs", "RFQs", reqs.filter(r => r.company === custName).length)}
+            {tabBtn("leads", "Leads", reqs.filter(r => r.company === custName).length)}
             {tabBtn("jobs", "Quotes", jobs.length)}
             {tabBtn("activity", "Activity", null)}
           </div>
@@ -7073,22 +7073,22 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
             </div>
           )}
 
-          {/* ════ RFQS TAB ════ */}
-          {tab === "rfqs" && (() => {
+          {/* ════ LeadS TAB ════ */}
+          {tab === "leads" && (() => {
             const custReqs = reqs.filter(r => r.company === custName).sort((a, b) => b.date > a.date ? 1 : -1);
             const openReqs = custReqs.filter(r => r.status !== "Dead");
             const deadReqs = custReqs.filter(r => r.status === "Dead");
 
-            const RFQ_BADGE = {
+            const Lead_BADGE = {
               "New": { bg: C.bluB, cl: C.blue, bd: C.bluBdr },
               "In Progress": { bg: C.yelB, cl: C.yel, bd: C.yelBdr },
               "Quoted": { bg: C.grnB, cl: C.grn, bd: C.grnBdr },
               "Dead": { bg: "#1c1f26", cl: "#9ca3af", bd: "#374151" },
             };
 
-            const RFQCard = ({ r }) => {
+            const LeadCard = ({ r }) => {
               const linked = jobs.find(q => q.fromReqId === r.id);
-              const st = RFQ_BADGE[r.status] || RFQ_BADGE["New"];
+              const st = Lead_BADGE[r.status] || Lead_BADGE["New"];
               const isDead = r.status === "Dead";
               return (
                 <div style={{ background: isDead ? "#111318" : C.bg, border: `1px solid ${isDead ? "#374151" : C.bdr}`, borderRadius: 8, padding: "12px 14px", opacity: isDead ? 0.75 : 1 }}>
@@ -7137,8 +7137,8 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
             if (custReqs.length === 0) return (
               <div style={{ textAlign: "center", color: C.txtS, padding: "36px 0" }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>No RFQs on record</div>
-                <div style={{ fontSize: 12 }}>RFQs submitted by this customer will appear here.</div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>No Leads on record</div>
+                <div style={{ fontSize: 12 }}>Leads submitted by this customer will appear here.</div>
               </div>
             );
 
@@ -7160,41 +7160,41 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
                   ))}
                 </div>
 
-                {/* ── ACTIVE RFQs section ── */}
+                {/* ── ACTIVE Leads section ── */}
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, paddingBottom: 6, borderBottom: `2px solid ${C.bdr}` }}>
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: C.blue, flexShrink: 0 }} />
-                    <div style={{ fontWeight: 700, fontSize: 13, color: C.txt }}>Active RFQs</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: C.txt }}>Active Leads</div>
                     <span style={{ background: C.bluB, color: C.blue, border: `1px solid ${C.bluBdr}`, borderRadius: 10, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{openReqs.length}</span>
                   </div>
                   {openReqs.length === 0 ? (
                     <div style={{ background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "16px", fontSize: 13, color: C.txtS, textAlign: "center" }}>
-                      No active RFQs — all requests have been quoted or closed.
+                      No active Leads — all requests have been quoted or closed.
                     </div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {openReqs.map((r, i) => <RFQCard key={listKey("open-rfq", r, i)} r={r} />)}
+                      {openReqs.map((r, i) => <LeadCard key={listKey("open-lead", r, i)} r={r} />)}
                     </div>
                   )}
                 </div>
 
-                {/* ── DEAD RFQs section — collapsible ── */}
+                {/* ── DEAD Leads section — collapsible ── */}
                 <div>
                   <button
-                    onClick={() => setShowDeadRfqs(d => !d)}
+                    onClick={() => setShowDeadLeads(d => !d)}
                     style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", padding: "6px 0", fontFamily: "inherit", width: "100%", borderTop: `1px solid #374151`, paddingTop: 10 }}>
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#374151", flexShrink: 0 }} />
-                    <div style={{ fontWeight: 700, fontSize: 13, color: "#6b7280" }}>Dead RFQs</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "#6b7280" }}>Dead Leads</div>
                     <span style={{ background: "#1f2937", color: "#9ca3af", border: "1px solid #374151", borderRadius: 10, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{deadReqs.length}</span>
-                    <span style={{ fontSize: 14, color: "#6b7280", marginLeft: "auto" }}>{showDeadRfqs ? "▾" : "▸"}</span>
+                    <span style={{ fontSize: 14, color: "#6b7280", marginLeft: "auto" }}>{showDeadLeads ? "▾" : "▸"}</span>
                   </button>
-                  {showDeadRfqs && deadReqs.length > 0 && (
+                  {showDeadLeads && deadReqs.length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-                      {deadReqs.map((r, i) => <RFQCard key={listKey("dead-rfq", r, i)} r={r} />)}
+                      {deadReqs.map((r, i) => <LeadCard key={listKey("dead-lead", r, i)} r={r} />)}
                     </div>
                   )}
-                  {showDeadRfqs && deadReqs.length === 0 && (
-                    <div style={{ padding: "12px 0", fontSize: 13, color: "#6b7280", textAlign: "center" }}>No dead RFQs.</div>
+                  {showDeadLeads && deadReqs.length === 0 && (
+                    <div style={{ padding: "12px 0", fontSize: 13, color: "#6b7280", textAlign: "center" }}>No dead Leads.</div>
                   )}
                 </div>
               </div>
@@ -7204,7 +7204,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
 
         {/* ════ ACTIVITY TAB ════ */}
         {tab === "activity" && (() => {
-          // Collect all timeline entries across all RFQs for this customer
+          // Collect all timeline entries across all Leads for this customer
           const custReqs = reqs.filter(r => r.company === custName);
           const allEvents = [];
 
@@ -7213,21 +7213,21 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
             const folder = jobFolders[r.id];
             if (folder?.timelines) {
               folder.timelines.forEach(tl => {
-                allEvents.push({ date: tl.date, note: tl.note, source: "timeline", rfqRn: r.rn, rfqId: r.id, color: C.blue });
+                allEvents.push({ date: tl.date, note: tl.note, source: "timeline", leadRn: r.rn, leadId: r.id, color: C.blue });
               });
             }
             // Stage changes captured as folder.stage
             if (folder?.stage > 0) {
-              const STAGES = ["RFQ Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
-              allEvents.push({ date: folder.lastActivity || r.date, note: `Progress: ${STAGES[folder.stage] || "Stage " + folder.stage}`, source: "stage", rfqRn: r.rn, rfqId: r.id, color: C.acc });
+              const STAGES = ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+              allEvents.push({ date: folder.lastActivity || r.date, note: `Progress: ${STAGES[folder.stage] || "Stage " + folder.stage}`, source: "stage", leadRn: r.rn, leadId: r.id, color: C.acc });
             }
-            // RFQ created
-            allEvents.push({ date: r.date, note: `RFQ received (${r.rn})`, source: "rfq", rfqRn: r.rn, rfqId: r.id, color: C.ora });
+            // Lead created
+            allEvents.push({ date: r.date, note: `Lead received (${r.rn})`, source: "lead", leadRn: r.rn, leadId: r.id, color: C.ora });
           });
 
           // From jobs
           jobs.forEach(q => {
-            allEvents.push({ date: q.start_date, note: `Quote ${q.job_num} — ${q.status} — $${Math.round(q.total || 0).toLocaleString()}`, source: "quote", rfqRn: null, rfqId: null, color: q.status === "Won" ? C.grn : q.status === "Lost" ? C.red : C.txtM });
+            allEvents.push({ date: q.start_date, note: `Quote ${q.job_num} — ${q.status} — $${Math.round(q.total || 0).toLocaleString()}`, source: "quote", leadRn: null, leadId: null, color: q.status === "Won" ? C.grn : q.status === "Lost" ? C.red : C.txtM });
           });
 
           // Sort newest first
@@ -7251,7 +7251,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
 
           return (
             <div>
-              <div style={{ fontSize: 12, color: C.txtS, marginBottom: 14 }}>{allEvents.length} events across all jobs and RFQs</div>
+              <div style={{ fontSize: 12, color: C.txtS, marginBottom: 14 }}>{allEvents.length} events across all jobs and Leads</div>
               {Object.keys(grouped).sort((a, b) => b > a ? 1 : -1).map(mo => (
                 <div key={mo} style={{ marginBottom: 20 }}>
                   {/* Month header */}
@@ -7275,10 +7275,10 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
                             <div style={{ fontSize: 12, fontWeight: 600, color: C.txt, flex: 1 }}>{e.note}</div>
                             <div style={{ fontSize: 10, color: C.txtS, whiteSpace: "nowrap", flexShrink: 0 }}>{e.date}</div>
                           </div>
-                          {e.rfqRn && (
+                          {e.leadRn && (
                             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
-                              <span style={{ fontSize: 10, color: C.txtS }}>RFQ:</span>
-                              <button onClick={() => { const r = custReqs.find(x => x.id === e.rfqId); if (r && onOpenJobFolder) onOpenJobFolder(r); }} style={{ background: "none", border: "none", fontSize: 10, color: C.acc, cursor: "pointer", padding: 0, fontFamily: "inherit", fontWeight: 600 }}>{e.rfqRn} ↗</button>
+                              <span style={{ fontSize: 10, color: C.txtS }}>Lead:</span>
+                              <button onClick={() => { const r = custReqs.find(x => x.id === e.leadId); if (r && onOpenJobFolder) onOpenJobFolder(r); }} style={{ background: "none", border: "none", fontSize: 10, color: C.acc, cursor: "pointer", padding: 0, fontFamily: "inherit", fontWeight: 600 }}>{e.leadRn} ↗</button>
                             </div>
                           )}
                         </div>
@@ -8461,7 +8461,7 @@ function VectorBrowser({ token }) {
   const corpus = [
     { label: "Customers", icon: "🏢", count: data?.indexedCounts?.customers ?? "—", desc: "Company profiles & contacts" },
     { label: "Quotes", icon: "📋", count: data?.indexedCounts?.quotes ?? "—", desc: "Quotes & bid history" },
-    { label: "RFQs", icon: "📩", count: data?.indexedCounts?.rfqs ?? "—", desc: "Incoming requests for quote" },
+    { label: "Leads", icon: "📩", count: data?.indexedCounts?.leads ?? "—", desc: "Incoming requests for quote" },
     { label: "Equipment", icon: "🔩", count: data?.indexedCounts?.equipment ?? "—", desc: "Rigging & equipment catalog" },
   ];
 
@@ -8635,6 +8635,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
   const [quoteStatusFilter, setQuoteStatusFilter] = useState("");
   const [editingRow, setEditingRow] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 100;
@@ -8697,8 +8698,9 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
 
   const uniqueQuoteStatuses = useMemo(() => {
     if (selectedTable !== 'quotes' && selectedTable !== 'Quotes') return [];
+    if (statusList && statusList.length > 0) return statusList.map(s => s.id);
     return Array.from(new Set(data.map(r => r.status).filter(x => x !== null && x !== undefined && x !== ''))).sort();
-  }, [data, selectedTable]);
+  }, [data, selectedTable, statusList]);
 
   const getStatusName = (val) => {
     const s = statusList.find(x => String(x.id) === String(val) || String(x.name).toLowerCase() === String(val).toLowerCase());
@@ -8766,6 +8768,41 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
       setCheckedRows(new Set());
     } catch (e) {
       alert(e.message);
+    }
+  };
+
+  const handleBulkUpdate = async (updatedData) => {
+    if (checkedRows.size === 0) return;
+    setUpdating(true);
+    if (Object.keys(updatedData).length === 0) {
+      alert("No fields provided for bulk update.");
+      setUpdating(false);
+      return;
+    }
+    if (!window.confirm(`Apply these changes to ${checkedRows.size} checked records?`)) {
+      setUpdating(false);
+      return;
+    }
+    try {
+      const ids = Array.from(checkedRows);
+      const res = await fetch(`/api/admin/tables/${selectedTable}/batch`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ ids, data: updatedData })
+      });
+      if (!res.ok) {
+        let msg = `Server error (${res.status})`;
+        try { const d = await res.json(); msg = d.error || msg; } catch {}
+        throw new Error(msg);
+      }
+      setData(prev => prev.map(r => checkedRows.has(r.id) ? { ...r, ...updatedData } : r));
+      setCheckedRows(new Set());
+      setShowBulkUpdateModal(false);
+    } catch (e) {
+      console.error("Bulk Update error:", e);
+      alert("Error updating records: " + e.message);
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -9080,15 +9117,18 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
           </div>
         )}
       </div>
-      {(editingRow || showAddModal) && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, backdropFilter: "blur(4px)" }}>
-          <Card style={{ maxWidth: 540, width: "100%", maxHeight: "85vh", overflowY: "auto", padding: 24, position: "relative", boxShadow: "0 10px 40px rgba(0,0,0,0.2)" }}>
+      {(editingRow || showAddModal || showBulkUpdateModal) && (
+        <div className="app-modal-overlay" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 24, backdropFilter: "blur(4px)", overflowY: "auto" }}>
+          <Card style={{ maxWidth: 540, width: "100%", padding: 24, position: "relative", boxShadow: "0 10px 40px rgba(0,0,0,0.2)", marginBottom: 40 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: C.acc }}>{showAddModal ? `Add record to ${selectedTable}` : `Edit record in ${selectedTable}`}</div>
-                {!showAddModal && <div style={{ fontSize: 12, color: C.txtS, marginTop: 2 }}>ID: {editingRow.id}</div>}
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.acc }}>
+                  {showBulkUpdateModal ? `Bulk Update ${checkedRows.size} Records` : showAddModal ? `Add record to ${selectedTable}` : `Edit record in ${selectedTable}`}
+                </div>
+                {!showAddModal && !showBulkUpdateModal && <div style={{ fontSize: 12, color: C.txtS, marginTop: 2 }}>ID: {editingRow.id}</div>}
+                {showBulkUpdateModal && <div style={{ fontSize: 12, color: C.txtM, marginTop: 2 }}>Only fields you fill out will be updated. Empty fields are ignored.</div>}
               </div>
-              <button onClick={() => { setEditingRow(null); setShowAddModal(false); }} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: C.txtS }}>×</button>
+              <button onClick={() => { setEditingRow(null); setShowAddModal(false); setShowBulkUpdateModal(false); }} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: C.txtS }}>×</button>
             </div>
 
             <form onSubmit={(e) => {
@@ -9097,34 +9137,44 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
               const payload = {};
               headers.forEach(h => {
                 if (h !== 'id' && h !== 'created_at' && h !== 'updated_at') {
-                  payload[h] = formData.get(h);
+                  const val = formData.get(h);
+                  if (showBulkUpdateModal && val === "") return;
+                  payload[h] = val;
                 }
               });
-              if (showAddModal) handleCreate(payload);
+              if (showBulkUpdateModal) handleBulkUpdate(payload);
+              else if (showAddModal) handleCreate(payload);
               else saveEdit(payload);
             }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {headers.filter(h => h !== 'id' && h !== 'created_at' && h !== 'updated_at').map(h => (
                   <div key={h}>
                     <Lbl c={h.replace(/_/g, ' ').toUpperCase()} />
-                    {selectedTable === 'rfqs' && h === 'customer_id' ? (
-                      <select name={h} defaultValue={editingRow ? editingRow[h] : ""} style={{ ...inp, fontSize: 12, padding: "6px 12px" }}>
+                    {selectedTable === 'leads' && h === 'customer_id' ? (
+                      <select name={h} defaultValue={(!showBulkUpdateModal && editingRow) ? editingRow[h] : ""} style={{ ...inp, fontSize: 12, padding: "6px 12px" }}>
                         <option value="">-- Select Company --</option>
                         {customersList.map(c => (
                           <option key={c.id} value={c.id}>{c.name} (ID: {c.id})</option>
                         ))}
                       </select>
-                    ) : String(editingRow ? (editingRow[h] || "") : "").length > 50 ? (
+                    ) : (selectedTable === 'quotes' || selectedTable === 'Quotes') && h === 'status' ? (
+                      <select name={h} defaultValue={(!showBulkUpdateModal && editingRow) ? editingRow[h] : ""} style={{ ...inp, fontSize: 12, padding: "6px 12px" }}>
+                        <option value="">-- Select Status --</option>
+                        {statusList.map(s => (
+                          <option key={s.id} value={s.id}>{s.name} (ID: {s.id})</option>
+                        ))}
+                      </select>
+                    ) : String((!showBulkUpdateModal && editingRow) ? (editingRow[h] || "") : "").length > 50 ? (
                       <textarea
                         name={h}
-                        defaultValue={editingRow ? editingRow[h] : ""}
+                        defaultValue={(!showBulkUpdateModal && editingRow) ? editingRow[h] : ""}
                         style={{ ...inp, minHeight: 80, fontFamily: "inherit", fontSize: 12, resize: "vertical" }}
                       />
                     ) : (
                       <input
                         name={h}
                         type="text"
-                        defaultValue={editingRow ? editingRow[h] : ""}
+                        defaultValue={(!showBulkUpdateModal && editingRow) ? editingRow[h] : ""}
                         style={{ ...inp, fontSize: 12 }}
                       />
                     )}
@@ -9134,9 +9184,9 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
 
               <div style={{ display: "flex", gap: 12, marginTop: 28 }}>
                 <button type="submit" disabled={updating} style={{ ...mkBtn("primary"), flex: 2, justifyContent: "center", padding: 12, fontWeight: 700 }}>
-                  {updating ? "Processing..." : (showAddModal ? "Create Record" : "Update Record")}
+                  {updating ? "Processing..." : (showBulkUpdateModal ? "Apply Bulk Update" : showAddModal ? "Create Record" : "Update Record")}
                 </button>
-                <button type="button" onClick={() => { setEditingRow(null); setShowAddModal(false); }} style={{ ...mkBtn("ghost"), flex: 1, justifyContent: "center", padding: 12, border: `1px solid ${C.bdr}` }}>
+                <button type="button" onClick={() => { setEditingRow(null); setShowAddModal(false); setShowBulkUpdateModal(false); }} style={{ ...mkBtn("ghost"), flex: 1, justifyContent: "center", padding: 12, border: `1px solid ${C.bdr}` }}>
                   Cancel
                 </button>
               </div>
@@ -9689,7 +9739,7 @@ function AdminPage({ token, profileUser, appUsers = [], setAppUsers, companyInfo
                 <div style={{ background: C.bg, padding: 14, borderRadius: 8, border: `1px solid ${C.bdr}` }}>
                   <div style={{ fontWeight: 700, fontSize: 13, color: C.acc, marginBottom: 8 }}>Company Baselines</div>
                   <Lbl c="Win Rate %" /><input type="number" step="0.1" style={{ ...inp, marginBottom: 8 }} value={phiConfig.win_base} onChange={e => setPhiConfig({ ...phiConfig, win_base: Number(e.target.value) })} />
-                  <Lbl c="RFQ Volume / Mo" /><input type="number" style={{ ...inp, marginBottom: 8 }} value={phiConfig.vol_base} onChange={e => setPhiConfig({ ...phiConfig, vol_base: Number(e.target.value) })} />
+                  <Lbl c="Lead Volume / Mo" /><input type="number" style={{ ...inp, marginBottom: 8 }} value={phiConfig.vol_base} onChange={e => setPhiConfig({ ...phiConfig, vol_base: Number(e.target.value) })} />
                   <Lbl c="Gross Margin %" /><input type="number" step="0.1" style={{ ...inp, marginBottom: 8 }} value={phiConfig.margin_base} onChange={e => setPhiConfig({ ...phiConfig, margin_base: Number(e.target.value) })} />
                   <Lbl c="Max Stale %" /><input type="number" step="0.1" style={{ ...inp, marginBottom: 8 }} value={phiConfig.stale_pct_base} onChange={e => setPhiConfig({ ...phiConfig, stale_pct_base: Number(e.target.value) })} />
                   <Lbl c="Response Time (Days)" /><input type="number" style={{ ...inp }} value={phiConfig.response_days_base} onChange={e => setPhiConfig({ ...phiConfig, response_days_base: Number(e.target.value) })} />
@@ -9697,7 +9747,7 @@ function AdminPage({ token, profileUser, appUsers = [], setAppUsers, companyInfo
                 <div style={{ background: C.bg, padding: 14, borderRadius: 8, border: `1px solid ${C.bdr}` }}>
                   <div style={{ fontWeight: 700, fontSize: 13, color: C.acc, marginBottom: 8 }}>Industry Benchmarks</div>
                   <Lbl c="Win Rate %" /><input type="number" step="0.1" style={{ ...inp, marginBottom: 8 }} value={phiConfig.win_ind} onChange={e => setPhiConfig({ ...phiConfig, win_ind: Number(e.target.value) })} />
-                  <Lbl c="RFQ Volume / Mo" /><input type="number" style={{ ...inp, marginBottom: 8 }} value={phiConfig.vol_ind} onChange={e => setPhiConfig({ ...phiConfig, vol_ind: Number(e.target.value) })} />
+                  <Lbl c="Lead Volume / Mo" /><input type="number" style={{ ...inp, marginBottom: 8 }} value={phiConfig.vol_ind} onChange={e => setPhiConfig({ ...phiConfig, vol_ind: Number(e.target.value) })} />
                   <Lbl c="Gross Margin %" /><input type="number" step="0.1" style={{ ...inp, marginBottom: 8 }} value={phiConfig.margin_ind} onChange={e => setPhiConfig({ ...phiConfig, margin_ind: Number(e.target.value) })} />
                   <Lbl c="Max Stale %" /><input type="number" step="0.1" style={{ ...inp, marginBottom: 8 }} value={phiConfig.stale_pct_ind} onChange={e => setPhiConfig({ ...phiConfig, stale_pct_ind: Number(e.target.value) })} />
                   <Lbl c="Response Time (Days)" /><input type="number" style={{ ...inp }} value={phiConfig.response_days_ind} onChange={e => setPhiConfig({ ...phiConfig, response_days_ind: Number(e.target.value) })} />
@@ -10351,7 +10401,7 @@ export default function App() {
   };
 
   const [profileUser, setProfileUser] = useState(null);
-  const [rfqStageFilter, setRfqStageFilter] = useState("all");
+  const [leadStageFilter, setLeadStageFilter] = useState("all");
   const [appUsers, setAppUsers] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [reqs, setReqs] = useState(SAMPLE_REQS);
@@ -10370,7 +10420,7 @@ export default function App() {
   const [showJobSiteModal, setShowJobSiteModal] = useState(false);
   const [attachModal, setAttachModal] = useState(null); // { job } for viewing all attachments
   const [adjModal, setAdjModal] = useState(null);  // quote to adjust
-  const [deadModal, setDeadModal] = useState(null);  // {type:"rfq"|"quote", item}
+  const [deadModal, setDeadModal] = useState(null);  // {type:"lead"|"quote", item}
   const [dashReportId, setDashReportId] = useState(null); // report to open when navigating from dashboard
   const [dashAcc, setDashAcc] = useState("metrics"); // current open accordion in Dashboard
   const [wonOnly, setWonOnly] = useState(false); // filter customers view
@@ -10536,7 +10586,7 @@ export default function App() {
         if (data.equipment) setEquipment(data.equipment);
         if (data.jobs && data.jobs.length > 0) {
           setJobs(data.jobs);
-          if (data.rfqs) setReqs(data.rfqs);
+          if (data.leads) setReqs(data.leads);
           if (data.leads) setLeads(data.leads);
           if (data.status) setStatusList(data.status);
           if (data.customers) setCustData(data.customers);
@@ -10553,7 +10603,7 @@ export default function App() {
             },
             body: JSON.stringify({
               jobs: SAMPLE_QUOTES,
-              rfqs: SAMPLE_REQS,
+              leads: SAMPLE_REQS,
               customers: INIT_CUST_DATA
             })
           });
@@ -10562,7 +10612,7 @@ export default function App() {
             const r2 = await fetch("/api/data", { headers: { 'Authorization': `Bearer ${token}` } });
             const d2 = await r2.json();
             setJobs(d2.jobs);
-            setReqs(d2.rfqs);
+            setReqs(d2.leads);
             setCustData(d2.customers);
             if (d2.users) setAppUsers(d2.users);
             setDbStatus("MySQL Live");
@@ -10651,7 +10701,7 @@ export default function App() {
   }
 
   function persistReq(req) {
-    fetch(`/api/rfqs/${req.id}`, {
+    fetch(`/api/leads/${req.id}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -10661,24 +10711,24 @@ export default function App() {
     })
       .then(async (res) => {
         if (!res.ok) {
-          console.error("Failed to save RFQ", await res.text());
+          console.error("Failed to save Lead", await res.text());
         }
       })
-      .catch(err => console.error("Error saving RFQ:", err));
+      .catch(err => console.error("Error saving Lead:", err));
   }
 
-  const deleteRfq = async (id) => {
-    if (!window.confirm("Are you sure you want to permanently delete this RFQ?")) return;
+  const deleteLead = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this Lead?")) return;
     try {
-      await fetch(`/api/rfqs/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      await fetch(`/api/leads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       setReqs(p => p.filter(x => x.id !== id));
     } catch (e) {
       console.error("Delete error:", e);
-      alert("Failed to delete RFQ.");
+      alert("Failed to delete Lead.");
     }
   };
 
-  const reopenRfq = (r) => {
+  const reopenLead = (r) => {
     const nr = { ...r, status: "New", deadNote: "" };
     setReqs(p => p.map(x => x.id === r.id ? nr : x));
     persistReq(nr);
@@ -10760,8 +10810,8 @@ export default function App() {
     setShowRM(false); setEditR(null);
   }
 
-  function saveJobFolder(rfqId, folder) {
-    setJobFolders(prev => ({ ...prev, [rfqId]: folder }));
+  function saveJobFolder(leadId, folder) {
+    setJobFolders(prev => ({ ...prev, [leadId]: folder }));
     setShowJFM(null);
   }
 
@@ -10773,7 +10823,7 @@ export default function App() {
   const cv = active ? calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate) : null;
   const pendN = notifs.filter(n => n.status === "Pending").length;
   const actBtns = <ActionBtns
-    onFromReq={() => setView("rfqs")}
+    onFromReq={() => setView("leads")}
     onNew={() => openNew()}
     onAddLead={() => setShowLeadModal(true)}
   />;
@@ -10924,21 +10974,21 @@ export default function App() {
           <span style={{ fontSize: 18 }}>💡</span> {SYSTEM_PROMPT}
         </div>
       )}
-      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} reqs={reqs} profileUser={profileUser} role={role} onClose={() => { setShowRM(false); setEditR(null); }} />}
-      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "rfq", item: r }); setShowJFM(null); }} onUpdateRfq={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} onClose={() => setShowJFM(null)} />}
+      {showRM && <LeadModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} reqs={reqs} profileUser={profileUser} role={role} onClose={() => { setShowRM(false); setEditR(null); }} />}
+      {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} onClose={() => setShowJFM(null)} />}
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       {deadModal && <MarkDeadModal
-        itemType={deadModal.type === "rfq" ? "RFQ" : "Job"}
-        itemLabel={deadModal.type === "rfq" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client}
+        itemType={deadModal.type === "lead" ? "Lead" : "Job"}
+        itemLabel={deadModal.type === "lead" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client}
         onConfirm={note => {
-          if (deadModal.type === "rfq") setReqs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x));
+          if (deadModal.type === "lead") setReqs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x));
           else setJobs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x));
           setDeadModal(null);
         }}
         onClose={() => setDeadModal(null)}
       />}
       {showNotifs && <NotifPanel />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a, c) => a + (c.locations?.length || 0), 0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div className="desktop-act-btns">{actBtns}</div>
         </div>
@@ -10970,7 +11020,7 @@ export default function App() {
             <div style={{ fontSize: 10, color: C.acc, fontWeight: 700, opacity: 0.6 }}>ALWAYS ACTIVE</div>
           </div>
           <div style={{ padding: 20 }}>
-            <DashboardMetrics jobs={jobs} reqs={reqs} rfqStageFilter={rfqStageFilter} setRfqStageFilter={setRfqStageFilter} onOpenReport={id => { setDashReportId(id); setView("reports"); }} />
+            <DashboardMetrics jobs={jobs} reqs={reqs} leadStageFilter={leadStageFilter} setLeadStageFilter={setLeadStageFilter} onOpenReport={id => { setDashReportId(id); setView("reports"); }} />
           </div>
         </div>
 
@@ -10984,10 +11034,10 @@ export default function App() {
 
         <AccordionCard
           title="📝 Leads"
-          isOpen={dashAcc === "rfqs"}
-          onToggle={open => setDashAcc(open ? "rfqs" : null)}
+          isOpen={dashAcc === "leads"}
+          onToggle={open => setDashAcc(open ? "leads" : null)}
         >
-          <RFQDashCard
+          <LeadDashCard
             reqs={reqs}
             jobs={jobs}
             jobFolders={jobFolders}
@@ -10997,7 +11047,7 @@ export default function App() {
             openEdit={openEdit}
             setView={setView}
             setDeadModal={setDeadModal}
-            rfqStageFilter={rfqStageFilter}
+            leadStageFilter={leadStageFilter}
             onBack={() => setDashAcc("metrics")}
           />
         </AccordionCard>
@@ -11074,33 +11124,9 @@ export default function App() {
           profileTemplate, showProfileTempl, setShowProfileTempl,
           openEdit, openNew, liftTonThreshold, globalCheck, setGlobalCheck, appUsers,
           setReqs, setJobs, jobListFilter, setJobListFilter,
-          Header, RFQModal, JobFolderModal, MarkDeadModal, CustomerModal, CompanySummaryModal, SearchResultsModal, SalesAdjustmentModal, ProfileTemplateModal
+          Header, LeadModal, JobFolderModal, MarkDeadModal, CustomerModal, CompanySummaryModal, SearchResultsModal, SalesAdjustmentModal, ProfileTemplateModal
         }}
       />
-      <Footer />
-    </div>
-  );
-
-  // ── RFQs ───────────────────────────────────────────────────────────────
-  if (view === "rfqs") return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.txt, fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize: 14 }}>
-      {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      {showRM && <RFQModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} reqs={reqs} onClose={() => { setShowRM(false); setEditR(null); }} />}
-      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "rfq", item: r }); setShowJFM(null); }} onUpdateRfq={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} onClose={() => setShowJFM(null)} />}
-      {deadModal && <MarkDeadModal
-        itemType={deadModal.type === "rfq" ? "Quote" : "Job"}
-        itemLabel={deadModal.type === "rfq" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client}
-        onConfirm={note => {
-          if (deadModal.type === "rfq") setReqs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x));
-          else setJobs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x));
-          setDeadModal(null);
-        }}
-        onClose={() => setDeadModal(null)}
-      />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a, c) => a + (c.locations?.length || 0), 0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
-      <div className="app-page-container" style={{ maxWidth: 1160 }}>
-        <RFQListView reqs={reqs} jobs={jobs} setReqs={setReqs} openNew={openNew} setShowJFM={setShowJFM} setEditR={setEditR} setShowRM={setShowRM} setDeadModal={setDeadModal} deleteRfq={deleteRfq} reopenRfq={reopenRfq} persistReq={persistReq} />
-      </div>
       <Footer />
     </div>
   );
@@ -11167,8 +11193,8 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: C.bg, color: C.txt, fontFamily: "'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize: 14 }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a, c) => a + (c.locations?.length || 0), 0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
-      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "rfq", item: r }); setShowJFM(null); }} onUpdateRfq={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} onClose={() => setShowJFM(null)} />}
-      {deadModal && <MarkDeadModal itemType={deadModal.type === "rfq" ? "RFQ" : "Job"} itemLabel={deadModal.type === "rfq" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client} onConfirm={note => { if (deadModal.type === "rfq") setReqs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x)); else setJobs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x)); setDeadModal(null); }} onClose={() => setDeadModal(null)} />}
+      {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} onClose={() => setShowJFM(null)} />}
+      {deadModal && <MarkDeadModal itemType={deadModal.type === "lead" ? "Lead" : "Job"} itemLabel={deadModal.type === "lead" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client} onConfirm={note => { if (deadModal.type === "lead") setReqs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x)); else setJobs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x)); setDeadModal(null); }} onClose={() => setDeadModal(null)} />}
       <MasterJobList
         jobs={jobs} reqs={reqs} jobFolders={jobFolders} openEdit={openEdit} setShowJFM={setShowJFM}
         onUpdateJobNum={(id, num) => setJobs(p => p.map(q => q.id === id ? { ...q, job_num: num } : q))}
@@ -11216,7 +11242,7 @@ export default function App() {
             </div>
             <div className="app-modal-actions" style={{ padding: "12px 22px", borderTop: `1px solid ${C.bdr}`, background: C.bg, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, display: "flex", gap: 8, justifyContent: "space-between" }}>
               <div style={{ display: "flex", gap: 8 }}>
-                {attachModal.rfq && <button style={{ ...mkBtn("outline"), fontSize: 11, padding: "5px 12px" }} onClick={() => { setAttachModal(null); setShowJFM(attachModal.rfq); }}>Open Job Folder</button>}
+                {attachModal.lead && <button style={{ ...mkBtn("outline"), fontSize: 11, padding: "5px 12px" }} onClick={() => { setAttachModal(null); setShowJFM(attachModal.lead); }}>Open Job Folder</button>}
                 <button style={{ ...mkBtn("ghost"), fontSize: 11, padding: "5px 12px" }} onClick={() => { setAttachModal(null); openEdit(attachModal.quote); }}>Open Quote</button>
               </div>
               <button style={mkBtn("ghost")} onClick={() => setAttachModal(null)}>Close</button>
@@ -11254,12 +11280,12 @@ export default function App() {
         onClearInitialReport={() => setTimeout(() => setDashReportId(null), 100)}
         onBack={() => { setDashReportId(null); goBack(); }}
       />
-      {showJFM && <JobFolderModal rfq={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "rfq", item: r }); setShowJFM(null); }} onUpdateRfq={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} onClose={() => setShowJFM(null)} />}
+      {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} onClose={() => setShowJFM(null)} />}
       {deadModal && <MarkDeadModal
-        itemType={deadModal.type === "rfq" ? "RFQ" : "Job"}
-        itemLabel={deadModal.type === "rfq" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client}
+        itemType={deadModal.type === "lead" ? "Lead" : "Job"}
+        itemLabel={deadModal.type === "lead" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client}
         onConfirm={note => {
-          if (deadModal.type === "rfq") setReqs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x));
+          if (deadModal.type === "lead") setReqs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x));
           else setJobs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x));
           setDeadModal(null);
         }}
@@ -11438,7 +11464,7 @@ export default function App() {
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d => { u("discounts", [...(active.discounts || []), d]); setShowDiscModal(false); }} onClose={() => setShowDiscModal(false)} />}
         {showCustDoc && <CustomerDocModal quote={{ ...active, total: cv.total }} onClose={() => setShowCustDoc(false)} />}
         {showJobSiteModal && <JobSiteModal token={token} clientName={active.client} custData={custData} onSave={site => { u("jobSites", [...(active.jobSites || []), site]); }} onClose={() => setShowJobSiteModal(false)} />}
-        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn + (active.isChangeOrder ? " (CO)" : "")} extra={
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={Object.values(custData).reduce((a, c) => a + (c.locations?.length || 0), 0)} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn + (active.isChangeOrder ? " (CO)" : "")} extra={
           <div style={{ display: "flex", gap: 5 }}>
             <button style={mkBtn("ghost")} onClick={goBack}>Cancel</button>
             {!active.locked && <button style={mkBtn("primary")} onClick={() => saveQuote()}>Save Quote</button>}
@@ -11615,13 +11641,13 @@ export default function App() {
             <Card>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <Sec c="Attachments" />
-                {/* Job Folder quick link — shown when this quote came from an RFQ */}
+                {/* Job Folder quick link — shown when this quote came from an Lead */}
                 {active.fromReqId && (() => {
-                  const linkedRfq = reqs.find(r => r.id === active.fromReqId);
-                  return linkedRfq ? (
+                  const linkedLead = reqs.find(r => r.id === active.fromReqId);
+                  return linkedLead ? (
                     <button
                       style={{ ...mkBtn("outline"), fontSize: 11, padding: "4px 11px", display: "flex", alignItems: "center", gap: 5 }}
-                      onClick={() => setShowJFM(linkedRfq)}>
+                      onClick={() => setShowJFM(linkedLead)}>
                       📁 View Job Folder
                     </button>
                   ) : null;

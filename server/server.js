@@ -150,8 +150,6 @@ async function ensureUserProfileColumns() {
     console.warn('[Schema] Ignoring quote_data column check:', e.message);
   }
 
-  // Ensure leads schema is up to date
-  await ensureLeadsTable();
 }
 
 
@@ -932,8 +930,15 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
       if (typeof val === 'object' && val !== null) {
         return JSON.stringify(val);
       }
-      if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update')) {
+      const numFields = ['labor', 'equip', 'hauling', 'travel', 'materials', 'total', 'markup', 'is_locked', 'customer_number'];
+      if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update' || k.endsWith('_id') || numFields.includes(k))) {
         return null;
+      }
+      if (table === 'quotes' && k === 'status' && typeof val === 'string') {
+        const smap = { 'lead':1, 'draft':1, 'pending':2, 'in progress':2, 'customer contact':3, 'in review':4, 'accepted':5, 'modification required':6, 'submitted':7, 'quoted':7, 'won':8, 'lost':9, 'dead':10, 'completed':11 };
+        if (smap[val.toLowerCase()]) return smap[val.toLowerCase()];
+        const num = parseInt(val, 10);
+        if (!isNaN(num)) return num;
       }
       return val;
     });
@@ -985,11 +990,18 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
       if (typeof val === 'object' && val !== null) {
         return JSON.stringify(val);
       }
-      if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update')) {
+      const numFields = ['labor', 'equip', 'hauling', 'travel', 'materials', 'total', 'markup', 'is_locked', 'customer_number'];
+      if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update' || k.endsWith('_id') || numFields.includes(k))) {
         return null;
       }
       if (table === 'admin_tasks' && k === 'subnotes' && val === '') {
         return '[]';
+      }
+      if (table === 'quotes' && k === 'status' && typeof val === 'string') {
+        const smap = { 'lead':1, 'draft':1, 'pending':2, 'in progress':2, 'customer contact':3, 'in review':4, 'accepted':5, 'modification required':6, 'submitted':7, 'quoted':7, 'won':8, 'lost':9, 'dead':10, 'completed':11 };
+        if (smap[val.toLowerCase()]) return smap[val.toLowerCase()];
+        const num = parseInt(val, 10);
+        if (!isNaN(num)) return num;
       }
       return val;
     });
@@ -1003,67 +1015,70 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
       }).catch(()=>{});
     }
 
-    if (interceptLeadAsQuote && leadRow) {
-       let customerName = '';
-       if (leadRow.customer_number) {
-         const [custName] = await db.query('SELECT name FROM customers WHERE id = ?', [leadRow.customer_number]);
-         if (custName.length > 0) customerName = custName[0].name;
-       } else if (leadRow.first_name || leadRow.last_name) {
-         customerName = `${leadRow.first_name || ''} ${leadRow.last_name || ''}`.trim();
-       }
-
-       const year = String(new Date().getFullYear());
-       const [seqRows] = await db.query(
-         `SELECT MAX(CAST(SUBSTRING_INDEX(job_num, '-', -1) AS UNSIGNED)) AS max_seq FROM quotes WHERE job_num REGEXP ?`,
-         [`^J-${year}-[0-9]{3,}$`]
-       );
-       const nextSeq = Number(seqRows?.[0]?.max_seq || 0) + 1;
-       const resolvedJobNum = `J-${year}-${String(nextSeq).padStart(3, '0')}`;
-
-       const quoteDataStr = JSON.stringify({ 
-           targetId: null, qn: '', client: customerName, 
-           street: leadRow.street1 || '', city: leadRow.city || '', 
-           state: leadRow.state || '', zipcode: leadRow.zip || '', 
-           desc: leadRow.description || '', date: new Date().toISOString().split('T')[0], 
-           status: 'Draft', qtype: '', salesAssoc: data.estimator_id 
-       });
-
-       const rowValues = [
-         '', // quote_number
-         leadRow.customer_number || null,
-         customerName,
-         leadRow.street1 || '', // job_site
-         leadRow.street1 || '',
-         leadRow.city || '',
-         leadRow.state || '',
-         leadRow.zip || '',
-         leadRow.description || '',
-         new Date().toISOString().split('T')[0],
-         0, // status id
-         '', // quote_type
-         0, 0, 0, 0, 0, 0, 0,
-         data.estimator_id,
-         resolvedJobNum,
-         null, null,
-         0,
-         'Auto-created from lead',
-         quoteDataStr
-       ];
-
-       const [insertRes] = await db.query(
-         'INSERT INTO quotes (quote_number, customer_id, customer_name, job_site, street, city, state, zipcode, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-         rowValues
-       );
-
-       await db.query('INSERT INTO Quote_Status_History (quote_id, status_name, changed_by, notes) VALUES (?, ?, ?, ?)', 
-         [insertRes.insertId, 'Draft', req.user ? req.user.userId : null, 'Created from lead assignment']
-       );
-    }
 
     res.json({ success: true });
   } catch (error) {
     console.error(`[API] Table update error (${table}):`, error);
     res.status(500).json({ error: 'Update failed', details: error.message });
+  }
+});
+
+// BATCH UPDATE RECORDS IN TABLE (Admin Only)
+app.put('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, async (req, res) => {
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const table = req.params.table;
+  const { ids, data } = req.body;
+
+  if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'No IDs provided for batch update' });
+  if (!data || Object.keys(data).length === 0) return res.status(400).json({ error: 'No data provided for update' });
+
+  try {
+    const keys = Object.keys(data);
+    const values = keys.map(k => {
+      let val = data[k];
+      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(val)) {
+        val = new Date(val).toISOString().slice(0, 19).replace('T', ' ');
+      }
+      if (typeof val === 'object' && val !== null) {
+        return JSON.stringify(val);
+      }
+      const numFields = ['labor', 'equip', 'hauling', 'travel', 'materials', 'total', 'markup', 'is_locked', 'customer_number'];
+      if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update' || k.endsWith('_id') || numFields.includes(k))) {
+        return null;
+      }
+      if (table === 'admin_tasks' && k === 'subnotes' && val === '') {
+        return '[]';
+      }
+      if (table === 'quotes' && k === 'status' && typeof val === 'string') {
+        const smap = { 'lead':1, 'draft':1, 'pending':2, 'in progress':2, 'customer contact':3, 'in review':4, 'accepted':5, 'modification required':6, 'submitted':7, 'quoted':7, 'won':8, 'lost':9, 'dead':10, 'completed':11 };
+        if (smap[val.toLowerCase()]) return smap[val.toLowerCase()];
+        const num = parseInt(val, 10);
+        if (!isNaN(num)) return num;
+      }
+      return val;
+    });
+
+    const setClause = keys.map(k => `\`${k}\` = ?`).join(', ');
+    const placeholders = ids.map(() => '?').join(',');
+
+    await db.query(`UPDATE \`${table}\` SET ${setClause} WHERE id IN (${placeholders})`, [...values, ...ids]);
+
+    if (table === 'sites') {
+      // Background re-geocoding if address info was bulk updated
+      if (keys.includes('address1') || keys.includes('city') || keys.includes('state') || keys.includes('zip')) {
+        db.query(`SELECT id, address1, city, state, zip FROM sites WHERE id IN (${placeholders})`, ids).then(([r])=> {
+          for (let site of r) {
+            triggerGeocodeUpdate(site.id, site.address1, site.city, site.state, site.zip);
+          }
+        }).catch(()=>{});
+      }
+    }
+
+    res.json({ success: true, updated: ids.length });
+  } catch (error) {
+    console.error(`[API] Table batch update error (${table}):`, error);
+    res.status(500).json({ error: 'Batch update failed', details: error.message });
   }
 });
 
@@ -1947,77 +1962,7 @@ app.post('/api/search/vector', authenticateToken, async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-async function ensureLeadsTable() {
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS leads (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      description TEXT,
-      create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      customer_id INT,
-      customer_name VARCHAR(255) DEFAULT '',
-      status_number INT DEFAULT 1,
-      first_name VARCHAR(100) DEFAULT '',
-      last_name VARCHAR(100) DEFAULT '',
-      contact_phone VARCHAR(50) DEFAULT '',
-      contact_email VARCHAR(100) DEFAULT '',
-      street VARCHAR(255) DEFAULT '',
-      city VARCHAR(100) DEFAULT '',
-      state VARCHAR(50) DEFAULT '',
-      zipcode VARCHAR(20) DEFAULT '',
-      site_type VARCHAR(50) DEFAULT 'master_billing',
-      estimator_id VARCHAR(100) DEFAULT '',
-      FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
-    )
-  `);
 
-  // Migration for existing tables
-  try {
-    const [leadsCols] = await db.query('SHOW COLUMNS FROM leads');
-    const leadsColNames = leadsCols.map(c => c.Field);
-
-    const checkAndAdd = async (colName, definition, after) => {
-      if (!leadsColNames.includes(colName)) {
-        await db.query(`ALTER TABLE leads ADD COLUMN ${colName} ${definition} ${after ? `AFTER ${after}` : ''}`);
-        console.log(`[Schema] Added ${colName} column to leads`);
-        return true;
-      }
-      return false;
-    };
-
-    if (leadsColNames.includes('company_name') && !leadsColNames.includes('customer_name')) {
-      await db.query('ALTER TABLE leads CHANGE COLUMN company_name customer_name VARCHAR(255) DEFAULT ""');
-      console.log('[Schema] Renamed leads.company_name to customer_name');
-    }
-    if (leadsColNames.includes('customer_number') && !leadsColNames.includes('customer_id')) {
-      await db.query('ALTER TABLE leads CHANGE COLUMN customer_number customer_id INT');
-      console.log('[Schema] Renamed leads.customer_number to customer_id');
-    }
-
-    await checkAndAdd('customer_name', 'VARCHAR(255) DEFAULT ""', 'customer_id');
-    await checkAndAdd('status_number', 'INT DEFAULT 1', 'customer_name');
-    await checkAndAdd('first_name', 'VARCHAR(100) DEFAULT ""', 'status_number');
-    await checkAndAdd('last_name', 'VARCHAR(100) DEFAULT ""', 'first_name');
-    await checkAndAdd('contact_phone', 'VARCHAR(50) DEFAULT ""', 'last_name');
-    await checkAndAdd('contact_email', 'VARCHAR(100) DEFAULT ""', 'contact_phone');
-    await checkAndAdd('street', 'VARCHAR(255) DEFAULT ""', 'contact_email');
-    await checkAndAdd('city', 'VARCHAR(100) DEFAULT ""', 'street');
-    await checkAndAdd('state', 'VARCHAR(50) DEFAULT ""', 'city');
-    await checkAndAdd('zipcode', 'VARCHAR(20) DEFAULT ""', 'state');
-    await checkAndAdd('site_type', 'VARCHAR(50) DEFAULT "master_billing"', 'zipcode');
-    await checkAndAdd('estimator_id', 'VARCHAR(100) DEFAULT ""', 'site_type');
-
-    if (leadsColNames.includes('street1') && !leadsColNames.includes('street')) {
-      await db.query('ALTER TABLE leads CHANGE COLUMN street1 street VARCHAR(255) DEFAULT ""');
-      console.log('[Schema] Renamed leads.street1 to street');
-    }
-    if (leadsColNames.includes('zip') && !leadsColNames.includes('zipcode')) {
-      await db.query('ALTER TABLE leads CHANGE COLUMN zip zipcode VARCHAR(20) DEFAULT ""');
-      console.log('[Schema] Renamed leads.zip to zipcode');
-    }
-  } catch (e) {
-    console.warn('[Schema] leads column check:', e.message);
-  }
-};
 
 // Ensure every managed table has a `description` column.
 async function ensureDescriptionColumns() {
@@ -2078,7 +2023,6 @@ const initAdmin = async () => {
     await ensureUserProfileColumns();
     await ensureCompanyInfoTable();
     await ensureSitesTable();
-    await ensureLeadsTable();
     await ensureDescriptionColumns();
     const hash = await bcrypt.hash('pass', 10);
     await db.query(

@@ -21,7 +21,7 @@ export default function RigPro3ExecutiveDashboard({ jobs, reqs, token }) {
     const now = new Date();
     const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
     
-    let revYTD = 0, pipelineVal = 0, winCount = 0, lossCount = 0, rfqCount = 0;
+    let revYTD = 0, pipelineVal = 0, winCount = 0, lossCount = 0, leadCount = 0;
     let totalMarginPct = 0, marginCount = 0, staleCount = 0, pendingQuotes = 0;
     let totalRespTimeHrs = 0, respTimeCount = 0;
 
@@ -40,8 +40,8 @@ export default function RigPro3ExecutiveDashboard({ jobs, reqs, token }) {
       if (q.status === "Lost") lossCount++;
     });
 
-    const activeRfqs = reqs.filter(r => r.status !== "Dead" && r.status !== "Completed");
-    rfqCount = activeRfqs.length;
+    const activeLeads = reqs.filter(r => r.status !== "Dead" && r.status !== "Completed");
+    leadCount = activeLeads.length;
 
     // Averages
     const wonJobs = jobs.filter(q => q.status === "Won");
@@ -97,9 +97,9 @@ export default function RigPro3ExecutiveDashboard({ jobs, reqs, token }) {
     const actualVolume = reqs.filter(r => r.date && new Date(r.date) >= thirtyDaysAgo).length;
 
     // Zone 1 Metrics (Spec)
-    const rfqsIn = reqs.filter(r => r.date && new Date(r.date).getFullYear() === now.getFullYear()).length;
+    const leadsIn = reqs.filter(r => r.date && new Date(r.date).getFullYear() === now.getFullYear()).length;
     const estimatesGiven = jobs.filter(q => q.date && new Date(q.date).getFullYear() === now.getFullYear()).length;
-    const responseRate = rfqsIn > 0 ? (estimatesGiven / rfqsIn * 100) : 0;
+    const responseRate = leadsIn > 0 ? (estimatesGiven / leadsIn * 100) : 0;
     
     const activeCustomers = new Set(jobs.filter(q => q.date && new Date(q.date).getFullYear() === now.getFullYear()).map(q => q.client));
     const customerCount = activeCustomers.size;
@@ -108,8 +108,8 @@ export default function RigPro3ExecutiveDashboard({ jobs, reqs, token }) {
     const avgMargin = marginCount > 0 ? totalMarginPct / marginCount : 0;
 
     return {
-      revYTD, pipelineVal, actualWinRate, actualMargin, rfqCount,
-      rfqsIn, estimatesGiven, responseRate, customerCount, wonSum, avgMargin,
+      revYTD, pipelineVal, actualWinRate, actualMargin, leadCount,
+      leadsIn, estimatesGiven, responseRate, customerCount, wonSum, avgMargin,
       phiData: {
         winRate: actualWinRate,
         volume: actualVolume,
@@ -130,7 +130,7 @@ export default function RigPro3ExecutiveDashboard({ jobs, reqs, token }) {
       {/* 1. Top KPI Ribbon (5 Cards) - per RigPro3 Spec Section 2.1 */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16 }}>
         {[
-          { label:"Total RFQs In", value:stats.rfqsIn, color:C.acc, sub:"Current Year" },
+          { label:"Total Leads In", value:stats.leadsIn, color:C.acc, sub:"Current Year" },
           { label:"Estimates Given", value:stats.estimatesGiven, color:C.purp, sub:`${stats.responseRate.toFixed(1)}% Response` },
           { label:"Customers", value:stats.customerCount, color:C.yel, sub:"Active in Period" },
           { label:"Won Sales", value:fmt2(stats.wonSum), color:C.grn, sub:"YTD Total" },
