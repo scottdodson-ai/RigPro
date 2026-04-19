@@ -9148,6 +9148,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
               const payload = {};
               headers.forEach(h => {
                 if (h !== 'id' && h !== 'created_at' && h !== 'updated_at') {
+                  if ((selectedTable === 'sites' || selectedTable === 'Sites') && h === 'customer_name') return;
                   const val = formData.get(h);
                   if (showBulkUpdateModal && val === "") return;
                   payload[h] = val;

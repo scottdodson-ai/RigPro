@@ -926,7 +926,7 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
 
 
   try {
-    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at');
+    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at' && !(table === 'sites' && k === 'customer_name'));
     if (keys.length === 0) return res.status(400).json({ error: 'No data provided' });
 
     const values = keys.map(k => {
@@ -986,7 +986,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
 
   try {
 
-    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at');
+    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at' && !(table === 'sites' && k === 'customer_name'));
     if (keys.length === 0) return res.json({ message: 'No change needed' });
 
     const values = keys.map(k => {
@@ -1041,7 +1041,7 @@ app.put('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, 
   if (!data || Object.keys(data).length === 0) return res.status(400).json({ error: 'No data provided for update' });
 
   try {
-    const keys = Object.keys(data);
+    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at' && !(table === 'sites' && k === 'customer_name'));
     const values = keys.map(k => {
       let val = data[k];
       if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(val)) {
