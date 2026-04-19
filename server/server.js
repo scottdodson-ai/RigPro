@@ -146,8 +146,12 @@ async function ensureUserProfileColumns() {
     if (qRows.length === 0) {
       await db.query(`ALTER TABLE quotes ADD COLUMN quote_data LONGTEXT`);
     }
+    const [sRows] = await db.query(`SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sites' AND COLUMN_NAME = 'geocode'`);
+    if (sRows.length === 0) {
+      await db.query(`ALTER TABLE sites ADD COLUMN geocode VARCHAR(100)`);
+    }
   } catch (e) {
-    console.warn('[Schema] Ignoring quote_data column check:', e.message);
+    console.warn('[Schema] Ignoring dynamic column check:', e.message);
   }
 
 }
@@ -410,7 +414,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       return {
         ...json,
         ...row,
-        status: row.status || json.status || 'Draft',
+        status: row.status_id || json.status || 'Draft',
         qn: row.qn || json.qn || '',
         quote_number: row.qn || json.qn || '',
         client: row.client || row.customer_name || json.client || '',
@@ -850,7 +854,7 @@ app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, a
 
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'site_types', 'phi_config', 'company_info', 'user_auth_audit'];
   let table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
@@ -871,7 +875,10 @@ app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async 
     let query;
     if (table === 'sites') {
       query = `SELECT s.*, c.name AS customer_name FROM sites s LEFT JOIN customers c ON s.customer_id = c.id ORDER BY s.id ASC`;
-      if (!columnNames.includes('customer_name')) columnNames.push('customer_name');
+      if (!columnNames.includes('customer_name')) {
+        const cIdIdx = columnNames.indexOf('customer_id');
+        columnNames.splice(cIdIdx + 1, 0, 'customer_name');
+      }
     } else if (table === 'customers') {
       query = `SELECT * FROM customers ORDER BY id ASC`;
       if (columnNames.includes('customer_num')) {
@@ -911,7 +918,7 @@ const triggerGeocodeUpdate = (siteId, address1, city, state, zip) => {
 
 // CREATE RECORD IN TABLE (Admin Only)
 app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'site_types', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
   const data = req.body;
 
@@ -970,7 +977,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
 
   authenticateAdmin(req, res, next);
 }, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'site_types', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
   const id = req.params.id;
   const data = req.body;
@@ -1025,7 +1032,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
 
 // BATCH UPDATE RECORDS IN TABLE (Admin Only)
 app.put('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'site_types', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
   const { ids, data } = req.body;
 
@@ -1084,7 +1091,7 @@ app.put('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, 
 
 // BATCH DELETE RECORDS IN TABLE (Admin Only)
 app.delete('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, async (req, res) => {
-  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
+  const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'site_types', 'phi_config', 'company_info', 'user_auth_audit'];
   const table = req.params.table;
   const { ids } = req.body;
 

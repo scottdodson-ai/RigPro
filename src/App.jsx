@@ -8643,6 +8643,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
   const [tableList, setTableList] = useState([]);
   const [customersList, setCustomersList] = useState([]);
   const [statusList, setStatusList] = useState([]);
+  const [siteTypeList, setSiteTypeList] = useState([]);
 
   useEffect(() => {
     if (!token) return;
@@ -8660,6 +8661,16 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
         setStatusList(arr);
       })
       .catch(e => console.error("Status list load err:", e));
+      
+    fetch('/api/admin/tables/site_types', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => {
+        let arr = [];
+        if (d && d.data && Array.isArray(d.data)) arr = d.data;
+        else if (Array.isArray(d)) arr = d;
+        setSiteTypeList(arr);
+      })
+      .catch(e => console.error("Site types load err:", e));
   }, [token]);
 
   useEffect(() => {
@@ -8698,7 +8709,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
 
   const uniqueQuoteStatuses = useMemo(() => {
     if (selectedTable !== 'quotes' && selectedTable !== 'Quotes') return [];
-    if (statusList && statusList.length > 0) return statusList.map(s => s.id);
+    if (statusList && statusList.length > 0) return statusList.filter(s => s.type === 'quote').map(s => s.id);
     return Array.from(new Set(data.map(r => r.status).filter(x => x !== null && x !== undefined && x !== ''))).sort();
   }, [data, selectedTable, statusList]);
 
@@ -8709,7 +8720,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
 
   const filteredData = data.filter((row) => {
     if ((selectedTable === 'sites' || selectedTable === 'Sites') && siteTypeFilter && String(row.site_type) !== siteTypeFilter) return false;
-    if ((selectedTable === 'quotes' || selectedTable === 'Quotes') && quoteStatusFilter && String(row.status) !== quoteStatusFilter) return false;
+    if ((selectedTable === 'quotes' || selectedTable === 'Quotes') && quoteStatusFilter && Number(row.status) !== Number(quoteStatusFilter)) return false;
     if (!searchTerm) return true;
     return headers.some((h) => {
       const val = row[h];
@@ -8967,7 +8978,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
                   >
                     <option value="">All Statuses</option>
                     {uniqueQuoteStatuses.map(st => (
-                      <option key={st} value={st}>{getStatusName(st)}</option>
+                      <option key={st} value={st}>{st} - {getStatusName(st)}</option>
                     ))}
                   </select>
                 )}
@@ -9036,7 +9047,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
                       {headers.map(h => {
                         let displayVal = row[h] === null ? <em style={{ color: C.txtS }}>null</em> : String(row[h]);
                         if ((selectedTable === 'quotes' || selectedTable === 'Quotes') && h === 'status' && row[h] !== null && row[h] !== undefined) {
-                          displayVal = getStatusName(row[h]);
+                          displayVal = String(row[h]);
                         }
                         return (
                           <td key={h} style={{ ...tdS, padding: "8px 12px", whiteSpace: "nowrap", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }} title={h === 'status' ? `Raw ID: ${row[h]}` : undefined}>
@@ -9164,6 +9175,22 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
                           <option key={s.id} value={s.id}>{s.name} (ID: {s.id})</option>
                         ))}
                       </select>
+                    ) : (selectedTable === 'sites' || selectedTable === 'Sites') && h === 'site_type' ? (
+                      <select name={h} defaultValue={(!showBulkUpdateModal && editingRow) ? editingRow[h] : ""} style={{ ...inp, fontSize: 12, padding: "6px 12px" }}>
+                        <option value="">-- Select Site Type --</option>
+                        {siteTypeList.map(t => (
+                          <option key={t.id} value={t.name}>{t.name}</option>
+                        ))}
+                      </select>
+                    ) : (selectedTable === 'sites' || selectedTable === 'Sites') && h === 'customer_name' ? (
+                      <input
+                        name={h}
+                        type="text"
+                        defaultValue={(!showBulkUpdateModal && editingRow) ? editingRow[h] : ""}
+                        readOnly
+                        disabled
+                        style={{ ...inp, fontSize: 12, background: 'rgba(0,0,0,0.05)', color: C.txtS, border: `1px solid ${C.bdrM}` }}
+                      />
                     ) : String((!showBulkUpdateModal && editingRow) ? (editingRow[h] || "") : "").length > 50 ? (
                       <textarea
                         name={h}
