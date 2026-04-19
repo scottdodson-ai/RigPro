@@ -541,7 +541,7 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       equipment,
       customers: custData,
       jobs,
-
+      sitesCount: sites.length,
       leads,
       users,
       estimators,

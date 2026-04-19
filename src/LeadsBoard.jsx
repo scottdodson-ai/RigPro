@@ -32,7 +32,7 @@ function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, c
 }
 
 const LeadsBoard = (props) => {
-  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel } = props;
+  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount } = props;
   const [search, setSearch] = useState("");
   const [leadView, setLeadView] = useState("list");
   const [selLead, setSelLead] = useState(null);
@@ -106,7 +106,7 @@ const LeadsBoard = (props) => {
 
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.txt, fontFamily:"'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize:14 }}>
-      <Header 
+      <Header siteCount={globalSitesCount} 
         leadCount={leads ? leads.length : 0}
         customerCount={props.customers ? props.customers.length : 0} 
         reqCount={reqs.length} 
