@@ -579,7 +579,15 @@ const pgBtn = (active) => ({
 });
 
 // ── SMALL COMPONENTS ──────────────────────────────────────────────────────────
-const Badge = ({ status }) => { const x = SS[status] || SS.Draft; return <span style={{ background: x.bg, color: x.cl, border: `1px solid ${x.bd}`, borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>{status}</span>; };
+const Badge = ({ status }) => {
+  let sName = status;
+  if (!isNaN(status) && window.STATUS_LIST) {
+    const st = window.STATUS_LIST.find(x => String(x.id) === String(status));
+    if (st) sName = st.name;
+  }
+  const x = SS[sName] || SS.Draft;
+  return <span style={{ background: x.bg, color: x.cl, border: `1px solid ${x.bd}`, borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>{sName}</span>;
+};
 const Lbl = ({ c, children, style }) => <div style={{ fontSize: 11, color: C.txtM, marginBottom: 3, fontWeight: 600, ...style }}>{c || children}</div>;
 const Sec = ({ c }) => <div style={{ color: C.acc, fontSize: 11, letterSpacing: 1, marginBottom: 10, fontWeight: 700, textTransform: "uppercase" }}>{c}</div>;
 const XBtn = ({ on }) => <button onClick={on} style={{ background: "none", border: "none", color: C.txtS, cursor: "pointer", fontSize: 17, padding: "0 3px", lineHeight: 1 }}>×</button>;
@@ -3154,14 +3162,13 @@ function LeadListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setS
 // ── MASTER JOB LIST ───────────────────────────────────────────────────────────
 // ── QUOTES PAGE VIEW ─────────────────────────────────────────────────────────
 
-function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQuote, setSelectedQuote, role, profileUser, statusList }) {
+function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, selectedQuote, setSelectedQuote, role, profileUser, statusList }) {
   const [filter, setFilter] = useState('');
   const [viewMode, setViewMode] = useState('card');
 
   const quotes = useMemo(() => {
     return jobs.filter(q =>
-      (q.quote_data || q.status === "Pending" || q.quote_number) &&
-      String(q.status) !== "1" && q.status !== "Lead"
+      !q.is_master_job && String(q.status) !== "1"
     ).sort((a, b) => {
       return new Date(b.date || b.start_date || 0) - new Date(a.date || a.start_date || 0);
     });
@@ -3173,11 +3180,7 @@ function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQu
     return quotes.filter(q => (q.client?.toLowerCase().includes(l)) || (q.job_description?.toLowerCase().includes(l)) || (q.description?.toLowerCase().includes(l)) || (q.qn?.toLowerCase().includes(l)));
   }, [quotes, filter]);
 
-  useEffect(() => {
-    if (viewMode === "list" && !selectedQuote && filtered.length > 0) {
-      setSelectedQuote(filtered[0]);
-    }
-  }, [viewMode, selectedQuote, filtered, setSelectedQuote]);
+
 
   const toggleView = (v) => {
     if (v === "card") setSelectedQuote(null);
@@ -3296,7 +3299,7 @@ function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQu
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <div style={{ fontSize: 10, fontWeight: 700, color: C.txtS, textTransform: "uppercase", marginBottom: 4 }}>Status</div>
-                          <Badge status={q.status || 'Draft'} />
+                          <Badge status={(statusList || []).find(s => String(s.id) === String(q.status))?.name || q.status || 'Draft'} />
                         </div>
                       </div>
 
@@ -3332,7 +3335,7 @@ function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQu
                    </button>
                  </div>
                )}
-               <QuotePreviewPanel quote={selectedQuote} custData={custData} setJobs={setJobs} setSelectedQuote={setSelectedQuote} onEdit={() => openEdit(selectedQuote)} role={role} profileUser={profileUser} statusList={statusList} />
+               <QuotePreviewPanel quote={selectedQuote} custData={custData} setJobs={setJobs} setLeads={setLeads} setSelectedQuote={setSelectedQuote} onEdit={() => openEdit(selectedQuote)} role={role} profileUser={profileUser} statusList={statusList} />
              </div>
           ) : (
              <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", height:"100%", color:C.txtM, fontSize:15, flexDirection:"column", gap:10, padding:40, textAlign:"center" }}>
@@ -3357,7 +3360,7 @@ function QuotesPageView({ jobs, setJobs, custData, setView, openEdit, selectedQu
   );
 }
 
-function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setSelectedQuote, role, profileUser, statusList = [] }) {
+function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setLeads, setSelectedQuote, role, profileUser, statusList = [] }) {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
@@ -3382,19 +3385,34 @@ function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setSelectedQuote,
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: C.acc, textTransform: "uppercase" }}>Quote Recipient</div>
-            <Badge status={quote.status || 'Draft'} />
+            <Badge status={(statusList || []).find(s => String(s.id) === String(quote.status))?.name || quote.status || 'Draft'} />
             {(role || []).includes('admin') && (
               <select
-                value={quote.status || 'Draft'}
+                value={quote.status || ''}
                 onChange={async (e) => {
-                  const newStatus = e.target.value;
-                  if (!window.confirm(`Are you sure you want to change the status of this quote to "${newStatus}"?`)) return;
+                  const newStatusId = e.target.value;
+                  const st = (statusList || []).find(s => String(s.id) === String(newStatusId));
+                  if (!window.confirm(`Are you sure you want to change the status of this quote to "${st ? st.name : newStatusId}"?`)) return;
 
-                  const updatedQuote = { ...quote, status: newStatus };
+                  const updatedQuote = { ...quote, status: newStatusId };
 
                   // Update local state
                   setJobs(prev => prev.map(q => q.id === quote.id ? updatedQuote : q));
                   setSelectedQuote(updatedQuote);
+                  
+                  if (setLeads) {
+                    if (String(newStatusId) === "1") {
+                      // Moved TO Lead state, ensure it exists in leads list natively
+                      const mappedQuote = { ...updatedQuote, customer_name: updatedQuote.customer_name || updatedQuote.client || '' };
+                      setLeads(prev => {
+                        if (prev.find(l => l.id === updatedQuote.id)) return prev.map(l => l.id === updatedQuote.id ? mappedQuote : l);
+                        return [mappedQuote, ...prev];
+                      });
+                    } else {
+                      // Not a lead, remove from leads strictly
+                      setLeads(prev => prev.filter(l => l.id !== updatedQuote.id));
+                    }
+                  }
 
                   // Sync to DB
                   const tkn = localStorage.getItem('token');
@@ -3412,8 +3430,9 @@ function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setSelectedQuote,
                 }}
                 style={{ ...sel, padding: "2px 5px", fontSize: 11, width: "auto", height: "auto", marginLeft: 8 }}
               >
+                <option value="">-- Change Status --</option>
                 {statusList.map(s => (
-                  <option key={s.name} value={s.name}>{s.name}</option>
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             )}
@@ -8659,6 +8678,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
         if (d && d.data && Array.isArray(d.data)) arr = d.data;
         else if (Array.isArray(d)) arr = d;
         setStatusList(arr);
+        window.STATUS_LIST = arr;
       })
       .catch(e => console.error("Status list load err:", e));
       
@@ -10617,7 +10637,10 @@ export default function App() {
           setJobs(data.jobs);
           if (data.leads) setReqs(data.leads);
           if (data.leads) setLeads(data.leads);
-          if (data.status) setStatusList(data.status);
+          if (data.status) {
+          setStatusList(data.status);
+          window.STATUS_LIST = data.status;
+        }
           if (data.customers) setCustData(data.customers);
           if (data.sitesCount !== undefined) setGlobalSitesCount(data.sitesCount);
           setDbStatus("MySQL Live");
@@ -10920,7 +10943,7 @@ export default function App() {
   // ── LANDING PAGE ───────────────────────────────────────────────────────────
   if (view === "landing") return (
     <div style={{ minHeight: "100vh", background: C.sur, color: C.txt, fontFamily: "'Segoe UI','Helvetica Neue',Arial,sans-serif", display: "flex", flexDirection: "column" }}>
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "6rem", fontWeight: 800, color: C.acc, letterSpacing: "-2px", lineHeight: 1, marginBottom: 10 }}>RigPro</div>
@@ -10942,7 +10965,7 @@ export default function App() {
     }
     return (
       <div style={{ minHeight: "100vh", background: C.sur, display: "flex", flexDirection: "column" }}>
-        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <LoginForm setToken={(t) => { setToken(t); setView("dash"); }} setRole={setRole} onBack={() => setView("landing")} onForgotPassword={() => setView("forgot-password")} />
         </div>
@@ -10953,7 +10976,7 @@ export default function App() {
   if (view === "forgot-password") {
     return (
       <div style={{ minHeight: "100vh", background: C.sur, display: "flex", flexDirection: "column" }}>
-        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <ForgotPasswordForm onBack={() => setView("login")} />
         </div>
@@ -10964,7 +10987,7 @@ export default function App() {
   if (view === "reset-password") {
     return (
       <div style={{ minHeight: "100vh", background: C.sur, display: "flex", flexDirection: "column" }}>
-        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <ResetPasswordForm onBack={() => setView("login")} />
         </div>
@@ -10977,7 +11000,7 @@ export default function App() {
   if (view === "admin" && !(Array.isArray(role) ? role : [role]).includes('admin')) return <div style={{ padding: 40, color: C.red, fontWeight: 700, fontSize: 20 }}>403 Unauthorized. Access Restricted to Administrators.</div>;
   if (view === "admin") return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: C.bg, color: C.txt, fontFamily: "'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize: 14 }}>
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <AdminPage token={token} profileUser={profileUser} appUsers={appUsers} setAppUsers={setAppUsers} companyInfo={companyInfo} setCompanyInfo={setCompanyInfo} />
       <Footer />
     </div>
@@ -11019,7 +11042,7 @@ export default function App() {
         onClose={() => setDeadModal(null)}
       />}
       {showNotifs && <NotifPanel />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div className="desktop-act-btns">{actBtns}</div>
         </div>
@@ -11166,7 +11189,7 @@ export default function App() {
   if (view === "sites") return (
     <div style={{ minHeight: "100vh", background: C.sur, display: "flex", flexDirection: "column" }}>
       {showSitesMap && <SitesMapModal token={token} onClose={() => setShowSitesMap(false)} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} />
       <div style={{ flex: 1, padding: 24, overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: C.txt }}>Site Management</h2>
@@ -11181,8 +11204,8 @@ export default function App() {
   if (view === "quotes") return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.txt, fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
-      <QuotesPageView jobs={jobs} setJobs={setJobs} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} role={role} profileUser={profileUser} statusList={statusList} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
+      <QuotesPageView jobs={jobs} setJobs={setJobs} setLeads={setLeads} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} role={role} profileUser={profileUser} statusList={statusList} />
     </div>
   );
 
@@ -11191,7 +11214,7 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: C.bg, color: C.txt, fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <LeadsBoard
-        C={C} fmt={fmt} thS={thS} tdS={tdS} leads={leads} setLeads={setLeads} reqs={reqs} jobs={jobs}
+        C={C} fmt={fmt} thS={thS} tdS={tdS} leads={leads} setLeads={setLeads} reqs={reqs} jobs={jobs} setJobs={setJobs}
         actBtns={actBtns} Header={Header} token={token} setToken={setToken} role={role} setRole={setRole} view={view} setView={setView}
         appUsers={appUsers} profileUser={profileUser} statusList={statusList} custData={custData} customers={customers} globalSitesCount={globalSitesCount}
         Sec={Sec} onAddLead={() => setShowLeadModal(true)} mkBtn={mkBtn} AutoInput={AutoInput} Lbl={Lbl} Card={Card} inp={inp} sel={sel}
@@ -11203,7 +11226,7 @@ export default function App() {
   if (view === "equipment") return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: C.bg, color: C.txt, fontFamily: "'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize: 14 }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
       <EquipmentPage equipment={equipment} setEquipment={setEquipment} eqCats={eqCats} eqMap={eqMap} eqOv={eqOv} setEqOv={setEqOv} role={role} />
       <Footer />
     </div>
@@ -11212,7 +11235,7 @@ export default function App() {
   if (view === "labor") return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: C.bg, color: C.txt, fontFamily: "'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize: 14 }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
       <LaborRatesPage customerRates={customerRates} setCustomerRates={setCustomerRates} role={role} baseLabor={baseLabor} setBaseLabor={setBaseLabor} />
       <Footer />
     </div>
@@ -11223,7 +11246,7 @@ export default function App() {
   if (view === "jobs") return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.txt, fontFamily: "'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize: 14 }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
       {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} onClose={() => setShowJFM(null)} />}
       {deadModal && <MarkDeadModal itemType={deadModal.type === "lead" ? "Lead" : "Job"} itemLabel={deadModal.type === "lead" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client} onConfirm={note => { if (deadModal.type === "lead") setReqs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x)); else setJobs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x)); setDeadModal(null); }} onClose={() => setDeadModal(null)} />}
       <MasterJobList
@@ -11287,7 +11310,7 @@ export default function App() {
   if (view === "calendar") return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: C.bg, color: C.txt, fontFamily: "'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize: 14 }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
       <CalendarPage jobs={jobs} setJobs={setJobs} eqMap={eqMap} onOpenQuote={q => { openEdit(q); setView("editor"); }} />
       <Footer />
     </div>
@@ -11297,7 +11320,7 @@ export default function App() {
   if (view === "reports") return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: C.bg, color: C.txt, fontFamily: "'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize: 14, overflowX: "auto" }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
-      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
+      <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
       <ReportsPage
         jobs={jobs}
         reqs={reqs}
@@ -11495,7 +11518,7 @@ export default function App() {
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d => { u("discounts", [...(active.discounts || []), d]); setShowDiscModal(false); }} onClose={() => setShowDiscModal(false)} />}
         {showCustDoc && <CustomerDocModal quote={{ ...active, total: cv.total }} onClose={() => setShowCustDoc(false)} />}
         {showJobSiteModal && <JobSiteModal token={token} clientName={active.client} custData={custData} onSave={site => { u("jobSites", [...(active.jobSites || []), site]); }} onClose={() => setShowJobSiteModal(false)} />}
-        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => (q.quote_data || q.status === "Pending" || q.quote_number) && String(q.status) !== "1" && q.status !== "Lead").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn + (active.isChangeOrder ? " (CO)" : "")} extra={
+        <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn + (active.isChangeOrder ? " (CO)" : "")} extra={
           <div style={{ display: "flex", gap: 5 }}>
             <button style={mkBtn("ghost")} onClick={goBack}>Cancel</button>
             {!active.locked && <button style={mkBtn("primary")} onClick={() => saveQuote()}>Save Quote</button>}

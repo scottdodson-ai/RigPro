@@ -32,7 +32,7 @@ function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, c
 }
 
 const LeadsBoard = (props) => {
-  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount } = props;
+  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, setJobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount } = props;
   const [search, setSearch] = useState("");
   const [leadView, setLeadView] = useState("list");
   const [selLead, setSelLead] = useState(null);
@@ -57,15 +57,57 @@ const LeadsBoard = (props) => {
       if (usernameTarget) updated.status_number = 2; // Server backend inherently trips it to 'In Progress' Quote Mode
       
       if (setLeads) {
-        setLeads((prev) => prev.map(l => l.id === selLead.id ? updated : l));
+        setLeads((prev) => prev.filter(l => l.id !== selLead.id));
       }
-      setSelLead(updated);
+      if (setJobs) {
+        setJobs(prev => {
+          if (prev.find(q => q.id === selLead.id)) return prev.map(q => q.id === selLead.id ? updated : q);
+          return [updated, ...prev];
+        });
+      }
+      setSelLead(null);
     } catch (e) {
       console.error(e);
       alert("Error assigning lead: " + e.message);
     }
   };
 
+  const handleStatusChange = async (newStatusId) => {
+    const st = (statusList || []).find(s => String(s.id) === String(newStatusId));
+    if (!window.confirm(`Are you sure you want to change the status to "${st ? st.name : newStatusId}"?`)) return;
+
+    try {
+      const payload = { status: newStatusId };
+      const res = await fetch(`${fmt.api || "/api"}/admin/tables/quotes/${selLead.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("Failed to change lead status.");
+      
+      const updated = { ...selLead, status_number: newStatusId };
+      
+      if (setLeads) {
+        if (String(newStatusId) === "1") {
+           setLeads(prev => prev.map(l => l.id === selLead.id ? updated : l));
+           setSelLead(updated);
+           if (setJobs) setJobs(prev => prev.map(q => q.id === selLead.id ? updated : q));
+        } else {
+           setLeads(prev => prev.filter(l => l.id !== selLead.id));
+           setSelLead(null);
+           if (setJobs) {
+             setJobs(prev => {
+                if (prev.find(q => q.id === selLead.id)) return prev.map(q => q.id === selLead.id ? updated : q);
+                return [updated, ...prev];
+             });
+           }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error changing status: " + e.message);
+    }
+  };
 
   const toggleView = (v) => {
     if (v === "card") setSelLead(null);
@@ -87,11 +129,6 @@ const LeadsBoard = (props) => {
 
   const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filteredLeads);
 
-  useEffect(() => {
-    if (leadView === "list" && !selLead && sortedItems.length > 0) {
-      setSelLead(sortedItems[0]);
-    }
-  }, [leadView, selLead, sortedItems]);
 
   const formatAssocName = (username) => {
     const user = (appUsers || []).find(u => u.username === username);
@@ -229,7 +266,18 @@ const LeadsBoard = (props) => {
                  )}
                  <div style={{ maxWidth:950, margin:"0 auto" }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
-                    <div style={{ display:"flex", gap:15, alignItems:"center", justifyContent:"flex-end" }}>
+                    <div style={{ display:"flex", gap:15, alignItems:"center", justifyContent:"flex-end", flexWrap: "wrap" }}>
+                       {(role || []).includes('admin') && (
+                         <select 
+                           style={{ padding:"5px 10px", borderRadius:6, border:`1px solid ${C.bdr}`, cursor:"pointer", color:C.txt, outline:"none", fontSize:12, background:"#f8fafc", fontWeight:600 }}
+                           value={selLead.status_number || 1}
+                           onChange={e => handleStatusChange(e.target.value)}
+                         >
+                           {statusList && statusList.map(s => (
+                             <option key={s.id} value={s.id}>{s.name}</option>
+                           ))}
+                         </select>
+                       )}
                        {selLead.estimator_id && <span style={{ background:C.accL, padding:"6px 12px", borderRadius:6, color:C.acc, fontWeight:800 }}>Est: {formatAssocName(selLead.estimator_id)}</span>}
                        <select 
                          style={{ padding:"5px 10px", borderRadius:6, border:`1px solid ${C.bdr}`, cursor:"pointer", color:C.txtM, outline:"none", fontSize:12, background:"#fff" }}
