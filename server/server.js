@@ -493,8 +493,10 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const leadsRaw = await safeQuery('SELECT q.*, c.name AS c_name FROM quotes q LEFT JOIN customers c ON q.customer_id = c.id WHERE q.status = 1 ORDER BY q.id DESC');
     const leads = leadsRaw.map(l => ({ 
       ...l, 
-      customer_name: l.c_name || l.customer_name,
-      status_number: Number(l.status_number) 
+      customer_name: l.c_name || l.customer_name || l.client,
+      status_number: Number(l.status) || 1,
+      estimator_id: l.sales_assoc,
+      description: l.description || l.desc || ''
     }));
 
     // Map customers array back to the object structure expected by App.jsx
@@ -851,7 +853,7 @@ app.patch('/api/admin/users/:id/status', authenticateToken, authenticateAdmin, a
 // GET RAW TABLE DATA (Admin Only) - For the Data Browser
 app.get('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async (req, res) => {
   const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
-  let table = req.params.table; let leadsFilter = ''; if (table === 'leads') { table = 'quotes'; leadsFilter = ' WHERE status = 1'; }
+  let table = req.params.table;
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
 
@@ -917,31 +919,6 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
 
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
 
-  if (table === 'leads') {
-    const name = (data.customer_name || "").trim();
-    if (name) data.customer_name = name;
-    
-    // Check if customer_id is conceptually missing
-    const cid = data.customer_id;
-    const cidMissing = !cid || cid === "0" || cid === 0 || cid === "null" || cid === "undefined";
-    
-    if (cidMissing && name) {
-      try {
-        const [existing] = await db.query('SELECT id FROM customers WHERE name = ?', [name]);
-        if (existing.length > 0) {
-          data.customer_id = existing[0].id;
-          console.log(`[API] Lead: linked to existing customer "${name}" (ID: ${data.customer_id})`);
-        } else {
-          console.log(`[API] Lead: creating new customer "${name}"`);
-          const [resCust] = await db.query('INSERT INTO customers (name, street, city, state, zip) VALUES (?, ?, ?, ?, ?)', [name, data.street||'', data.city||'', data.state||'', data.zipcode||'']);
-          data.customer_id = resCust.insertId;
-          console.log(`[API] Lead: auto-created customer "${name}" (New ID: ${data.customer_id})`);
-        }
-      } catch (err) {
-        console.warn('[API] Lead customer automated resolution error:', err.message);
-      }
-    }
-  }
 
   try {
     const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at');
@@ -973,18 +950,6 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
        triggerGeocodeUpdate(result.insertId, data.address1, data.city, data.state, data.zip);
     }
 
-    // When creating a lead with address data, auto-create a master_billing site record
-    if (table === 'leads' && (data.street || data.street1) && data.customer_id) {
-      try {
-        const [siteResult] = await db.query(
-          `INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)`,
-          [data.customer_id, data.site_type || 'master_billing', data.street || data.street1 || '', data.city || '', data.state || '', data.zipcode || data.zip || '']
-        );
-        triggerGeocodeUpdate(siteResult.insertId, data.street || data.street1, data.city, data.state, data.zipcode || data.zip);
-      } catch (siteErr) {
-        console.warn('[API] Could not auto-create site for lead:', siteErr.message);
-      }
-    }
 
     res.json(newRow[0]);
   } catch (error) {
@@ -997,9 +962,7 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
 app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => { 
   const table = req.params.table;
   const roles = req.user.roles || [];
-  if (table === 'leads' && roles.includes('estimator')) {
-    return next();
-  }
+
   authenticateAdmin(req, res, next);
 }, async (req, res) => {
   const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'phi_config', 'company_info', 'user_auth_audit'];
@@ -1010,17 +973,6 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
   if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid or restricted table access' });
 
   try {
-    let interceptLeadAsQuote = false;
-    let leadRow = null;
-
-    if (table === 'leads') {
-      const [old] = await db.query('SELECT * FROM leads WHERE id = ?', [id]);
-      if (old.length > 0 && old[0].status_number !== 2 && data.estimator_id) {
-         data.status_number = 2;
-         interceptLeadAsQuote = true;
-         leadRow = old[0];
-      }
-    }
 
     const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at');
     if (keys.length === 0) return res.json({ message: 'No change needed' });
@@ -2226,11 +2178,21 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
     if (customerName) {
       const [existingCustomer] = await connection.query('SELECT id FROM customers WHERE name = ? LIMIT 1', [customerName]);
       if (existingCustomer.length === 0) {
-        const [inserted] = await connection.query(
-          'INSERT INTO customers (name, address1, city, state, zip, notes) VALUES (?, ?, ?, ?, ?, ?)',
-          [customerName, String(quote.street || '').trim(), String(quote.city || '').trim(), String(quote.state || '').trim(), String(quote.zipcode || '').trim(), 'Auto-created from quote save']
+        // Customers table no longer holds address fields natively due to normalization
+        const [insertedCust] = await connection.query(
+          'INSERT INTO customers (name, notes) VALUES (?, ?)',
+          [customerName, 'Auto-created from quote save']
         );
-        custId = inserted.insertId;
+        custId = insertedCust.insertId;
+
+        // Auto-create initial master site containing the address payload
+        const [insertedSite] = await connection.query(
+          'INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)',
+          [custId, 'master_billing', String(quote.street || '').trim(), String(quote.city || '').trim(), String(quote.state || '').trim(), String(quote.zipcode || '').trim()]
+        );
+        
+        // Link primary site
+        await connection.query('UPDATE customers SET primary_site_id = ? WHERE id = ?', [insertedSite.insertId, custId]);
       } else {
         custId = existingCustomer[0].id;
       }

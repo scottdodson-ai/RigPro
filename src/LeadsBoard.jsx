@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 function useTableSort(items) {
   const [sortKey, setSortKey] = useState("create_date");
@@ -44,15 +44,16 @@ const LeadsBoard = (props) => {
 
   const handleAssign = async (usernameTarget) => {
     try {
-      const payload = { estimator_id: usernameTarget };
-      const res = await fetch(`${fmt.api || "/api"}/admin/tables/leads/${selLead.id}`, {
+      // Map estimator update payload to quotes schema
+      const payload = { sales_assoc: usernameTarget, status: 2 }; // status 2 is Quote Requested / In Progress
+      const res = await fetch(`${fmt.api || "/api"}/admin/tables/quotes/${selLead.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error("Failed to assign lead to estimator. You might lack permissions.");
       
-      const updated = { ...selLead, estimator_id: usernameTarget };
+      const updated = { ...selLead, estimator_id: usernameTarget, sales_assoc: usernameTarget };
       if (usernameTarget) updated.status_number = 2; // Server backend inherently trips it to 'In Progress' Quote Mode
       
       if (setLeads) {
@@ -85,6 +86,12 @@ const LeadsBoard = (props) => {
   }, [leads, search]);
 
   const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filteredLeads);
+
+  useEffect(() => {
+    if (leadView === "list" && !selLead && sortedItems.length > 0) {
+      setSelLead(sortedItems[0]);
+    }
+  }, [leadView, selLead, sortedItems]);
 
   const formatAssocName = (username) => {
     const user = (appUsers || []).find(u => u.username === username);
