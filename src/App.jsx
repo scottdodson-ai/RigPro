@@ -2869,7 +2869,7 @@ function JobFoldersDashboardCard({ allJobs, statusList, C, title }) {
 }
 
 // ── Lead DASHBOARD CARD ────────────────────────────────────────────────────────
-function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, leadStageFilter, onBack, statusList }) {
+function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, leadStageFilter, onBack, statusList, profileUser }) {
   const STAGES_DASH = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const baseColors = ["#b86b0a", "#2563eb", "#0d9488", "#7c3aed", "#16a34a", "#eab308", "#f97316", "#ef4444", "#3b82f6", "#14b8a6", "#a855f7", "#ec4899", "#8b5cf6"];
   const stageColors = STAGES_DASH.map((_, i) => baseColors[i % baseColors.length]);
@@ -2983,13 +2983,7 @@ function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openN
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 3, background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 5, padding: "3px 7px" }}>
-                    {STAGES_DASH.map((s, i) => (
-                      <div key={i} title={s} style={{ width: 8, height: 8, borderRadius: "50%", background: i <= stage ? stageColors[i] : C.bdr }} />
-                    ))}
-                  </div>
-                  <button style={{ ...mkBtn("ghost"), padding: "4px 9px", fontSize: 11 }} onClick={e => { e.stopPropagation(); setShowJFM(r); }}>Job Folder</button>
-                  <button style={{ ...mkBtn("blue"), padding: "4px 9px", fontSize: 11 }} onClick={e => { e.stopPropagation(); const draftStatus = (statusList || []).find(s => s.name === "Draft")?.id || "Draft"; openEdit({ ...r.original_job, status: draftStatus, client: r.original_job.client || r.original_job.customer_name || r.company }); }}>Quote →</button>
+                  <button style={{ ...mkBtn("blue"), padding: "4px 9px", fontSize: 11 }} onClick={e => { e.stopPropagation(); const inProgStatus = (statusList || []).find(s => s.name === "In Progress")?.id || "In Progress"; const pName = profileUser ? (profileUser.username || profileUser.first_name || "") : ""; openEdit({ ...r.original_job, status: inProgStatus, client: r.original_job.client || r.original_job.customer_name || r.company, salesAssoc: pName, sales_assoc: pName, estimator: pName, estimator_id: pName }); }}>Grab this lead</button>
                 </div>
               </div>
 
@@ -3006,31 +3000,7 @@ function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openN
                     <div style={{ gridColumn: "1 / -1" }}><div style={{ fontSize: 9, color: C.txtS, textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>Description</div><div style={{ fontSize: 12, color: C.txtM, marginTop: 4, lineHeight: 1.5 }}>{r.desc || r.job_description || "No description provided."}</div></div>
                   </div>
 
-                  <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-                    {/* Stage progress */}
-                    <div style={{ flex: 1, minWidth: 280 }}>
-                      <div style={{ fontSize: 9, color: C.txtS, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Quote Progress</div>
-                      <div className="custom-scroll" style={{ display: "flex", overflowX: "auto", paddingBottom: 10 }}>
-                        {STAGES_DASH.map((s, i) => {
-                          const done = i < stage; const active = i === stage; const color = stageColors[i];
-                          return (
-                            <div key={s} style={{ flex: "1 0 80px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-                              {i > 0 && <div style={{ position: "absolute", top: 14, left: "-50%", right: "50%", height: 2, background: done || active ? stageColors[i - 1] : C.bdr, zIndex: 0 }} />}
-                              {i < STAGES_DASH.length - 1 && <div style={{ position: "absolute", top: 14, left: "50%", right: "-50%", height: 2, background: done ? color : C.bdr, zIndex: 0 }} />}
-                              <button
-                                title={s}
-                                onClick={(e) => { e.stopPropagation(); setPromptInfo({ leadId: r.id, newStage: i, note: `Moved to stage: ${s}`, date: new Date().toISOString().slice(0, 10) }); }}
-                                style={{ width: 28, height: 28, borderRadius: "50%", border: `2px solid ${active || done ? color : C.bdr}`, background: active || done ? color : C.sur, color: active || done ? "#fff" : C.txtS, fontSize: 11, fontWeight: 800, zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
-                              >
-                                {done ? "✓" : i + 1}
-                              </button>
-                              <div style={{ fontSize: 8, color: active ? color : C.txtS, fontWeight: active ? 800 : 500, marginTop: 4, textAlign: "center", lineHeight: 1.2, maxWidth: 60 }}>{s}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {/* Day badges */}
+                  <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "flex-end" }}>
                     <div style={{ display: "flex", gap: 8 }}>
                       {dayBadge("Days Since Lead", daysLead, 7)}
                       {dayBadge("Days Since Activity", daysAct, 3)}
@@ -10901,7 +10871,14 @@ export default function App() {
     const cv = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     // Save Quote always preserves current status (keeps In Progress if that's where it is)
     // Unless a specific status override is passed
-    const newStatus = opts.status || active.status;
+    let newStatus = opts.status || active.status;
+    
+    const existingQuote = jobs.find(q => q.id === active.id);
+    const inProgId = (statusList || []).find(s => s.name === "In Progress")?.id || "In Progress";
+    
+    if (existingQuote && String(existingQuote.status) === String(inProgId) && String(newStatus) === String(inProgId)) {
+      newStatus = 3; // "Customer Contact"
+    }
     const shouldAssignJobNum = !["Dead", "Lost"].includes(newStatus);
     const autoJobNum = shouldAssignJobNum ? (active.job_num || active.jobNum || nextJobNumber(jobs, active.date)) : "";
     const upd = { ...active, ...cv, status: newStatus, ...(shouldAssignJobNum ? { job_num: autoJobNum, jobNum: autoJobNum } : {}) };
@@ -11201,6 +11178,7 @@ export default function App() {
             leadStageFilter={leadStageFilter}
             onBack={() => setDashAcc("metrics")}
             statusList={statusList}
+            profileUser={profileUser}
           />
         </AccordionCard>
 

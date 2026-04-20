@@ -491,7 +491,8 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       return { ...u, roles: rolesArray, role: rolesArray[0] || 'user' };
     });
     const estimators = await safeQuery('SELECT * FROM estimators');
-    const status = await safeQuery('SELECT * FROM status ORDER BY sort_order ASC');
+    const statusRaw = await safeQuery('SELECT * FROM status ORDER BY sort_order ASC');
+    const status = statusRaw.map(s => ({ ...s, type: 'quote' }));
     const leadsRaw = await safeQuery('SELECT q.*, c.name AS c_name FROM quotes q LEFT JOIN customers c ON q.customer_id = c.id WHERE q.status = 1 ORDER BY q.id DESC');
     const leads = leadsRaw.map(l => ({ 
       ...l, 
