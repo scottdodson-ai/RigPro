@@ -2039,7 +2039,18 @@ const initAdmin = async () => {
        ON DUPLICATE KEY UPDATE username = username`,
       ['Scott', 'Admin', 'scott', 'scott@shoemakerrigging.com', '', hash]
     );
-    await db.query(`UPDATE users SET roles = JSON_ARRAY('admin') WHERE username = 'scott'`);
+    const [sRows] = await db.query("SELECT roles FROM users WHERE username = 'scott'");
+    if (sRows.length > 0) {
+      let currentRoles = sRows[0].roles;
+      if (typeof currentRoles === 'string') {
+        try { currentRoles = JSON.parse(currentRoles); } catch(e) { currentRoles = []; }
+      }
+      currentRoles = Array.isArray(currentRoles) ? currentRoles : [];
+      if (!currentRoles.includes('admin')) {
+        currentRoles.push('admin');
+        await db.query("UPDATE users SET roles = ? WHERE username = 'scott'", [JSON.stringify(currentRoles)]);
+      }
+    }
     console.log('Admin account (scott) ensured.');
   } catch (error) {
     console.error('Failed to initialize admin account', error);
