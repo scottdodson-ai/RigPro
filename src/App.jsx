@@ -3391,9 +3391,6 @@ function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setLeads, setSele
                 value={quote.status || ''}
                 onChange={async (e) => {
                   const newStatusId = e.target.value;
-                  const st = (statusList || []).find(s => String(s.id) === String(newStatusId));
-                  if (!window.confirm(`Are you sure you want to change the status of this quote to "${st ? st.name : newStatusId}"?`)) return;
-
                   const updatedQuote = { ...quote, status: newStatusId };
 
                   // Update local state
@@ -3431,7 +3428,7 @@ function QuotePreviewPanel({ quote, custData, onEdit, setJobs, setLeads, setSele
                 style={{ ...sel, padding: "2px 5px", fontSize: 11, width: "auto", height: "auto", marginLeft: 8 }}
               >
                 <option value="">-- Change Status --</option>
-                {statusList.map(s => (
+                {(statusList || []).filter(s => s.type === 'quote').map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
@@ -9192,7 +9189,7 @@ function DatabaseBrowser({ token, initialTable, hideTabs }) {
                     ) : (selectedTable === 'quotes' || selectedTable === 'Quotes') && h === 'status' ? (
                       <select name={h} defaultValue={(!showBulkUpdateModal && editingRow) ? editingRow[h] : ""} style={{ ...inp, fontSize: 12, padding: "6px 12px" }}>
                         <option value="">-- Select Status --</option>
-                        {statusList.map(s => (
+                        {(statusList || []).filter(s => s.type === 'quote').map(s => (
                           <option key={s.id} value={s.id}>{s.name} (ID: {s.id})</option>
                         ))}
                       </select>
@@ -11599,7 +11596,7 @@ export default function App() {
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                 {active.status !== "Lead" && <div style={{ flex: "1 1 120px" }}><Lbl c="QUOTE TYPE" /><select style={{ ...sel, width: "100%", boxSizing: "border-box" }} value={active.qtype} onChange={e => u("qtype", e.target.value)} disabled={active.locked}><option>Contract</option><option>T&M</option><option>Not To Exceed</option></select></div>}
-                {active.status !== "Lead" && <div style={{ flex: "1 1 120px" }}><Lbl c="STATUS" /><select style={{ ...sel, width: "100%", boxSizing: "border-box" }} value={active.status} onChange={e => u("status", e.target.value)} disabled={active.locked}>{statusList.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}</select></div>}
+                {active.status !== "Lead" && <div style={{ flex: "1 1 120px" }}><Lbl c="STATUS" /><select style={{ ...sel, width: "100%", boxSizing: "border-box" }} value={active.status} onChange={e => u("status", e.target.value)} disabled={active.locked}>{(statusList || []).filter(s => s.type === 'quote').map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
                 <div style={{ flex: "2 1 150px" }}>
                   <Lbl c="ESTIMATOR" />
                   <select style={{ ...sel, width: "100%", boxSizing: "border-box" }} value={active.salesAssoc || ""} onChange={e => u("salesAssoc", e.target.value)} disabled={active.locked}>

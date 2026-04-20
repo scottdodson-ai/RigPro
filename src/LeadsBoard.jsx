@@ -73,9 +73,6 @@ const LeadsBoard = (props) => {
   };
 
   const handleStatusChange = async (newStatusId) => {
-    const st = (statusList || []).find(s => String(s.id) === String(newStatusId));
-    if (!window.confirm(`Are you sure you want to change the status to "${st ? st.name : newStatusId}"?`)) return;
-
     try {
       const payload = { status: newStatusId };
       const res = await fetch(`${fmt.api || "/api"}/admin/tables/quotes/${selLead.id}`, {
@@ -273,7 +270,7 @@ const LeadsBoard = (props) => {
                            value={selLead.status_number || 1}
                            onChange={e => handleStatusChange(e.target.value)}
                          >
-                           {statusList && statusList.map(s => (
+                           {statusList && statusList.filter(s => s.type === 'quote').map(s => (
                              <option key={s.id} value={s.id}>{s.name}</option>
                            ))}
                          </select>
