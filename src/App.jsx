@@ -2575,7 +2575,7 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, leadStageFilter, setLeadSt
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
   const [showLeadMenu, setShowLeadMenu] = useState(false);
 
-  const STAGES_DASH = ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+  const STAGES_DASH = ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const [customStart, setCustomStart] = useState(() => `${thisYear}-01-01`);
   const [customEnd, setCustomEnd] = useState(() => now.toISOString().slice(0, 10));
 
@@ -2825,9 +2825,52 @@ function RecentQuotesCard({ jobs, openEdit, setView, onBack }) {
   );
 }
 
+function JobFoldersDashboardCard({ allJobs, statusList, C, title }) {
+  const [filterCustName, setFilterCustName] = useState("");
+  const uniqueCustomers = useMemo(() => Array.from(new Set((allJobs||[]).map(j => j.client || j.customer_name).filter(Boolean))).sort(), [allJobs]);
+  const progressQuotes = useMemo(() => !filterCustName ? (allJobs||[]) : (allJobs||[]).filter(j => j.client === filterCustName || j.customer_name === filterCustName), [allJobs, filterCustName]);
+
+  const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+  const baseColors = ["#b86b0a", "#2563eb", "#0d9488", "#7c3aed", "#16a34a", "#eab308", "#f97316", "#ef4444", "#3b82f6", "#14b8a6", "#a855f7", "#ec4899", "#8b5cf6"];
+  const stageColors = STAGES.map((_, i) => baseColors[i % baseColors.length]);
+
+  return (
+    <div style={{ background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "24px", marginTop: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+        <div style={{ fontSize: 13, color: C.txtS, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1 }}>{title || "Job Folder / Quote Tracking Pipeline"}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 11, color: C.txtS, fontWeight: 700 }}>FILTER METRICS:</div>
+          <select style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.bdr}`, fontSize: 12, outline: "none", background: C.sur, color: C.txt }} value={filterCustName} onChange={e => setFilterCustName(e.target.value)}>
+            <option value="">All Customers</option>
+            {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="custom-scroll mobile-wrap-stages" style={{ display: "flex", alignItems: "flex-start", overflowX: "auto", paddingBottom: 10 }}>
+        {STAGES.map((s, i) => {
+          const color = stageColors[i];
+          const stId = (statusList || []).find(st => st.name === s)?.id;
+          const count = progressQuotes.filter(q => String(q.status) === String(stId) || q.status_name === s).length;
+          return (
+            <div className="jb-dash-stage" key={s} style={{ flex: "1 0 100px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+              {i > 0 && <div className="jb-dash-line" style={{ position: "absolute", top: 22, left: "-50%", right: "50%", height: 3, background: C.bdr, zIndex: 0 }} />}
+              {i < STAGES.length - 1 && <div className="jb-dash-line" style={{ position: "absolute", top: 22, left: "50%", right: "-50%", height: 3, background: C.bdr, zIndex: 0 }} />}
+              <div className="jb-dash-circle" title={s} style={{ width: 46, height: 46, borderRadius: "50%", border: `3px solid ${color}`, background: C.sur, color: color, fontSize: 16, fontWeight: 800, zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", cursor: "default", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+                {i + 1}
+              </div>
+              <div className="jb-dash-title" style={{ fontSize: 11, color: C.txtS, fontWeight: 700, marginTop: 10, textAlign: "center", lineHeight: 1.3, maxWidth: 80 }}>{s}</div>
+              <div className="jb-dash-count" style={{ fontSize: 14, fontWeight: 800, color: C.acc, marginTop: 8, background: C.accL, padding: "4px 12px", borderRadius: 12, border: `1px solid ${C.acc}30` }}>{count}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Lead DASHBOARD CARD ────────────────────────────────────────────────────────
 function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, leadStageFilter, onBack, statusList }) {
-  const STAGES_DASH = statusList && statusList.length ? statusList.filter(s => s.type === 'quote').map(s => s.name) : ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+  const STAGES_DASH = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const baseColors = ["#b86b0a", "#2563eb", "#0d9488", "#7c3aed", "#16a34a", "#eab308", "#f97316", "#ef4444", "#3b82f6", "#14b8a6", "#a855f7", "#ec4899", "#8b5cf6"];
   const stageColors = STAGES_DASH.map((_, i) => baseColors[i % baseColors.length]);
   const [expandedLead, setExpandedLead] = useState(null);
@@ -2844,7 +2887,24 @@ function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openN
     setPromptInfo(null);
   }
 
-  const pendingReqs = reqs.filter(r => r.status !== "Quoted" && r.status !== "Dead").sort((a, b) => new Date(b.date || "1970-01-01").getTime() - new Date(a.date || "1970-01-01").getTime());
+  const leadStatusObj = (statusList || []).find(s => (s.name || '').toLowerCase() === 'lead');
+  const pendingReqs = jobs.filter(q => String(q.status) === String(leadStatusObj?.id) || q.status_name === 'Lead').map(q => {
+    let qd = {};
+    if (typeof q.quote_data === 'string') { try { qd = JSON.parse(q.quote_data); } catch (e) { } } 
+    else if (q.quote_data) qd = q.quote_data;
+    return {
+      ...qd, ...q,
+      id: q.id, original_job: q,
+      rn: q.qn || q.job_num || q.rn || "—",
+      company: q.client || q.customer_name || qd.company || "—",
+      requester: qd.requester || qd.req_name || qd.contact || "—",
+      phone: qd.phone || "—", email: qd.email || "—",
+      jobSite: q.job_location || qd.jobSite || "—",
+      desc: q.job_description || qd.desc || "—",
+      date: q.date_created || q.date || new Date().toISOString()
+    };
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   if (pendingReqs.length === 0) return null;
 
   const filteredReqs = pendingReqs.filter(r => {
@@ -2908,7 +2968,7 @@ function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openN
           const todayD = new Date();
           const daysLead = Math.floor((todayD - leadDate) / 86400000);
           const daysAct = Math.floor((todayD - actDate) / 86400000);
-          const linkedQ = jobs.find(q => q.fromReqId === r.id);
+          const linkedQ = jobs.find(q => q.fromReqId === r.id) || r.original_job;
           const isExp = expandedLead === r.id;
 
           return (
@@ -2918,7 +2978,9 @@ function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openN
                 <div style={{ width: 22, height: 22, borderRadius: "50%", background: isExp ? C.acc : C.bdr, color: isExp ? "#fff" : C.txtM, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, transition: "all .15s" }}>{isExp ? "▾" : "▸"}</div>
                 <div style={{ flex: 1, minWidth: 140 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{r.company}</div>
-                  <div style={{ fontSize: 11, color: C.txtS, marginTop: 1 }}>{(r.desc || "").slice(0, 70)}</div>
+                  <div style={{ fontSize: 11, color: daysLead === 0 ? C.grn : C.txtS, fontWeight: daysLead === 0 ? 700 : 500, marginTop: 1 }}>
+                    {daysLead === 0 ? "Received today" : `${daysLead} ${daysLead === 1 ? 'day' : 'days'} ago`}
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 3, background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 5, padding: "3px 7px" }}>
@@ -2927,22 +2989,32 @@ function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openN
                     ))}
                   </div>
                   <button style={{ ...mkBtn("ghost"), padding: "4px 9px", fontSize: 11 }} onClick={e => { e.stopPropagation(); setShowJFM(r); }}>Job Folder</button>
-                  <button style={{ ...mkBtn("blue"), padding: "4px 9px", fontSize: 11 }} onClick={e => { e.stopPropagation(); openNew(r); }}>Quote →</button>
+                  <button style={{ ...mkBtn("blue"), padding: "4px 9px", fontSize: 11 }} onClick={e => { e.stopPropagation(); const draftStatus = (statusList || []).find(s => s.name === "Draft")?.id || "Draft"; openEdit({ ...r.original_job, status: draftStatus, client: r.original_job.client || r.original_job.customer_name || r.company }); }}>Quote →</button>
                 </div>
               </div>
 
               {/* Expanded detail */}
               {isExp && (
                 <div style={{ borderTop: `1px solid ${C.bdr}`, padding: "14px 16px", background: C.sur, display: "flex", flexDirection: "column", gap: 14 }}>
+                  {/* Lead Data */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 7, padding: "12px 14px" }}>
+                    <div><div style={{ fontSize: 9, color: C.txtS, textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>Lead #</div><div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginTop: 2 }}>{r.rn || "—"}</div></div>
+                    <div><div style={{ fontSize: 9, color: C.txtS, textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>Requester</div><div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginTop: 2 }}>{r.requester || "—"}</div></div>
+                    <div><div style={{ fontSize: 9, color: C.txtS, textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>Phone</div><div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginTop: 2 }}>{r.phone ? <a href={`tel:${r.phone}`} style={{ color: C.blue, textDecoration: "none" }}>{r.phone}</a> : "—"}</div></div>
+                    <div><div style={{ fontSize: 9, color: C.txtS, textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>Email</div><div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginTop: 2 }}>{r.email ? <a href={`mailto:${r.email}`} style={{ color: C.blue, textDecoration: "none" }}>{r.email}</a> : "—"}</div></div>
+                    <div><div style={{ fontSize: 9, color: C.txtS, textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>Job Site</div><div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginTop: 2 }}>{r.jobSite || "—"}</div></div>
+                    <div style={{ gridColumn: "1 / -1" }}><div style={{ fontSize: 9, color: C.txtS, textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>Description</div><div style={{ fontSize: 12, color: C.txtM, marginTop: 4, lineHeight: 1.5 }}>{r.desc || r.job_description || "No description provided."}</div></div>
+                  </div>
+
                   <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
                     {/* Stage progress */}
                     <div style={{ flex: 1, minWidth: 280 }}>
                       <div style={{ fontSize: 9, color: C.txtS, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Quote Progress</div>
-                      <div style={{ display: "flex" }}>
+                      <div className="custom-scroll" style={{ display: "flex", overflowX: "auto", paddingBottom: 10 }}>
                         {STAGES_DASH.map((s, i) => {
                           const done = i < stage; const active = i === stage; const color = stageColors[i];
                           return (
-                            <div key={s} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+                            <div key={s} style={{ flex: "1 0 80px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
                               {i > 0 && <div style={{ position: "absolute", top: 14, left: "-50%", right: "50%", height: 2, background: done || active ? stageColors[i - 1] : C.bdr, zIndex: 0 }} />}
                               {i < STAGES_DASH.length - 1 && <div style={{ position: "absolute", top: 14, left: "50%", right: "-50%", height: 2, background: done ? color : C.bdr, zIndex: 0 }} />}
                               <button
@@ -3643,7 +3715,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
       .map(q => {
         const lead = reqs.find(r => r.id === q.fromReqId);
         const folder = lead ? jobFolders[lead.id] : null;
-        const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote').map(s => s.name) : ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+        const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
         const stage = folder?.stage ?? null;
         return {
           id: q.id,
@@ -4654,7 +4726,7 @@ function ClockBadge({ label, days, alertThresh }) {
   );
 }
 
-function JobFolderModal({ lead, folder, onSave, onClose, onMarkDead, onUpdateLead, onCreateEstimate, appUsers = [], globalChecklist, onUpdateGlobalChecklist, linkedQuote = null, liftTonThreshold = 10, statusList = [] }) {
+function JobFolderModal({ lead, folder, onSave, onClose, onMarkDead, onUpdateLead, onCreateEstimate, appUsers = [], globalChecklist, onUpdateGlobalChecklist, linkedQuote = null, liftTonThreshold = 10, statusList = [], allJobs = [] }) {
   const today = new Date();
   const leadDate = new Date(lead.start_date || today);
   const daysSinceLead = Math.floor((today - leadDate) / 86400000);
@@ -4669,13 +4741,17 @@ function JobFolderModal({ lead, folder, onSave, onClose, onMarkDead, onUpdateLea
   const fileInputRef = useRef();
   const lastActivityDate = new Date(init.lastActivity || lead.start_date || today);
   const daysSinceActivity = Math.floor((today - lastActivityDate) / 86400000);
-  const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote').map(s => s.name) : ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+  const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const baseColors = ["#b86b0a", "#2563eb", "#0d9488", "#7c3aed", "#16a34a", "#eab308", "#f97316", "#ef4444", "#3b82f6", "#14b8a6", "#a855f7", "#ec4899", "#8b5cf6"];
   const stageColors = STAGES.map((_, i) => baseColors[i % baseColors.length]);
   const [editingLead, setEditingLead] = useState(false);
   const [leadEdits, setLeadEdits] = useState({ requester: lead.requester || "", phone: lead.phone || "", email: lead.email || "", jobSite: lead.jobSite || "", desc: lead.job_description || "", salesAssoc: lead.salesAssoc || "", date: lead.start_date || "" });
   const [promptInfo, setPromptInfo] = useState(null);
   const [mobilePage, setMobilePage] = useState(1);
+
+  const [filterCustName, setFilterCustName] = useState("");
+  const uniqueCustomers = useMemo(() => Array.from(new Set(allJobs.map(j => j.client || j.customer_name).filter(Boolean))).sort(), [allJobs]);
+  const progressQuotes = useMemo(() => !filterCustName ? allJobs : allJobs.filter(j => j.client === filterCustName || j.customer_name === filterCustName), [allJobs, filterCustName]);
 
   const applyProgress = () => {
     if (!promptInfo) return;
@@ -4887,16 +4963,28 @@ function JobFolderModal({ lead, folder, onSave, onClose, onMarkDead, onUpdateLea
 
             {/* ROW 2: PROGRESS TRACKER */}
             <div style={{ background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 8, padding: "14px 18px" }}>
-              <div style={{ fontSize: 9, color: C.txtS, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Quote Progress — Click a stage to update</div>
-              <div style={{ display: "flex" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ fontSize: 9, color: C.txtS, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1 }}>Quote Progress — Click a stage to update</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontSize: 10, color: C.txtS, fontWeight: 700 }}>FILTER METRICS:</div>
+                  <select style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.bdr}`, fontSize: 11, outline: "none", background: C.sur, color: C.txt }} value={filterCustName} onChange={e => setFilterCustName(e.target.value)}>
+                    <option value="">All Customers</option>
+                    {uniqueCustomers.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="custom-scroll" style={{ display: "flex", overflowX: "auto", paddingBottom: 10 }}>
                 {STAGES.map((s, i) => {
                   const done = i < stage; const active = i === stage; const color = stageColors[i];
+                  const stId = statusList.find(st => st.name === s)?.id;
+                  const count = progressQuotes.filter(q => String(q.status) === String(stId) || q.status_name === s).length;
                   return (
-                    <div key={s} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+                    <div key={s} style={{ flex: "1 0 80px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
                       {i > 0 && <div style={{ position: "absolute", top: 18, left: "-50%", right: "50%", height: 3, background: done || active ? stageColors[i - 1] : C.bdr, zIndex: 0 }} />}
                       {i < STAGES.length - 1 && <div style={{ position: "absolute", top: 18, left: "50%", right: "-50%", height: 3, background: done ? color : C.bdr, zIndex: 0 }} />}
                       <button onClick={(e) => { e.stopPropagation(); setPromptInfo({ newStage: i, note: `Moved to stage: ${s}`, date: new Date().toISOString().slice(0, 10) }); }} title={s} style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${active || done ? color : C.bdr}`, background: active || done ? color : C.sur, color: active || done ? "#fff" : C.txtS, fontSize: 13, fontWeight: 800, cursor: "pointer", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: active ? `0 0 0 4px ${color}30` : "none", transition: "all .2s" }}>{done ? "" : i + 1}</button>
                       <div style={{ fontSize: 9, color: active ? color : C.txtS, fontWeight: active ? 800 : 600, marginTop: 6, textAlign: "center", lineHeight: 1.2, maxWidth: 80 }}>{s}</div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: C.acc, marginTop: 4, background: C.accL, padding: "2px 8px", borderRadius: 10 }}>{count}</div>
                     </div>
                   );
                 })}
@@ -7236,7 +7324,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
             }
             // Stage changes captured as folder.stage
             if (folder?.stage > 0) {
-              const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote').map(s => s.name) : ["Lead Received", "Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+              const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
               allEvents.push({ date: folder.lastActivity || r.date, note: `Progress: ${STAGES[folder.stage] || "Stage " + folder.stage}`, source: "stage", leadRn: r.rn, leadId: r.id, color: C.acc });
             }
             // Lead created
@@ -10470,7 +10558,7 @@ export default function App() {
   const [adjModal, setAdjModal] = useState(null);  // quote to adjust
   const [deadModal, setDeadModal] = useState(null);  // {type:"lead"|"quote", item}
   const [dashReportId, setDashReportId] = useState(null); // report to open when navigating from dashboard
-  const [dashAcc, setDashAcc] = useState("metrics"); // current open accordion in Dashboard
+  const [dashAcc, setDashAcc] = useState("leads"); // current open accordion in Dashboard
   const [wonOnly, setWonOnly] = useState(false); // filter customers view
   const [custView, setCustView] = useState("list"); // "list" or "card"
   const [jobListFilter, setJobListFilter] = useState(null); // customer name to filter Master Jobs list
@@ -11020,7 +11108,16 @@ export default function App() {
 
 
   // ── DASHBOARD ──────────────────────────────────────────────────────────────
-  if (view === "dash") return (
+  if (view === "dash") {
+    const dashLeadStatusId = (statusList || []).find(s => (s.name || '').toLowerCase() === 'lead')?.id;
+    const leadsFilterFn = q => String(q.status) === String(dashLeadStatusId) || q.status_name === 'Lead';
+    const quoteStages = (statusList || []).filter(s => s.type === 'quote' && (s.name || '').toLowerCase() !== 'lead').map(s => s.name);
+    const jbFilterFn = q => quoteStages.includes(q.status_name || (statusList || []).find(s => String(s.id) === String(q.status))?.name);
+    const dashLeadsCount = jobs.filter(leadsFilterFn).length;
+    const dashMyJbCount = profileUser ? jobs.filter(q => (q.salesAssoc === profileUser.username || q.estimator === profileUser.username || q.salesAssoc === profileUser.first_name || q.estimator === profileUser.first_name) && jbFilterFn(q)).length : 0;
+    const dashGlbJbCount = jobs.filter(jbFilterFn).length;
+
+    return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: C.bg, color: C.txt, fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif", fontSize: 14 }}>
       {SHOW_SYSTEM_PROMPT_BANNER && showSystemPrompt && (
         <div style={{ position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)", zIndex: 1000, background: C.acc, color: "#fff", padding: "10px 20px", borderRadius: 30, fontWeight: 700, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 8 }}>
@@ -11028,7 +11125,7 @@ export default function App() {
         </div>
       )}
       {showRM && <LeadModal init={editR} onSave={saveReq} appUsers={appUsers} custData={custData} setCustData={setCustData} jobs={jobs} reqs={reqs} profileUser={profileUser} role={role} onClose={() => { setShowRM(false); setEditR(null); }} />}
-      {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} statusList={statusList} onClose={() => setShowJFM(null)} />}
+      {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} statusList={statusList} allJobs={jobs} onClose={() => setShowJFM(null)} />}
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       {deadModal && <MarkDeadModal
         itemType={deadModal.type === "lead" ? "Lead" : "Job"}
@@ -11049,6 +11146,27 @@ export default function App() {
       <div className="app-page-container" style={{ maxWidth: 1160 }}>
         <style>{`
           .mobile-act-btns { display: none; }
+          @media (max-width: 800px) {
+            .mobile-wrap-stages {
+              flex-direction: column !important;
+              align-items: stretch !important;
+              gap: 8px !important;
+              overflow-x: hidden !important;
+              padding-bottom: 0 !important;
+            }
+            .jb-dash-stage {
+              flex-direction: row !important;
+              flex: none !important;
+              width: 100% !important;
+              padding: 8px 16px !important;
+              border-radius: 8px !important;
+              align-items: center !important;
+            }
+            .jb-dash-line { display: none !important; }
+            .jb-dash-circle { width: 34px !important; height: 34px !important; font-size: 14px !important; border-width: 2px !important; box-shadow: none !important; }
+            .jb-dash-title { margin-top: 0 !important; margin-left: 14px !important; font-size: 13px !important; text-align: left !important; max-width: none !important; flex: 1 !important; }
+            .jb-dash-count { margin-top: 0 !important; margin-left: auto !important; font-size: 13px !important; padding: 4px 10px !important; }
+          }
         `}</style>
         <div className="mobile-act-btns"></div>
         {SHOW_SEMANTIC_SEARCH && (
@@ -11065,28 +11183,8 @@ export default function App() {
         )}
 
 
-        <div style={{ background: C.sur, border: `1px solid ${C.bdr}`, borderRadius: 10, overflow: "hidden", marginBottom: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.04)" }}>
-          <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: C.accL, borderBottom: `1px solid ${C.bdr}` }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: C.acc, display: "flex", alignItems: "center", gap: 10, letterSpacing: 0.5, textTransform: "uppercase" }}>
-              📊 Performance Metrics
-            </div>
-            <div style={{ fontSize: 10, color: C.acc, fontWeight: 700, opacity: 0.6 }}>ALWAYS ACTIVE</div>
-          </div>
-          <div style={{ padding: 20 }}>
-            <DashboardMetrics jobs={jobs} reqs={reqs} leadStageFilter={leadStageFilter} setLeadStageFilter={setLeadStageFilter} onOpenReport={id => { setDashReportId(id); setView("reports"); }} />
-          </div>
-        </div>
-
         <AccordionCard
-          title="📈 Sales Analytics"
-          isOpen={dashAcc === "sales"}
-          onToggle={open => setDashAcc(open ? "sales" : null)}
-        >
-          <SalesmanCharts jobs={jobs} reqs={reqs} onBack={() => setDashAcc("metrics")} />
-        </AccordionCard>
-
-        <AccordionCard
-          title="📝 Leads"
+          title={`📝 Leads (${dashLeadsCount})`}
           isOpen={dashAcc === "leads"}
           onToggle={open => setDashAcc(open ? "leads" : null)}
         >
@@ -11104,6 +11202,47 @@ export default function App() {
             onBack={() => setDashAcc("metrics")}
             statusList={statusList}
           />
+        </AccordionCard>
+
+        {profileUser && (profileUser.roles || [profileUser.role]).includes("estimator") && (
+          <AccordionCard
+            title={`👤 My Job Folders (${dashMyJbCount})`}
+            isOpen={dashAcc === "myjobfolders"}
+            onToggle={open => setDashAcc(open ? "myjobfolders" : null)}
+          >
+            <JobFoldersDashboardCard 
+              allJobs={jobs.filter(q => q.salesAssoc === profileUser.username || q.estimator === profileUser.username || q.salesAssoc === profileUser.first_name || q.estimator === profileUser.first_name)} 
+              statusList={statusList} 
+              C={C} 
+              title="My Tracking Pipeline"
+            />
+          </AccordionCard>
+        )}
+
+        <AccordionCard
+          title={`📁 Job Folders (${dashGlbJbCount})`}
+          isOpen={dashAcc === "jobfolders"}
+          onToggle={open => setDashAcc(open ? "jobfolders" : null)}
+        >
+          <JobFoldersDashboardCard allJobs={jobs} statusList={statusList} C={C} />
+        </AccordionCard>
+
+        <AccordionCard
+          title="📊 Performance Metrics"
+          isOpen={dashAcc === "metrics"}
+          onToggle={open => setDashAcc(open ? "metrics" : null)}
+        >
+          <div style={{ padding: 20 }}>
+            <DashboardMetrics jobs={jobs} reqs={reqs} leadStageFilter={leadStageFilter} setLeadStageFilter={setLeadStageFilter} onOpenReport={id => { setDashReportId(id); setView("reports"); }} />
+          </div>
+        </AccordionCard>
+
+        <AccordionCard
+          title="📈 Sales Analytics"
+          isOpen={dashAcc === "sales"}
+          onToggle={open => setDashAcc(open ? "sales" : null)}
+        >
+          <SalesmanCharts jobs={jobs} reqs={reqs} onBack={() => setDashAcc("metrics")} />
         </AccordionCard>
 
         <AccordionCard
@@ -11161,6 +11300,7 @@ export default function App() {
       <Footer />
     </div>
   );
+}
 
   // ── CUSTOMERS ──────────────────────────────────────────────────────────────
   if (view === "customers") return (
@@ -11247,7 +11387,7 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: C.bg, color: C.txt, fontFamily: "'Segoe UI','Helvetica Neue',Arial,sans-serif", fontSize: 14 }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => setLeads(p => [l, ...p])} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
-      {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} statusList={statusList} onClose={() => setShowJFM(null)} />}
+      {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} statusList={statusList} allJobs={jobs} onClose={() => setShowJFM(null)} />}
       {deadModal && <MarkDeadModal itemType={deadModal.type === "lead" ? "Lead" : "Job"} itemLabel={deadModal.type === "lead" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client} onConfirm={note => { if (deadModal.type === "lead") setReqs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x)); else setJobs(p => p.map(x => x.id === deadModal.item.id ? { ...x, status: "Dead", deadNote: note } : x)); setDeadModal(null); }} onClose={() => setDeadModal(null)} />}
       <MasterJobList
         jobs={jobs} reqs={reqs} jobFolders={jobFolders} openEdit={openEdit} setShowJFM={setShowJFM}
@@ -11334,7 +11474,7 @@ export default function App() {
         onClearInitialReport={() => setTimeout(() => setDashReportId(null), 100)}
         onBack={() => { setDashReportId(null); goBack(); }}
       />
-      {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} statusList={statusList} onClose={() => setShowJFM(null)} />}
+      {showJFM && <JobFolderModal lead={showJFM} folder={jobFolders[showJFM.id]} globalChecklist={globalCheck} onUpdateGlobalChecklist={setGlobalCheck} onSave={saveJobFolder} onMarkDead={r => { setDeadModal({ type: "lead", item: r }); setShowJFM(null); }} onUpdateLead={r => setReqs(p => p.map(x => x.id === r.id ? r : x))} onCreateEstimate={r => { setShowJFM(null); openNew(r); }} appUsers={appUsers} linkedQuote={jobs.find(q => q.fromReqId === showJFM?.id) || null} liftTonThreshold={liftTonThreshold} statusList={statusList} allJobs={jobs} onClose={() => setShowJFM(null)} />}
       {deadModal && <MarkDeadModal
         itemType={deadModal.type === "lead" ? "Lead" : "Job"}
         itemLabel={deadModal.type === "lead" ? deadModal.item.rn + " · " + deadModal.item.company : deadModal.item.job_num + " · " + deadModal.item.client}

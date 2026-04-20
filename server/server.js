@@ -2087,24 +2087,32 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
     let targetId = null;
     let oldStatus = null;
 
+    let oldEstimator = null;
+
+    let oldQuoteNumber = null;
+
     // Only trust route id if it fits INT range used by quotes.id
     if (Number.isInteger(safeId) && safeId > 0 && safeId <= 2147483647) {
-      const [existingById] = await connection.query('SELECT id, status FROM quotes WHERE id = ?', [safeId]);
+      const [existingById] = await connection.query('SELECT id, status, sales_assoc, quote_number FROM quotes WHERE id = ?', [safeId]);
       if (existingById.length > 0) {
         targetId = existingById[0].id;
         oldStatus = existingById[0].status;
+        oldEstimator = existingById[0].sales_assoc;
+        oldQuoteNumber = existingById[0].quote_number;
       }
     }
 
     // Fallback: resolve by quote number so client-side timestamp ids can still update correctly
     if (!targetId && quote.qn) {
       const [existingByQn] = await connection.query(
-        'SELECT id, status FROM quotes WHERE quote_number = ? ORDER BY id DESC LIMIT 1',
+        'SELECT id, status, sales_assoc, quote_number FROM quotes WHERE quote_number = ? ORDER BY id DESC LIMIT 1',
         [quote.qn]
       );
       if (existingByQn.length > 0) {
         targetId = existingByQn[0].id;
         oldStatus = existingByQn[0].status;
+        oldEstimator = existingByQn[0].sales_assoc;
+        oldQuoteNumber = existingByQn[0].quote_number;
       }
     }
 
@@ -2207,6 +2215,38 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
           'INSERT INTO Quote_Status_History (quote_id, status_name, changed_by, notes) VALUES (?, ?, ?, ?)',
           [targetId, quote.status || 'Draft', req.user ? req.user.id || req.user.userId : null, 'Status updated via Quote form']
         );
+      }
+
+      const quoteNumberDisplay = quote.qn || oldQuoteNumber || '';
+      
+      // Always delete preexisting assignment notifications when quote data is updated or reassigned
+      if (quoteNumberDisplay) {
+        await connection.query(
+          'DELETE FROM admin_tasks WHERE text LIKE ?', 
+          [`Quote Reassignment: [${quoteNumberDisplay}]%`]
+        );
+      }
+
+      const newEstimator = String(quote.salesAssoc || quote.sales_assoc || '').trim();
+      const priorEstimator = String(oldEstimator || '').trim();
+      
+      if (priorEstimator !== '' && newEstimator !== '' && priorEstimator !== newEstimator && quoteNumberDisplay !== '') {
+        const [usersMatch] = await connection.query(
+          `SELECT id FROM users 
+           WHERE CONCAT(first_name, ' ', SUBSTRING(last_name, 1, 1)) = ?
+              OR CONCAT(first_name, ' ', last_name) = ?
+              OR username = ?
+              OR first_name = ?
+           LIMIT 1`,
+          [newEstimator, newEstimator, newEstimator, newEstimator]
+        );
+        if (usersMatch.length > 0) {
+          const taskText = `Quote Reassignment: [${quoteNumberDisplay}] has been reassigned to you.`;
+          await connection.query(
+            'INSERT INTO admin_tasks (text, assigned_to, created_by, subnotes, done) VALUES (?, ?, ?, "[]", 0)',
+            [taskText, usersMatch[0].id, req.user ? (req.user.id || req.user.userId) : null]
+          );
+        }
       }
     } else {
       const [insertResult] = await connection.query(
