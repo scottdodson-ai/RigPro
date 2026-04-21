@@ -976,6 +976,11 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
   const table = req.params.table;
   const roles = req.user.roles || [];
 
+  // Allow estimators to update quotes (which includes leads)
+  if (table === 'quotes' && (roles.includes('estimator') || roles.includes('admin') || roles.includes('1'))) {
+    return next();
+  }
+
   authenticateAdmin(req, res, next);
 }, async (req, res) => {
   const allowedTables = ['users', 'admin_tasks', 'quotes', 'customers', 'customer_contacts', 'base_labor', 'equipment', 'estimators', 'master_jobs', 'status', 'Quote_Status_History',  'in_review', 'role', 'sites', 'site_types', 'phi_config', 'company_info', 'user_auth_audit'];

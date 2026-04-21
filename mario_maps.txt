@@ -1,0 +1,239 @@
+const EQ_CATS = [...new Set(EQUIPMENT.map(e => e.cat))];
+  return ["Foreman","Rigger","Labor"].map(role => {
+    : machines.map((m,i) => `M${i+1}: ${m.equipDesc||"Machine"}`).join(" · ");
+    .map(r => {
+    .map(code => {
+    .map(r => ({
+    .map(r => ({
+        {bars.map(b => b.v>0 && <div key={b.l} style={{ width:`${b.v/total*100}%`, background:b.c }}/>)}
+        {bars.map(b => <div key={b.l} style={{ display:"flex", alignItems:"center", gap:3, fontSize:10, color:C.txtS }}><div style={{ width:7, height:7, borderRadius:2, background:b.c }}/>{b.l} {Math.round(b.v/total*100)}%</div>)}
+          {sg.map(c => <div key={c} style={{ padding:"8px 12px", fontSize:13, cursor:"pointer", borderBottom:`1px solid ${C.bdr}` }} onMouseDown={() => { on(c); setOpen(false); }}>{c}</div>)}
+      {[["dash","Dashboard"],["jobs","Sales"],["customers","Customers"],["requests","Requests"],["quotes","Quotes"],["equipment","Equip Rates"],["labor","Labor Rates"],["calendar","Calendar"]].map(([v,l]) => (
+          <div><Lbl c="STATUS"/><select style={{ ...sel, width:"100%" }} value={f.status} onChange={e=>u("status",e.target.value)}>{["New","In Progress","Quoted"].map(x=><option key={x}>{x}</option>)}</select></div>
+                {["Role","Bill Regular","Bill OT","Cost Regular","Cost OT","Burden %"].map(h => (
+              {BASE_LABOR.map((r, i) => {
+                  {CUSTS_ALL.filter(c => !customerRates[c]).map(c => (
+              {filteredClients.map(client => {
+                    {["Role","Std Bill Reg","Std Bill OT","Custom Bill Reg","Custom Bill OT","Diff"].map(h => (
+                  {BASE_LABOR.map((r, i) => {
+                {["+","-"].map(s => (
+              {REASONS.map(r => (
+    setEquipment(prev => prev.map(e =>
+                {KNOWN_CATS.map(ct => <option key={ct}>{ct}</option>)}
+      {eqCats.map(cat => (
+                  {["Code","Category","Equipment Name","Capacity","Base/Day","Override Rate","Override Note",""].map(h => (
+                {equipment.filter(e => e.cat === cat).map(e => {
+                            {KNOWN_CATS.map(ct => <option key={ct}>{ct}</option>)}
+  const [fields, setFields] = useState(template.map(f => ({...f})));
+  function toggle(i)    { setFields(prev => prev.map((f,j) => j===i ? {...f, enabled:!f.enabled} : f)); }
+  function updateLabel(i, v) { setFields(prev => prev.map((f,j) => j===i ? {...f, label:v} : f)); }
+          {fields.map((f, i) => (
+      return machines.map(m => ({
+    const upd = locations.map(l => l.id===editLocId ? { ...l, ...editLoc } : l);
+    const updc = contacts.map(c => c.locationId===id ? {...c,locationId:null} : c);
+            ].map(x => (
+                      {locations.map(l => (
+                  {enabledFields.map(field => (
+                          {locations.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}
+                  {visibleContacts.map(con => {
+                {locations.map(loc => {
+                            {locContacts.map(con=>(
+                            {locQuotes.map(q=>{
+                  {machineHistory.map((m, i) => (
+                    {locations.map(l=>(
+                {filteredQ.map(q=>{
+  const slices = data.filter(d=>d.value>0).map(d => {
+      {slices.map((s,i) => <path key={i} d={s.path} fill={s.color} stroke="#fff" strokeWidth="1.5"/>)}
+            {data.filter(d=>d.value>0).map((d,i) => (
+            {chart.data.filter(d=>d.value>0).map((d,i) => (
+    ...reqs.map(r=>getSA(r)),
+    ...quotes.map(q=>q.salesAssoc||"Unassigned"),
+    return Object.entries(map).sort((a,b)=>b[1].value-a[1].value).map(([label,d],i) => ({
+      .map(q => ({
+        return job.equipSchedule.map(s => ({
+      return (job.equipList || []).map(code => ({
+        return (j.equipList || []).map(code => ({
+    setQuotes(prev => prev.map(q =>
+          {calView === "job" && viewJobs.slice(0, 2).map(job => {
+                {visibleCodes.map(([code, jbs]) => {
+            {equipConflicts.map((cf, i) => (
+                  {cf.equipment.map(code => {
+                {[cf.jobA, cf.jobB].map(job => (
+              ].filter(Boolean).map(([l, v]) => (
+                  {(detailJob.equipList || []).map(code => {
+          {[["master", "📊 Schedule"], ["job", "📋 By Job"], ["equipment", "🔧 By Equipment"]].map(([v, l]) => (
+            return (job.equipList||[]).map(code => ({
+                      {equipConflicts.slice(0,3).map((cf,i) => (
+                  {masterRows.map((row, ri) => {
+              {allEquipCodes.map(code => {
+        ].map(x => (
+          {DAYS.map(d => (
+          {cells.map((d, i) => <React.Fragment key={i}>{renderCell(d)}</React.Fragment>)}
+            {Object.entries(equipMap).filter(([, jbs]) => jbs.length > 1).map(([code, jbs]) => {
+                      Double-booked: {jbs.map(j => j.qn).join(" and ")}
+              {jobs.map(job => {
+                const jobEquip = (job.equipList || []).map(code => ({
+                            {jobEquip.map(({ code, eq, conflict }) => (
+              {filtered.map(job => {
+                          {(job.equipList || []).map(code => (
+        setUsers(prev => prev.map(u => u.id === editUserId ? { ...u, ...updated } : u));
+      setUsers(prev => prev.map(x => x.id===u.id ? {...x, is_disabled: !u.is_disabled} : x));
+      setTasks(prev => prev.map(x => x.id===t.id ? {...x, done: !t.done} : x));
+          {tabs.map(t => (
+                      {["admin","manager","estimator","user"].map(r=><option key={r} value={r}>{r}</option>)}
+                    {["Name","Username","Email","Cell","Role","Status",""].map(h=><th key={h} style={{ textAlign:"left", padding:"6px 10px", fontSize:11, color:C.txtS, fontWeight:700, textTransform:"uppercase" }}>{h}</th>)}
+                    {users.map(u => (
+                  ].map((row, i) => {
+                tasks.map(t => (
+                      {tables.map(t => (
+                {ALLOWED_TABLES_BROWSER.map(t => (
+                          {Object.keys(browseRows[0]).map(k => <th key={k} style={{ textAlign:"left", padding:"5px 8px", color:C.txtS, fontWeight:700, textTransform:"uppercase", fontSize:10, whiteSpace:"nowrap" }}>{k}</th>)}
+                          {browseRows.map((row, i) => (
+                              {Object.values(row).map((v, j) => (
+      return job.intakeData.dateSegments.map((seg,i) => ({
+    return (job.equipList||[]).map(code => ({
+  const allStarts = phases.filter(p=>p.startDate).map(p=>p.startDate);
+  const allEnds   = phases.filter(p=>p.endDate).map(p=>p.endDate);
+          {rows.map((row,ri)=>(
+            {dayHeaders.map((d,di)=>{
+            {dayHeaders.map((d,di)=>{
+          {rows.map((row,ri)=>(
+    return (job.equipList || []).map(code => ({
+    const updated  = current.map(e => e.code === code ? { ...e, [field]: value } : e);
+    setQuotes(prev => prev.map(q => q.id === selJob.id ? upd : q));
+    setQuotes(prev => prev.map(q => q.id === jobId ? { ...q, notes: notesVal } : q));
+              ].map(([k,v]) => (
+                ].map(([k,v]) => (
+                {(selJob.salesAdjustments||[]).map(a => (
+                {getEquipSchedule(selJob).map(eq => {
+              {changeOrders.map(co => (
+                  setQuotes(prev => prev.map(q => q.id===selJob.id ? upd : q));
+                  const segs = selJob.intakeData.dateSegments.map((s,i) =>
+                  setQuotes(prev => prev.map(q => q.id===selJob.id ? upd : q));
+                    setQuotes(prev=>prev.map(q=>q.id===selJob.id?upd:q));
+                    setQuotes(prev=>prev.map(q=>q.id===selJob.id?upd:q));
+                {(selJob.attachments||[]).map((a,i) => (
+          ].map(x => (
+                  {upcoming.map((j,i)=>{
+            {jobs.map(job => {
+const I_EQ_CATS = [...new Set(I_EQUIPMENT.map(e => e.cat))];
+const I_EQ_MAP  = Object.fromEntries(I_EQUIPMENT.map(e => [e.code, e]));
+          {filtered.map(c=><div key={c} onMouseDown={()=>{on(c);setOpen(false);}}
+          {["known","custom"].map(m=>(
+            {knownLocs.map(l=><option key={l} value={l}>{l}</option>)}
+                {I_WEIGHT_SOURCES.map(s=><option key={s}>{s}</option>)}
+                  {phases.map((p,pi)=><option key={p.id} value={p.id}>{p.label||`Phase ${pi+1}`}{p.startDate?` (${p.startDate})`:""}  </option>)}
+          {photos.map(p=>(
+  const allStarts = phases.filter(p=>p.startDate).map(p=>p.startDate);
+  const allEnds   = phases.filter(p=>p.endDate).map(p=>p.endDate);
+          {rows.map((row, ri) => (
+            {dayHeaders.map((d,di)=>{
+            {dayHeaders.map((d,di)=>{
+          {rows.map((row,ri)=>(
+          {phases.map((phase,pi)=>{
+      {labels.map(l=><span key={l} style={{fontSize:10}}>☐ {l}</span>)}
+      {[1,2,3].map(n=>(
+            {[["Description",""],["Manufacturer",""],["Model",""],["Serial #",""],["Weight (lbs)",""],["Dimensions",""],["Pickup Point",""],["Set Point",""],["Phase",""]].map(([l])=>row(l,"90%"))}
+          {["Role","Reg Hrs","OT Hrs","Est Days","Notes"].map(h=><th key={h} style={{border:"1px solid #ccc",padding:"3px 7px",textAlign:"left"}}>{h}</th>)}
+        <tbody>{I_LABOR_ROLES.map(r=><tr key={r}><td style={{border:"1px solid #ccc",padding:"3px 7px"}}>{r}</td>{[1,2,3,4].map(i=><td key={i} style={{border:"1px solid #ccc",padding:"3px 7px"}}>&nbsp;</td>)}</tr>)}</tbody>
+        {I_EQ_CATS.map(cat=>(
+            {I_EQUIPMENT.filter(e=>e.cat===cat).map(e=>(
+        <thead><tr style={{background:"#f3f4f6"}}>{["Type","Vendor / Description","Est. Cost","Notes"].map(h=><th key={h} style={{border:"1px solid #ccc",padding:"3px 7px",textAlign:"left"}}>{h}</th>)}</tr></thead>
+        <tbody>{[1,2,3,4].map(i=><tr key={i}>{[0,1,2,3].map(j=><td key={j} style={{border:"1px solid #ccc",padding:"3px 7px",height:18}}>&nbsp;</td>)}</tr>)}</tbody>
+      {hdr("9. Notes")}{[0,1,2].map(i=><div key={i} style={{borderBottom:"1px solid #ccc",height:16,marginBottom:5}}/>)}
+        {["Customer Signature / Date","Received By / Date","Estimator / Date"].map(l=><div key={l}><div style={{borderBottom:"1px solid #000",height:28}}/><div style={{fontSize:9,color:"#666",marginTop:3}}>{l}</div></div>)}
+  laborRows:I_LABOR_ROLES.map(role=>({id:iUid(),role,regHrs:"",otHrs:"",estDays:"",notes:""})),
+  const updateSite = (i,s) => u("sites",f.sites.map((x,idx)=>idx===i?s:x));
+  const updateMachine = (i,m) => u("machines",f.machines.map((x,idx)=>idx===i?m:x));
+  const updateLabor = (id,k,v) => u("laborRows",f.laborRows.map(r=>r.id===id?{...r,[k]:v}:r));
+  const updateSub = (id,k,v) => u("subRows",f.subRows.map(r=>r.id===id?{...r,[k]:v}:r));
+    u("dateSegments", f.dateSegments.map((s,idx)=>idx===i?{...s,...phase}:s));
+        dateSegments: (prev.dateSegments||[]).map((s,idx)=>idx===i?{...s,...phase}:s),
+                {ganttData.machines.map((m,i)=>(
+                {ganttData.machines.map((m,i)=>(
+              {gPhases.map((seg,i)=>(
+          badge={f.machines.map(m=>m.equipDesc||"?").join(", ")||"Not started"}
+          {f.machines.map((m,i)=>(
+              {f.sites.map((site,i)=>(
+            {I_SCOPE_OPTIONS.map(s=>(
+                {[["flexDate","Flexible ±3 days"],["overtimeOk","OT / weekend OK"]].map(([k,l])=>(
+                {[["permitRequired","Permits / traffic"],["engineeredLiftPlan","Stamped lift plan"]].map(([k,l])=>(
+              {f.dateSegments.map((seg,i)=>(
+                      onChange={e=>u("dateSegments",f.dateSegments.map((s,idx)=>idx===i?{...s,label:e.target.value}:s))}/>
+                    <div><ILbl c="Start Date" req/><input type="date" style={iInp} value={seg.startDate} onChange={e=>u("dateSegments",f.dateSegments.map((s,idx)=>idx===i?{...s,startDate:e.target.value}:s))}/></div>
+                    <div><ILbl c="End Date"/><input type="date" style={iInp} value={seg.endDate} onChange={e=>u("dateSegments",f.dateSegments.map((s,idx)=>idx===i?{...s,endDate:e.target.value}:s))}/></div>
+                    <div><ILbl c="Phase Notes"/><input style={iInp} value={seg.notes} placeholder="What's happening..." onChange={e=>u("dateSegments",f.dateSegments.map((s,idx)=>idx===i?{...s,notes:e.target.value}:s))}/></div>
+                      {f.machines.filter(m=>m.phaseId===seg.id).map(m=>(
+                {[["flexDate","Flexible ±3 days"],["overtimeOk","OT / weekend OK"],["permitRequired","Permits / traffic"],["engineeredLiftPlan","Stamped lift plan"]].map(([k,l])=>(
+              {f.laborRows.map(r=>(
+                      {[...I_LABOR_ROLES,"Other"].map(x=><option key={x}>{x}</option>)}
+                    {[["regHrs","Reg Hrs"],["otHrs","OT Hrs"],["estDays","Days"]].map(([k,label])=>(
+                  {["Role","Reg Hrs","OT Hrs","Est. Days","Notes",""].map((h,i)=>(
+                  {f.laborRows.map(r=>(
+                          {[...I_LABOR_ROLES,"Other"].map(x=><option key={x}>{x}</option>)}
+                      {["regHrs","otHrs","estDays"].map(k=>(
+            {I_EQ_CATS.map(cat=>(
+                {I_EQUIPMENT.filter(e=>e.cat===cat).map(e=>(
+              {f.subRows.map(r=>(
+                      {["Subcontractor","Crane Rental (w/ Operator)","Equipment Rental","Material","Permit","Other"].map(x=><option key={x}>{x}</option>)}
+                {["Type","Vendor / Description","Est. Cost","Notes",""].map((h,i)=>(
+                {f.subRows.map(r=>(
+                        {["Subcontractor","Crane Rental (w/ Operator)","Equipment Rental","Material","Permit","Other"].map(x=><option key={x}>{x}</option>)}
+                {["Standard","Rush","Future / No Rush"].map(x=><option key={x}>{x}</option>)}
+  const eqCats = useMemo(() => [...new Set(equipment.map(e=>e.cat))], [equipment]);
+      laborRows:   (sourceQ.laborRows  || []).map(r => ({ ...r, id: uid() })),
+      travelRows:  (sourceQ.travelRows || []).map(r => ({ ...r, id: uid() })),
+      equipRows:   (sourceQ.equipRows  || []).map(r => ({ ...r, id: uid() })),
+      haulingRows: (sourceQ.haulingRows|| []).map(r => ({ ...r, id: uid() })),
+      matRows:     (sourceQ.matRows    || []).map(r => ({ ...r, id: uid() })),
+    setQuotes(prev => prev.map(q =>
+    setQuotes(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
+    if (upd.fromReqId) setReqs(prev=>prev.map(r=>r.id===upd.fromReqId?{...r,status:"Quoted"}:r));
+    setQuotes(prev => { const ix=prev.findIndex(q=>q.id===fin.id); return ix>=0?prev.map((q,i)=>i===ix?fin:q):[fin,...prev]; });
+    setQuotes(prev => { const ix=prev.findIndex(q=>q.id===upd.id); return ix>=0?prev.map((q,i)=>i===ix?upd:q):[upd,...prev]; });
+    setReqs(prev => { const ix=prev.findIndex(r=>r.id===req.id); return ix>=0?prev.map((r,i)=>i===ix?req:r):[req,...prev]; });
+  const updR = (sec,id,f,v)=> setActive(q => ({ ...q, [sec]:q[sec].map(r=>r.id===id?{...r,[f]:v}:r) }));
+          {notifs.map(n => (
+                  <button style={{ ...mkBtn("won"),    fontSize:11, padding:"3px 8px" }} onClick={()=>setNotifs(p=>p.map(x=>x.id===n.id?{...x,status:"Approved"}:x))}>Approve</button>
+                  <button style={{ ...mkBtn("danger"), fontSize:11, padding:"3px 8px" }} onClick={()=>setNotifs(p=>p.map(x=>x.id===n.id?{...x,status:"Changes Requested"}:x))}>Request Changes</button>
+          {[{ l:"Sales", v:fmt(stats.rev), s:`${quotes.filter(q=>q.status==="Won").length} jobs`, c:C.grn },{ l:"Pipeline", v:fmt(stats.pipe), s:`${quotes.filter(q=>q.status==="Submitted").length} submitted`, c:C.blue },{ l:"Win Rate", v:stats.wr+"%", s:"closed quotes", c:C.acc },{ l:"Open Requests", v:stats.rn, s:"need estimates", c:C.ora }].map(x => (
+          {["Draft","Submitted","Won","Lost"].map(st => { const qs=quotes.filter(q=>q.status===st); const x=SS[st]; return (<div key={st} style={{ background:x.bg, border:`1px solid ${x.bd}`, borderRadius:8, padding:12 }}><div style={{ fontSize:11, fontWeight:600, color:x.cl }}>{st}</div><div style={{ fontSize:20, fontWeight:700, color:x.cl, margin:"2px 0" }}>{qs.length}</div><div style={{ fontSize:11, color:x.cl, opacity:.8 }}>{fmt(qs.reduce((s,q)=>s+(q.total||0),0))}</div></div>); })}
+              {reqs.filter(r=>r.status!=="Quoted").slice(0,3).map(r => (
+              <thead><tr>{["Quote #","Client","Description","Date","Status","Total"].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
+              <tbody>{quotes.slice(0,5).map(q=>(
+                  {cQuotes.map(q => {
+                                {(q.salesAdjustments||[]).map(a=>(
+              {customers.filter(c=>!search||c.name.toLowerCase().includes(search.toLowerCase())).map(c => {
+                    <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:9 }}>{displayQuotes.slice(0,4).map(q=><Badge key={q.id} status={q.status}/>)}</div>
+            {sortedReqs.map(r => {
+    const byStage   = STAGES.map(s => ({
+    const maxVal    = Math.max(...byStage.map(b=>b.value), 1);
+                  {byStage.map(s => (
+                ].map(stat=>(
+                  {["All",...STAGES.map(s=>s.key)].map(f=>(
+                {filteredQ.map(q => {
+                                  onChange={e=>{ const upd={...q,follow_up_date:e.target.value}; setQuotes(prev=>prev.map(x=>x.id===q.id?upd:x)); persistQuote(upd); }}/>
+                            {[["Labor",q.labor],["Equipment",q.equip],["Hauling",q.hauling],["Travel",q.travel],["Materials",q.mats]].map(([l,v])=>v>0&&(
+          setReqs(prev => prev.map(r => r.id===intakeFromReq.id ? {...r, status:"In Progress", intake_id: newIntake.id} : r));
+      if (c) setActive(q => ({ ...q, client:val, laborRows:(q.laborRows||[]).map(r => { const rc=c[r.role]; return rc?{...r,special:true,overReg:rc.reg,overOT:rc.ot,note:"Special rate"}:{...r,special:false}; }) }));
+      else setActive(q => ({ ...q, client:val, laborRows:(q.laborRows||[]).map(r => ({ ...r, special:false })) }));
+        {[{ l:"Labor",v:cv.labor,c:C.ora },{ l:"Travel",v:cv.travel,c:C.blue },{ l:"Equipment",v:cv.equip,c:C.teal },{ l:"Hauling",v:cv.hauling,c:C.purp },{ l:"Materials",v:cv.mats,c:C.lime }].map(x => (
+                {(active.salesAdjustments||[]).map(a=>(
+                      {filteredQ.map(q => {
+              <div><Lbl c="STATUS"/><select style={{ ...sel, width:"100%" }} value={active.status} onChange={e=>u("status",e.target.value)} disabled={active.locked}>{["Draft","Submitted","Won","Lost"].map(x=><option key={x}>{x}</option>)}</select></div>
+              {(active.attachments||[]).map((a,ix) => (
+                <thead><tr>{["Role","Workers","Days","Reg Hrs","OT Hrs","Bill Rate","Subtotal","Special?",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
+                  {(active.laborRows||[]).map(row => {
+                        <td style={tdS}><select style={sel} value={row.role} onChange={e=>updR("laborRows",row.id,"role",e.target.value)} disabled={active.locked}>{BASE_LABOR.map(r=><option key={r.role}>{r.role}</option>)}</select></td>
+                <thead><tr>{["Mobilization","Workers","Days","Per Diem","Hotel","Subtotal",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
+                  {(active.travelRows||[]).map(row => {
+                        <td style={tdS}><select style={sel} value={row.label} onChange={e=>updR("travelRows",row.id,"label",e.target.value)} disabled={active.locked}>{["First Mobilization","Second Mobilization","Additional Mobilization"].map(l=><option key={l}>{l}</option>)}</select></td>
+                <thead><tr>{["Equipment","Cap.","Rate/Day","Days","Shipping","Subtotal","Override?",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
+                  {(active.equipRows||[]).map(row => {
+                        <td style={tdS}><select style={{ ...sel, maxWidth:210 }} value={row.code} onChange={e=>{ const ne=eqLookup[e.target.value]||equipment[0]||EQUIPMENT[0]; const go=eqOv[e.target.value]; updR("equipRows",row.id,"code",e.target.value); updR("equipRows",row.id,"overDaily",go?go.daily:ne.daily); }} disabled={active.locked}>{eqCats.map(cat=><optgroup key={cat} label={cat}>{equipment.filter(e=>e.cat===cat).map(e=><option key={e.code} value={e.code}>{e.name}</option>)}</optgroup>)}</select></td>
+                <thead><tr>{["Vendor","Description","Cost","Markup %","Bid Amt",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
+                  {(active.haulingRows||[]).map(row => {
+                        <td style={tdS}><select style={sel} value={row.markup} onChange={e=>updR("haulingRows",row.id,"markup",Number(e.target.value))} disabled={active.locked}>{[0,0.15,0.20,0.25,0.30,0.35].map(v=><option key={v} value={v}>{v===0?"None":Math.round(v*100)+"%"}</option>)}</select></td>
+                <thead><tr>{["Vendor","Description","Cost","Markup %","Bid Amt",""].map(h=><th key={h} style={thS}>{h}</th>)}</tr></thead>
+                  {(active.matRows||[]).map(row => {
+                        <td style={tdS}><select style={sel} value={row.markup} onChange={e=>updR("matRows",row.id,"markup",Number(e.target.value))} disabled={active.locked}>{[0.10,0.15,0.20,0.25,0.30,0.35].map(v=><option key={v} value={v}>{Math.round(v*100)+"%"}</option>)}</select></td>

@@ -5,6 +5,8 @@ import RigPro3ExecutiveDashboard from "./RigPro3ExecutiveDashboard";
 import RigPro3FinanceDashboard from "./RigPro3FinanceDashboard";
 import RigPro3InvestorDashboard from "./RigPro3InvestorDashboard";
 import LeadsBoard from "./LeadsBoard";
+import ScottApp from "./ScottApp";
+import MarioApp from "./MarioApp";
 
 
 // ── BASE DATA ─────────────────────────────────────────────────────────────────
@@ -2830,7 +2832,7 @@ function JobFoldersDashboardCard({ allJobs, statusList, C, title }) {
   const uniqueCustomers = useMemo(() => Array.from(new Set((allJobs||[]).map(j => j.client || j.customer_name).filter(Boolean))).sort(), [allJobs]);
   const progressQuotes = useMemo(() => !filterCustName ? (allJobs||[]) : (allJobs||[]).filter(j => j.client === filterCustName || j.customer_name === filterCustName), [allJobs, filterCustName]);
 
-  const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+  const STAGES = statusList && statusList.length ? Array.from(new Set(statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name))) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const baseColors = ["#b86b0a", "#2563eb", "#0d9488", "#7c3aed", "#16a34a", "#eab308", "#f97316", "#ef4444", "#3b82f6", "#14b8a6", "#a855f7", "#ec4899", "#8b5cf6"];
   const stageColors = STAGES.map((_, i) => baseColors[i % baseColors.length]);
 
@@ -2870,7 +2872,7 @@ function JobFoldersDashboardCard({ allJobs, statusList, C, title }) {
 
 // ── Lead DASHBOARD CARD ────────────────────────────────────────────────────────
 function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openNew, openEdit, setView, setDeadModal, leadStageFilter, onBack, statusList, profileUser }) {
-  const STAGES_DASH = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+  const STAGES_DASH = statusList && statusList.length ? Array.from(new Set(statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name))) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const baseColors = ["#b86b0a", "#2563eb", "#0d9488", "#7c3aed", "#16a34a", "#eab308", "#f97316", "#ef4444", "#3b82f6", "#14b8a6", "#a855f7", "#ec4899", "#8b5cf6"];
   const stageColors = STAGES_DASH.map((_, i) => baseColors[i % baseColors.length]);
   const [expandedLead, setExpandedLead] = useState(null);
@@ -3685,7 +3687,7 @@ function MasterJobList({ jobs, reqs, jobFolders, openEdit, setShowJFM, onUpdateJ
       .map(q => {
         const lead = reqs.find(r => r.id === q.fromReqId);
         const folder = lead ? jobFolders[lead.id] : null;
-        const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+        const STAGES = statusList && statusList.length ? Array.from(new Set(statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name))) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
         const stage = folder?.stage ?? null;
         return {
           id: q.id,
@@ -4211,7 +4213,7 @@ function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {},
 }
 
 
-function ActionBtns({ onFromReq, onNew, onNewLead, onAddLead }) {
+function ActionBtns({ onFromReq, onNew, onNewLead, onAddLead, onMario, onScott }) {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
@@ -4231,6 +4233,8 @@ function ActionBtns({ onFromReq, onNew, onNewLead, onAddLead }) {
   const s = compact ? { fontSize: 10, padding: "5px 8px", gap: 3 } : {};
   return (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+      {onScott && <button style={{ ...mkBtn("outline"), ...s }} onClick={onScott}>Ref Scott</button>}
+      {onMario && <button style={{ ...mkBtn("outline"), ...s }} onClick={onMario}>Ref Mario</button>}
       <button style={{ ...mkBtn("blue"), ...s, background: C.acc }} onClick={onAddLead}>+ New Lead</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Quote</button>
     </div>
@@ -4711,7 +4715,7 @@ function JobFolderModal({ lead, folder, onSave, onClose, onMarkDead, onUpdateLea
   const fileInputRef = useRef();
   const lastActivityDate = new Date(init.lastActivity || lead.start_date || today);
   const daysSinceActivity = Math.floor((today - lastActivityDate) / 86400000);
-  const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+  const STAGES = statusList && statusList.length ? Array.from(new Set(statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name))) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
   const baseColors = ["#b86b0a", "#2563eb", "#0d9488", "#7c3aed", "#16a34a", "#eab308", "#f97316", "#ef4444", "#3b82f6", "#14b8a6", "#a855f7", "#ec4899", "#8b5cf6"];
   const stageColors = STAGES.map((_, i) => baseColors[i % baseColors.length]);
   const [editingLead, setEditingLead] = useState(false);
@@ -7294,7 +7298,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
             }
             // Stage changes captured as folder.stage
             if (folder?.stage > 0) {
-              const STAGES = statusList && statusList.length ? statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
+              const STAGES = statusList && statusList.length ? Array.from(new Set(statusList.filter(s => s.type === 'quote' && s.name.toLowerCase() !== 'lead').map(s => s.name))) : ["Client Contact", "Viewed Job / Docs", "Priced Materials / Rentals", "Final Consult"];
               allEvents.push({ date: folder.lastActivity || r.date, note: `Progress: ${STAGES[folder.stage] || "Stage " + folder.stage}`, source: "stage", leadRn: r.rn, leadId: r.id, color: C.acc });
             }
             // Lead created
@@ -10944,6 +10948,8 @@ export default function App() {
     onFromReq={() => setView("leads")}
     onNew={() => openNew()}
     onAddLead={() => setShowLeadModal(true)}
+    onScott={() => setView("scott_ref")}
+    onMario={() => setView("mario_ref")}
   />;
 
   const NotifPanel = () => (
@@ -11003,6 +11009,10 @@ export default function App() {
     const id = setInterval(checkSession, 10000);
     return () => clearInterval(id);
   }, [token]);
+
+  // ── EXTERNAL REFERENCES ────────────────────────────────────────────────────
+  if (view === "scott_ref") return <ScottApp initialView="intake" />;
+  if (view === "mario_ref") return <MarioApp />;
 
   // ── LANDING PAGE ───────────────────────────────────────────────────────────
   if (view === "landing") return (
@@ -11088,7 +11098,7 @@ export default function App() {
   if (view === "dash") {
     const dashLeadStatusId = (statusList || []).find(s => (s.name || '').toLowerCase() === 'lead')?.id;
     const leadsFilterFn = q => String(q.status) === String(dashLeadStatusId) || q.status_name === 'Lead';
-    const quoteStages = (statusList || []).filter(s => s.type === 'quote' && (s.name || '').toLowerCase() !== 'lead').map(s => s.name);
+    const quoteStages = Array.from(new Set((statusList || []).filter(s => s.type === 'quote' && (s.name || '').toLowerCase() !== 'lead').map(s => s.name)));
     const jbFilterFn = q => quoteStages.includes(q.status_name || (statusList || []).find(s => String(s.id) === String(q.status))?.name);
     const dashLeadsCount = jobs.filter(leadsFilterFn).length;
     const dashMyJbCount = profileUser ? jobs.filter(q => (q.salesAssoc === profileUser.username || q.estimator === profileUser.username || q.salesAssoc === profileUser.first_name || q.estimator === profileUser.first_name) && jbFilterFn(q)).length : 0;
