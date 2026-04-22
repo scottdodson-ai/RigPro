@@ -475,6 +475,7 @@ function checkCriticalLift(q, eqMapArg) {
   const maxLbs = maxTons * 2000;
 
   for (const r of q.equipRows) {
+    if (r.isCriticalLift) isCritical = true;
     const e = _eqMap[r.code];
     if (!e) continue;
     if (e.category === "Crane" || e.category === "Forklift") {
@@ -10904,6 +10905,11 @@ export default function App() {
       alert("Estimator is required to save the quote.");
       return;
     }
+    const invalidEq = (active.equipRows || []).find(r => r.isCriticalLift && (r.maxLiftTons == null || r.maxLiftTons === "" || r.radius == null || r.radius === "" || r.boomAngle == null || r.boomAngle === ""));
+    if (invalidEq) {
+      alert("Missing required Critical Lift Plan data (Tonnage, Radius, Angle) on equipment marked as Critical Lift.");
+      return;
+    }
     const cv = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     // Save Quote always preserves current status (keeps In Progress if that's where it is)
     // Unless a specific status override is passed
@@ -10917,7 +10923,8 @@ export default function App() {
     }
     const shouldAssignJobNum = !["Dead", "Lost"].includes(newStatus);
     const autoJobNum = shouldAssignJobNum ? (active.job_num || active.jobNum || nextJobNumber(jobs, active.date)) : "";
-    const upd = { ...active, ...cv, status: newStatus, ...(shouldAssignJobNum ? { job_num: autoJobNum, jobNum: autoJobNum } : {}) };
+    const isCrit = active.liftPlanRequired || checkCriticalLift(active, eqMap);
+    const upd = { ...active, ...cv, status: newStatus, liftPlanRequired: isCrit, ...(shouldAssignJobNum ? { job_num: autoJobNum, jobNum: autoJobNum } : {}) };
     if (upd.isHistorical) upd.locked = true;
     if (upd.client) {
       const newRates = {};
@@ -10942,12 +10949,18 @@ export default function App() {
       alert("Estimator is required to mark the quote as won.");
       return;
     }
+    const invalidEq = (active.equipRows || []).find(r => r.isCriticalLift && (r.maxLiftTons == null || r.maxLiftTons === "" || r.radius == null || r.radius === "" || r.boomAngle == null || r.boomAngle === ""));
+    if (invalidEq) {
+      alert("Missing required Critical Lift Plan data (Tonnage, Radius, Angle) on equipment marked as Critical Lift.");
+      return;
+    }
     if ((active.liftPlanRequired || checkCriticalLift(active)) && active.liftPlanStatus !== "Engineering Approved") {
       alert("Cannot mark job as Won: Critical Lift Plan must be 'Engineering Approved'.");
       return;
     }
     const resolvedJobNum = (jn || active.job_num || active.jobNum || nextJobNumber(jobs, active.date));
-    const upd = { ...active, status: "Won", job_num: resolvedJobNum, jobNum: resolvedJobNum, compDate: cd, locked: true };
+    const isCrit = active.liftPlanRequired || checkCriticalLift(active, eqMap);
+    const upd = { ...active, status: "Won", job_num: resolvedJobNum, jobNum: resolvedJobNum, compDate: cd, locked: true, liftPlanRequired: isCrit };
     const cv = calcQuote(upd, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     const fin = { ...upd, ...cv };
     setJobs(prev => { const ix = prev.findIndex(q => q.id === fin.id); return ix >= 0 ? prev.map((q, i) => i === ix ? fin : q) : [fin, ...prev]; });
@@ -10961,9 +10974,15 @@ export default function App() {
       alert("Estimator is required to submit the quote.");
       return;
     }
+    const invalidEq = (active.equipRows || []).find(r => r.isCriticalLift && (r.maxLiftTons == null || r.maxLiftTons === "" || r.radius == null || r.radius === "" || r.boomAngle == null || r.boomAngle === ""));
+    if (invalidEq) {
+      alert("Missing required Critical Lift Plan data (Tonnage, Radius, Angle) on equipment marked as Critical Lift.");
+      return;
+    }
     const cv = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     const autoJobNum = active.job_num || active.jobNum || nextJobNumber(jobs, active.date);
-    const upd = { ...active, ...cv, status: "In Review", job_num: autoJobNum, jobNum: autoJobNum };
+    const isCrit = active.liftPlanRequired || checkCriticalLift(active, eqMap);
+    const upd = { ...active, ...cv, status: "In Review", job_num: autoJobNum, jobNum: autoJobNum, liftPlanRequired: isCrit };
     setJobs(prev => { const ix = prev.findIndex(q => q.id === upd.id); return ix >= 0 ? prev.map((q, i) => i === ix ? upd : q) : [upd, ...prev]; });
     setNotifs(p => [{ id: uid(), qn: upd.qn, client: upd.client, total: upd.total, at: new Date().toLocaleTimeString(), status: "Pending Review" }, ...p]);
     persistQuote(upd);
@@ -11526,6 +11545,10 @@ export default function App() {
       else setActive(q => ({ ...q, client: val, laborRows: (q.laborRows || []).map(r => ({ ...r, special: false })) }));
     }
 
+    const unapprovedCritLifts = (active.equipRows || []).filter(r => r.isCriticalLift && r.liftPlanStatus !== 'Engineering Approved');
+    const invalidCritLifts = (active.equipRows || []).filter(r => r.isCriticalLift && (!r.maxLiftTons || !r.radius || !r.boomAngle));
+    const isSaveDisabled = unapprovedCritLifts.length > 0 || invalidCritLifts.length > 0;
+
     const SummaryPanel = () => (
       <Card>
         <Sec c="Quote Summary" />
@@ -11623,13 +11646,13 @@ export default function App() {
             🏷 Apply Discount
           </button>
           {/* Save Quote — saves as In Progress, stays on editor */}
-          <button style={{ ...mkBtn("primary"), width: "100%", padding: "9px 0", marginTop: 5, fontSize: 13, justifyContent: "center" }}
-            onClick={() => saveQuote()}>
+          <button style={{ ...mkBtn("primary"), width: "100%", padding: "9px 0", marginTop: 5, fontSize: 13, justifyContent: "center", ...(isSaveDisabled ? {opacity: 0.5, cursor: "not-allowed"} : {}) }}
+            onClick={() => { if (!isSaveDisabled) saveQuote(); }}>
             💾 Save Quote
           </button>
           {/* Submit for Review — saves as In Review, sends notification */}
-          <button style={{ ...mkBtn("blue"), width: "100%", padding: "8px 0", marginTop: 5, fontSize: 13, justifyContent: "center" }}
-            onClick={submitQuote}>
+          <button style={{ ...mkBtn("blue"), width: "100%", padding: "8px 0", marginTop: 5, fontSize: 13, justifyContent: "center", ...(isSaveDisabled ? {opacity: 0.5, cursor: "not-allowed"} : {}) }}
+            onClick={() => { if (!isSaveDisabled) submitQuote(); }}>
             📋 Submit for Review
           </button>
           {/* Create Customer Document */}
@@ -11639,8 +11662,8 @@ export default function App() {
           </button>
           {/* Mark as Won */}
           {!["Won", "Dead"].includes(active.status) && (
-            <button style={{ ...mkBtn("won"), width: "100%", padding: "8px 0", marginTop: 5, fontSize: 13, justifyContent: "center" }}
-              onClick={() => setShowWM(true)}>
+            <button style={{ ...mkBtn("won"), width: "100%", padding: "8px 0", marginTop: 5, fontSize: 13, justifyContent: "center", ...(isSaveDisabled ? {opacity: 0.5, cursor: "not-allowed"} : {}) }}
+              onClick={() => { if (!isSaveDisabled) setShowWM(true); }}>
               ✓ Mark as Won
             </button>
           )}
@@ -11686,7 +11709,7 @@ export default function App() {
         <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn + (active.isChangeOrder ? " (CO)" : "")} extra={
           <div style={{ display: "flex", gap: 5 }}>
             <button style={mkBtn("ghost")} onClick={goBack}>Cancel</button>
-            {!active.locked && <button style={mkBtn("primary")} onClick={() => saveQuote()}>Save Quote</button>}
+            {!active.locked && <button style={{...mkBtn("primary"), ...(isSaveDisabled ? {opacity: 0.5, cursor: "not-allowed"} : {})}} onClick={() => { if (!isSaveDisabled) saveQuote(); }}>Save Quote</button>}
           </div>
         } />
         <div className="app-page-container" style={{ maxWidth: 1160 }}>
@@ -11697,6 +11720,9 @@ export default function App() {
               {active.isChangeOrder && <div style={{ background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 6, padding: "6px 12px", fontSize: 12, color: "#6d28d9" }}>Change Order — linked to original won quote.</div>}
               {active.isHistorical && <div style={{ background: C.accL, border: `1px solid ${C.accB}`, borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.acc, fontWeight: 700 }}>HISTORICAL QUOTE — Metrics manually established.</div>}
               {active.locked && <div style={{ background: C.yelB, border: `1px solid ${C.yelBdr}`, borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.yel }}>This quote is locked. View only.</div>}
+              {!active.jsaData?.completed && <div style={{ background: C.redB, border: `1px solid ${C.redBdr}`, borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.red, fontWeight: 700 }}>⚠️ JSA not completed</div>}
+              {invalidCritLifts.length > 0 && <div style={{ background: C.redB, border: `1px solid ${C.redBdr}`, borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.red, fontWeight: 700 }}>⚠️ {invalidCritLifts.length} equipment item(s) are missing required Critical Lift Plan data (Tons, Radius, Angle).</div>}
+              {unapprovedCritLifts.length > 0 && <div style={{ background: C.redB, border: `1px solid ${C.redBdr}`, borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.red, fontWeight: 700 }}>⚠️ {unapprovedCritLifts.length} equipment item(s) require Critical Lift Plan approval before saving.</div>}
             </div>
           </div>
 
@@ -12023,7 +12049,7 @@ export default function App() {
                 <Sec c="Equipment" />
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
-                    <thead><tr>{["Equipment", "Cap.", "Rate/Day", "Days", "Shipping", "Subtotal", "Override?", ""].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                    <thead><tr>{["Equipment", "Cap.", "Rate/Day", "Days", "Shipping", "Subtotal", "Crit. Lift", "Override?", ""].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
                     <tbody>
                       {(active.equipRows || []).map((row, i) => {
                         const eq = eqMap[row.code] || EQUIPMENT[0];
@@ -12032,16 +12058,59 @@ export default function App() {
                         const daily = row.overRate ? Number(row.overDaily ?? bd) : bd;
                         const sub = daily * row.days + Number(row.ship || 0);
                         return (
-                          <tr key={listKey("equip-row", row, i)}>
-                            <td style={tdS}><select style={{ ...sel, maxWidth: 210 }} value={row.code} onChange={e => { const ne = eqMap[e.target.value] || EQUIPMENT[0]; const go = eqOv[e.target.value]; updR("equipRows", row.id, "code", e.target.value); updR("equipRows", row.id, "overDaily", go ? go.daily : ne.daily_rate); }} disabled={active.locked}>{eqCats.map(cat => <optgroup key={cat} label={cat}>{equipment.filter(e => e.category === cat).map(e => <option key={e.code} value={e.code}>{e.name}</option>)}</optgroup>)}</select></td>
-                            <td style={{ ...tdS, fontSize: 11, color: C.txtS }}>{eq.capacity}</td>
-                            <td style={tdS}>{row.overRate ? <DollarInput val={row.overDaily} on={e => updR("equipRows", row.id, "overDaily", Number(e.target.value))} w={65} /> : <span style={{ fontSize: 13, color: gOv ? C.yel : C.txtM }}>${daily.toLocaleString()}/day{gOv ? " ⚡" : ""}</span>}</td>
-                            <td style={tdS}><input style={{ ...inp, width: 50 }} type="number" min={0} value={row.days} onChange={e => updR("equipRows", row.id, "days", Number(e.target.value))} disabled={active.locked} /></td>
-                            <td style={tdS}><DollarInput val={row.ship || 0} on={e => updR("equipRows", row.id, "ship", Number(e.target.value))} w={65} /></td>
-                            <td style={{ ...tdS, color: C.teal, fontWeight: 700, fontSize: 13 }}>{fmt(sub)}</td>
-                            <td style={tdS}>{!active.locked && <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, cursor: "pointer" }}><input type="checkbox" checked={!!row.overRate} onChange={e => { updR("equipRows", row.id, "overRate", e.target.checked); if (e.target.checked) updR("equipRows", row.id, "overDaily", bd); }} />Ov.</label>}</td>
-                            <td style={tdS}>{!active.locked && <XBtn on={() => delR("equipRows", row.id)} />}</td>
-                          </tr>
+                          <Fragment key={listKey("equip-row", row, i)}>
+                            <tr>
+                              <td style={tdS}><select style={{ ...sel, maxWidth: 210 }} value={row.code} onChange={e => { const ne = eqMap[e.target.value] || EQUIPMENT[0]; const go = eqOv[e.target.value]; updR("equipRows", row.id, "code", e.target.value); updR("equipRows", row.id, "overDaily", go ? go.daily : ne.daily_rate); }} disabled={active.locked}>{eqCats.map(cat => <optgroup key={cat} label={cat}>{equipment.filter(e => e.category === cat).map(e => <option key={e.code} value={e.code}>{e.name}</option>)}</optgroup>)}</select></td>
+                              <td style={{ ...tdS, fontSize: 11, color: C.txtS }}>{eq.capacity}</td>
+                              <td style={tdS}>{row.overRate ? <DollarInput val={row.overDaily} on={e => updR("equipRows", row.id, "overDaily", Number(e.target.value))} w={65} /> : <span style={{ fontSize: 13, color: gOv ? C.yel : C.txtM }}>${daily.toLocaleString()}/day{gOv ? " ⚡" : ""}</span>}</td>
+                              <td style={tdS}><input style={{ ...inp, width: 50 }} type="number" min={0} value={row.days} onChange={e => updR("equipRows", row.id, "days", Number(e.target.value))} disabled={active.locked} /></td>
+                              <td style={tdS}><DollarInput val={row.ship || 0} on={e => updR("equipRows", row.id, "ship", Number(e.target.value))} w={65} /></td>
+                              <td style={{ ...tdS, color: C.teal, fontWeight: 700, fontSize: 13 }}>{fmt(sub)}</td>
+                              <td style={tdS}>
+                                {!active.locked && (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                    <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, cursor: "pointer" }}>
+                                      <input type="checkbox" checked={!!row.isCriticalLift} onChange={e => updR("equipRows", row.id, "isCriticalLift", e.target.checked)} />
+                                      Req.
+                                    </label>
+                                    {row.isCriticalLift && (
+                                      <select style={{...sel, padding: "2px 4px", fontSize: 10}} value={row.liftPlanStatus || "Pending Review"} onChange={e => updR("equipRows", row.id, "liftPlanStatus", e.target.value)}>
+                                        <option>Pending Review</option>
+                                        <option>Engineering Approved</option>
+                                      </select>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                              <td style={tdS}>{!active.locked && <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, cursor: "pointer" }}><input type="checkbox" checked={!!row.overRate} onChange={e => { updR("equipRows", row.id, "overRate", e.target.checked); if (e.target.checked) updR("equipRows", row.id, "overDaily", bd); }} />Ov.</label>}</td>
+                              <td style={tdS}>{!active.locked && <XBtn on={() => delR("equipRows", row.id)} />}</td>
+                            </tr>
+                            {row.isCriticalLift && (
+                              <tr style={{ background: C.redB }}>
+                                <td colSpan={9} style={{ padding: "8px 12px", borderBottom: `1px solid ${C.bdr}` }}>
+                                  <div style={{ display: "flex", gap: 15, alignItems: "center", flexWrap: "wrap" }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: C.red }}>CRITICAL LIFT DATA</div>
+                                    <label style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+                                      Max Lift (tons):
+                                      <input style={{...inp, width: 60, padding: "2px 4px", fontSize: 11}} value={row.maxLiftTons || ""} onChange={e => updR("equipRows", row.id, "maxLiftTons", e.target.value)} disabled={active.locked} />
+                                    </label>
+                                    <label style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+                                      Radius:
+                                      <input style={{...inp, width: 60, padding: "2px 4px", fontSize: 11}} value={row.radius || ""} onChange={e => updR("equipRows", row.id, "radius", e.target.value)} disabled={active.locked} />
+                                    </label>
+                                    <label style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+                                      Boom Angle:
+                                      <input style={{...inp, width: 60, padding: "2px 4px", fontSize: 11}} value={row.boomAngle || ""} onChange={e => updR("equipRows", row.id, "boomAngle", e.target.value)} disabled={active.locked} />
+                                    </label>
+                                    <label style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+                                      <input type="checkbox" checked={!!row.peStampRequired} onChange={e => updR("equipRows", row.id, "peStampRequired", e.target.checked)} disabled={active.locked} />
+                                      PE Stamp Required
+                                    </label>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
                         );
                       })}
                     </tbody>
