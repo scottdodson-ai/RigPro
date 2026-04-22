@@ -11523,15 +11523,6 @@ export default function App() {
             {active.maxLiftTons ? " (" + active.maxLiftTons + "T max)" : ""}
           </div>
         )}
-        <button 
-          onClick={() => setShowJSAModal(true)} 
-          style={{ width: "100%", background: active.jsaData ? C.grnB : C.sur, color: active.jsaData ? C.grn : C.txtM, border: `1px solid ${active.jsaData ? C.grnBdr : C.bdr}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, transition: "all 0.1s" }}
-        >
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 14 }}>🛡️</span> {active.jsaData ? "JSA Completed" : "Conduct JSA"}
-          </span>
-          {active.jsaData ? <span style={{ color: C.grn }}>✓</span> : <span style={{ color: C.acc, fontSize: 10 }}>REQUIRED</span>}
-        </button>
         {[
           { l: "Labor", v: cv.labor, c: C.ora },
           { l: "Travel & Mob.", v: cv.travel, c: C.blue },
@@ -11813,6 +11804,18 @@ export default function App() {
                     )}
                   </div>
                 </div>
+              )}
+              
+              {active.status !== "Lead" && (
+                <button 
+                  onClick={() => setShowJSAModal(true)} 
+                  style={{ width: "100%", background: active.jsaData ? C.grnB : C.sur, color: active.jsaData ? C.grn : C.txtM, border: `1px solid ${active.jsaData ? C.grnBdr : C.bdr}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, transition: "all 0.1s" }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 14 }}>🛡️</span> {active.jsaData ? "JSA Completed" : "Conduct JSA"}
+                  </span>
+                  {active.jsaData ? <span style={{ color: C.grn }}>✓</span> : <span style={{ color: C.acc, fontSize: 10 }}>REQUIRED</span>}
+                </button>
               )}
 
               {active.status === "Lead" ? (
