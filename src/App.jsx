@@ -5,8 +5,6 @@ import RigPro3ExecutiveDashboard from "./RigPro3ExecutiveDashboard";
 import RigPro3FinanceDashboard from "./RigPro3FinanceDashboard";
 import RigPro3InvestorDashboard from "./RigPro3InvestorDashboard";
 import LeadsBoard from "./LeadsBoard";
-import ScottApp from "./ScottApp";
-import MarioApp from "./MarioApp";
 
 
 // ── BASE DATA ─────────────────────────────────────────────────────────────────
@@ -448,6 +446,12 @@ function blankQuote(jobs = [], req, customerRates, isCO = false, parentQ = null)
     travelOther: 0,
     travelMarkup: 0,
     liftPlanRequired: false,
+    liftPlanStatus: "Not Started",
+    liftRadius: "",
+    boomAngle: "",
+    windLimit: "",
+    groundBearing: "",
+    peStampRequired: false,
     maxLiftTons: "",
     markupCostOnly: false,
     discounts: [],
@@ -457,6 +461,34 @@ function blankQuote(jobs = [], req, customerRates, isCO = false, parentQ = null)
     haulingRows: [{ id: uid(), vendor: "", desc: "", cost: 0, markup: 0.35 }],
     matRows: [{ id: uid(), vendor: "", desc: "", cost: 0, markup: 0.15 }],
   };
+}
+
+function checkCriticalLift(q, eqMapArg) {
+  const _eqMap = eqMapArg || EQ_MAP;
+  let isCritical = false;
+  let craneCount = 0;
+  
+  if (!q.equipRows) return false;
+
+  const maxTons = Number(q.maxLiftTons) || 0;
+  const maxLbs = maxTons * 2000;
+
+  for (const r of q.equipRows) {
+    const e = _eqMap[r.code];
+    if (!e) continue;
+    if (e.category === "Crane" || e.category === "Forklift") {
+       if (e.category === "Crane") craneCount++;
+       if (e.capacity) {
+         const capLbs = Number(e.capacity.replace(/[^0-9.]/g, ''));
+         if (capLbs > 0 && maxLbs > (capLbs * 0.75)) {
+           isCritical = true;
+         }
+       }
+    }
+  }
+  
+  if (craneCount >= 2) isCritical = true;
+  return isCritical;
 }
 
 function calcQuote(q, customerRates, eqOv, eqMapArg, baseLabor, perDiemRate = DEFAULT_PER_DIEM, hotelRate = DEFAULT_HOTEL) {
@@ -4213,7 +4245,7 @@ function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {},
 }
 
 
-function ActionBtns({ onFromReq, onNew, onNewLead, onAddLead, onMario, onScott }) {
+function ActionBtns({ onFromReq, onNew, onNewLead, onAddLead }) {
   const [compact, setCompact] = useState(false);
 
   useEffect(() => {
@@ -4233,8 +4265,6 @@ function ActionBtns({ onFromReq, onNew, onNewLead, onAddLead, onMario, onScott }
   const s = compact ? { fontSize: 10, padding: "5px 8px", gap: 3 } : {};
   return (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-      {onScott && <button style={{ ...mkBtn("outline"), ...s }} onClick={onScott}>Ref Scott</button>}
-      {onMario && <button style={{ ...mkBtn("outline"), ...s }} onClick={onMario}>Ref Mario</button>}
       <button style={{ ...mkBtn("blue"), ...s, background: C.acc }} onClick={onAddLead}>+ New Lead</button>
       <button style={{ ...mkBtn("blue"), ...s }} onClick={onNew}>+ New Quote</button>
     </div>
@@ -4817,21 +4847,15 @@ function JobFolderModal({ lead, folder, onSave, onClose, onMarkDead, onUpdateLea
         <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
 
           {/* Lift plan alert banner */}
-          {linkedQuote && linkedQuote.liftPlanRequired && (
-            <div style={{ background: C.yelB, border: `1px solid ${C.yelBdr}`, borderRadius: 7, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 18 }}>⚠️</span>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.yel }}>Lift Plan Required</div>
-                <div style={{ fontSize: 11, color: C.yel }}>This job has a lift plan requirement{linkedQuote.maxLiftTons ? " — max " + linkedQuote.maxLiftTons + " tons" : ""}.  Ensure documentation is in attachments before submission.</div>
-              </div>
-            </div>
-          )}
-          {linkedQuote && !linkedQuote.liftPlanRequired && linkedQuote.maxLiftTons && Number(linkedQuote.maxLiftTons) > liftTonThreshold && (
+          {linkedQuote && (linkedQuote.liftPlanRequired || checkCriticalLift(linkedQuote)) && (
             <div style={{ background: C.redB, border: `1px solid ${C.redBdr}`, borderRadius: 7, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 18 }}>🚨</span>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.red }}>Lift Plan Not Marked Required</div>
-                <div style={{ fontSize: 11, color: C.red }}>Job tonnage ({linkedQuote.maxLiftTons}T) exceeds the {liftTonThreshold}T threshold but Lift Plan Required is not checked on the quote.</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.red, textTransform: "uppercase" }}>Critical Lift Plan Required</div>
+                <div style={{ fontSize: 11, color: C.red, fontWeight: 500 }}>
+                  {checkCriticalLift(linkedQuote) ? "This job meets the OSHA trigger for a critical lift (weight > 75% capacity or multi-crane)." : "A lift plan has been manually required for this job."} 
+                  {" "}Status: <strong>{linkedQuote.liftPlanStatus || "Not Started"}</strong>. Ensure documentation is approved before scheduling.
+                </div>
               </div>
             </div>
           )}
@@ -10906,6 +10930,10 @@ export default function App() {
   }
 
   function markWon(jn, cd) {
+    if ((active.liftPlanRequired || checkCriticalLift(active)) && active.liftPlanStatus !== "Engineering Approved") {
+      alert("Cannot mark job as Won: Critical Lift Plan must be 'Engineering Approved'.");
+      return;
+    }
     const resolvedJobNum = (jn || active.job_num || active.jobNum || nextJobNumber(jobs, active.date));
     const upd = { ...active, status: "Won", job_num: resolvedJobNum, jobNum: resolvedJobNum, compDate: cd, locked: true };
     const cv = calcQuote(upd, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
@@ -10948,8 +10976,6 @@ export default function App() {
     onFromReq={() => setView("leads")}
     onNew={() => openNew()}
     onAddLead={() => setShowLeadModal(true)}
-    onScott={() => setView("scott_ref")}
-    onMario={() => setView("mario_ref")}
   />;
 
   const NotifPanel = () => (
@@ -11011,8 +11037,6 @@ export default function App() {
   }, [token]);
 
   // ── EXTERNAL REFERENCES ────────────────────────────────────────────────────
-  if (view === "scott_ref") return <ScottApp initialView="intake" />;
-  if (view === "mario_ref") return <MarioApp />;
 
   // ── LANDING PAGE ───────────────────────────────────────────────────────────
   if (view === "landing") return (
@@ -11491,14 +11515,10 @@ export default function App() {
         <Sec c="Quote Summary" />
         <div style={{ fontSize: 12, color: C.txtM, marginBottom: 2 }}>{active.qn} · {active.date} · {active.qtype}{active.isChangeOrder ? " · Change Order" : ""}</div>
         {/* Lift plan flag in summary */}
-        {active.liftPlanRequired && (
-          <div style={{ background: C.yelB, border: `1px solid ${C.yelBdr}`, borderRadius: 5, padding: "5px 9px", marginBottom: 6, fontSize: 11, color: C.yel, fontWeight: 600 }}>
-            ⚠ Lift Plan Required{active.maxLiftTons ? " — " + active.maxLiftTons + "T max" : ""}
-          </div>
-        )}
-        {!active.liftPlanRequired && active.maxLiftTons && Number(active.maxLiftTons) > liftTonThreshold && (
+        {(active.liftPlanRequired || checkCriticalLift(active)) && (
           <div style={{ background: C.redB, border: `1px solid ${C.redBdr}`, borderRadius: 5, padding: "5px 9px", marginBottom: 6, fontSize: 11, color: C.red, fontWeight: 600 }}>
-            ⚠ Lift exceeds {liftTonThreshold}T — Lift Plan not marked required
+            🚨 CRITICAL LIFT PLAN: {active.liftPlanStatus || "Not Started"}
+            {active.maxLiftTons ? " (" + active.maxLiftTons + "T max)" : ""}
           </div>
         )}
         {[
@@ -11741,21 +11761,45 @@ export default function App() {
 
               {/* Lift Plan fields */}
               {active.status !== "Lead" && (
-                <div style={{ display: "flex", gap: 12, alignItems: "center", background: active.liftPlanRequired ? C.yelB : C.bg, border: `1px solid ${active.liftPlanRequired ? C.yelBdr : C.bdr}`, borderRadius: 6, padding: "8px 12px", flexWrap: "wrap" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", color: active.liftPlanRequired ? C.yel : C.txtM }}>
-                    <input type="checkbox" checked={!!active.liftPlanRequired} onChange={e => u("liftPlanRequired", e.target.checked)} disabled={active.locked} style={{ width: 15, height: 15 }} />
-                    Lift Plan Required
-                  </label>
-                  {active.liftPlanRequired && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, background: (active.liftPlanRequired || checkCriticalLift(active, eqMap)) ? C.redB : C.bg, border: `1px solid ${(active.liftPlanRequired || checkCriticalLift(active, eqMap)) ? C.redBdr : C.bdr}`, borderRadius: 6, padding: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, cursor: "pointer", color: (active.liftPlanRequired || checkCriticalLift(active, eqMap)) ? C.red : C.txtM }}>
+                      <input type="checkbox" checked={!!active.liftPlanRequired || checkCriticalLift(active, eqMap)} onChange={e => u("liftPlanRequired", e.target.checked)} disabled={active.locked || checkCriticalLift(active, eqMap)} style={{ width: 16, height: 16 }} />
+                      CRITICAL LIFT PLAN REQUIRED
+                    </label>
+                    {checkCriticalLift(active, eqMap) && <span style={{ fontSize: 11, background: C.red, color: "#fff", padding: "3px 8px", borderRadius: 4, fontWeight: 800 }}>OSHA TRIGGER MET</span>}
+                  </div>
+                  
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
                     <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.txtM }}>
                       Max Lift Tonnage:
                       <input type="number" min={0} step={0.5} value={active.maxLiftTons || ""} onChange={e => u("maxLiftTons", e.target.value)} placeholder="tons" style={{ ...inp, width: 70, fontSize: 12, padding: "3px 7px" }} disabled={active.locked} />
                       <span style={{ fontSize: 11, color: C.txtS }}>tons</span>
                     </label>
-                  )}
-                  {!active.liftPlanRequired && active.maxLiftTons && Number(active.maxLiftTons) > liftTonThreshold && (
-                    <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>⚠ Lift exceeds {liftTonThreshold}T threshold — Lift Plan Recommended</span>
-                  )}
+                    
+                    {(active.liftPlanRequired || checkCriticalLift(active, eqMap)) && (
+                      <>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.txtM }}>
+                          Radius: <input value={active.liftRadius || ""} onChange={e => u("liftRadius", e.target.value)} style={{ ...inp, width: 60, padding: "3px 7px" }} disabled={active.locked} />
+                        </label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.txtM }}>
+                          Boom Angle: <input value={active.boomAngle || ""} onChange={e => u("boomAngle", e.target.value)} style={{ ...inp, width: 60, padding: "3px 7px" }} disabled={active.locked} />
+                        </label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.txtM }}>
+                          Status:
+                          <select value={active.liftPlanStatus || "Not Started"} onChange={e => u("liftPlanStatus", e.target.value)} style={{ ...sel, width: 150, padding: "3px 7px" }} disabled={active.locked}>
+                            <option>Not Started</option>
+                            <option>In Progress</option>
+                            <option>Engineering Approved</option>
+                          </select>
+                        </label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: C.txtM, marginTop: 2 }}>
+                           <input type="checkbox" checked={!!active.peStampRequired} onChange={e => u("peStampRequired", e.target.checked)} disabled={active.locked} style={{ width: 14, height: 14 }} />
+                           PE Stamp Required
+                        </label>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
