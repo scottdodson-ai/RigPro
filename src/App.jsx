@@ -5,6 +5,7 @@ import RigPro3ExecutiveDashboard from "./RigPro3ExecutiveDashboard";
 import RigPro3FinanceDashboard from "./RigPro3FinanceDashboard";
 import RigPro3InvestorDashboard from "./RigPro3InvestorDashboard";
 import LeadsBoard from "./LeadsBoard";
+import JSAWizardModal from "./JSAWizardModal";
 
 
 // ── BASE DATA ─────────────────────────────────────────────────────────────────
@@ -10558,6 +10559,7 @@ export default function App() {
   const [dashReportId, setDashReportId] = useState(null); // report to open when navigating from dashboard
   const [dashAcc, setDashAcc] = useState("leads"); // current open accordion in Dashboard
   const [wonOnly, setWonOnly] = useState(false); // filter customers view
+  const [showJSAModal, setShowJSAModal] = useState(false);
   const [custView, setCustView] = useState("list"); // "list" or "card"
   const [jobListFilter, setJobListFilter] = useState(null); // customer name to filter Master Jobs list
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -11521,6 +11523,15 @@ export default function App() {
             {active.maxLiftTons ? " (" + active.maxLiftTons + "T max)" : ""}
           </div>
         )}
+        <button 
+          onClick={() => setShowJSAModal(true)} 
+          style={{ width: "100%", background: active.jsaData ? C.grnB : C.sur, color: active.jsaData ? C.grn : C.txtM, border: `1px solid ${active.jsaData ? C.grnBdr : C.bdr}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, transition: "all 0.1s" }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 14 }}>🛡️</span> {active.jsaData ? "JSA Completed" : "Conduct JSA"}
+          </span>
+          {active.jsaData ? <span style={{ color: C.grn }}>✓</span> : <span style={{ color: C.acc, fontSize: 10 }}>REQUIRED</span>}
+        </button>
         {[
           { l: "Labor", v: cv.labor, c: C.ora },
           { l: "Travel & Mob.", v: cv.travel, c: C.blue },
@@ -11666,6 +11677,7 @@ export default function App() {
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d => { u("discounts", [...(active.discounts || []), d]); setShowDiscModal(false); }} onClose={() => setShowDiscModal(false)} />}
         {showCustDoc && <CustomerDocModal quote={{ ...active, total: cv.total }} onClose={() => setShowCustDoc(false)} />}
         {showJobSiteModal && <JobSiteModal token={token} clientName={active.client} custData={custData} onSave={site => { u("jobSites", [...(active.jobSites || []), site]); }} onClose={() => setShowJobSiteModal(false)} />}
+        {showJSAModal && <JSAWizardModal quote={active} onSave={(jsa) => { u("jsaData", jsa); setShowJSAModal(false); }} onClose={() => setShowJSAModal(false)} />}
         <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn + (active.isChangeOrder ? " (CO)" : "")} extra={
           <div style={{ display: "flex", gap: 5 }}>
             <button style={mkBtn("ghost")} onClick={goBack}>Cancel</button>

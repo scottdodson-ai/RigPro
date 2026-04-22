@@ -1,5 +1,6 @@
 import React from "react";
 import { useState, useMemo, useRef, useEffect } from "react";
+import JSAWizardModal from "./JSAWizardModal";
 
 // ── MOBILE GLOBAL STYLES ─────────────────────────────────────────────────────
 const MOBILE_CSS = `
@@ -7475,6 +7476,7 @@ export default function ScottApp({ initialView }) {
   const [showRM,     setShowRM]     = useState(false);
   const [editR,      setEditR]      = useState(null);
   const [showWM,       setShowWM]       = useState(false);
+  const [showJSAModal, setShowJSAModal] = useState(false);
   const [showDiscModal, setShowDiscModal] = useState(false);
   const [showCustDoc,   setShowCustDoc]   = useState(false);
   const [dashReqsOpen,  setDashReqsOpen]  = useState(false);
@@ -8662,6 +8664,15 @@ export default function ScottApp({ initialView }) {
       <Card>
         <Sec c="Quote Summary"/>
         <div style={{ fontSize:12, color:C.txtM, marginBottom:2 }}>{active.qn} · {active.date} · {active.qtype}{active.isChangeOrder?" · Change Order":""}</div>
+        <button 
+          onClick={() => setShowJSAModal(true)} 
+          style={{ width: "100%", background: active.jsaData ? C.grnB : C.sur, color: active.jsaData ? C.grn : C.txtM, border: `1px solid ${active.jsaData ? C.grnBdr : C.bdr}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, transition: "all 0.1s" }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 14 }}>🛡️</span> {active.jsaData ? "JSA Completed" : "Conduct JSA"}
+          </span>
+          {active.jsaData ? <span style={{ color: C.grn }}>✓</span> : <span style={{ color: C.acc, fontSize: 10 }}>REQUIRED</span>}
+        </button>
         {[{ l:"Labor",v:cv.labor,c:C.ora },{ l:"Travel",v:cv.travel,c:C.blue },{ l:"Equipment",v:cv.equip,c:C.teal },{ l:"Hauling",v:cv.hauling,c:C.purp },{ l:"Materials",v:cv.mats,c:C.lime }].map(x => (
           <div key={x.l} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:`1px solid ${C.bdr}` }}>
             <span style={{ color:C.txtM, fontSize:13 }}>{x.l}</span>
@@ -8766,6 +8777,7 @@ export default function ScottApp({ initialView }) {
         {searchModal}
         {adjModal&&<SalesAdjustmentModal quote={adjModal} onSave={saveAdjustment} onClose={()=>setAdjModal(null)}/>}
         {showWM && <WonModal quote={active} onSave={markWon} onClose={()=>setShowWM(false)}/>}
+        {showJSAModal && <JSAWizardModal quote={active} onSave={(jsa) => { u("jsaData", jsa); setShowJSAModal(false); }} onClose={() => setShowJSAModal(false)} />}
         {showDiscModal && <DiscountModal quoteTotal={cv.preDisc} onSave={d=>{ u("discounts",[...(active.discounts||[]),d]); setShowDiscModal(false); }} onClose={()=>setShowDiscModal(false)}/>}
         {showCustDoc && <CustomerDocModal quote={{...active, total:cv.total}} onClose={()=>setShowCustDoc(false)}/>}
         <Header view={view} setView={setView} onSearch={s=>setGlobalSearchTerm(s)} crumb={active.qn+(active.isChangeOrder?" (CO)":"")} extra={
