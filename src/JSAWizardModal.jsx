@@ -59,7 +59,8 @@ export default function JSAWizardModal({ quote, onSave, onClose }) {
     route_notes: "",
     permits: "",
     weather: "",
-    steps: [...DEFAULT_STEPS],
+    steps: quote.jsaData ? quote.jsaData.steps : [...DEFAULT_STEPS],
+    completed: false,
     ...quote.jsaData
   });
 
@@ -79,6 +80,23 @@ export default function JSAWizardModal({ quote, onSave, onClose }) {
   ];
 
   const Lbl = ({ c }) => <div style={{ fontSize: 11, fontWeight: 700, color: C.txtS, marginBottom: 4, textTransform: "uppercase" }}>{c}</div>;
+
+  const getValidationErrors = () => {
+    const errs = [];
+    if (!jsa.supervisor?.trim()) errs.push("Supervisor / Lift Director (Step 1)");
+    if (jsa.hazards.length === 0) errs.push("At least one Hazard (Step 3)");
+    if (jsa.controls.length === 0) errs.push("At least one Control Measure (Step 3)");
+    if (jsa.steps.length === 0) errs.push("At least one JSA Step (Step 5)");
+    else {
+      let missingStepInfo = false;
+      for (const s of jsa.steps) {
+        if (!s.task?.trim() || !s.hazard?.trim() || !s.control?.trim()) missingStepInfo = true;
+      }
+      if (missingStepInfo) errs.push("Incomplete JSA Steps - fill all fields (Step 5)");
+    }
+    return errs;
+  };
+  const valErrs = getValidationErrors();
 
   const handlePrint = () => {
     const printDiv = document.getElementById("jsa-print-area");
@@ -322,14 +340,33 @@ export default function JSAWizardModal({ quote, onSave, onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.bdr}`, display: "flex", justifyContent: "space-between", background: C.bg }}>
-          {step > 1 ? (
-            <button style={mkBtn("outline")} onClick={() => setStep(step - 1)}>← Previous</button>
-          ) : <div />}
-          
-          <button style={mkBtn("primary")} onClick={() => { if (step < 5) setStep(step + 1); else onSave(jsa); }}>
-            {step === 5 ? "Save & Complete JSA" : "Next Step →"}
-          </button>
+        <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.bdr}`, display: "flex", flexDirection: "column", gap: 12, background: C.bg }}>
+          {valErrs.length > 0 && (
+            <div style={{ fontSize: 12, color: C.red, fontWeight: 600 }}>
+              ⚠️ Missing required fields: {valErrs.join(", ")}
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {step > 1 ? (
+                <button style={mkBtn("outline")} onClick={() => setStep(step - 1)}>← Previous</button>
+              ) : <div style={{ width: 95 }} />}
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.txtM }}>Step {step} of 5</span>
+            </div>
+            
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={mkBtn("ghost")} onClick={() => onSave({ ...jsa, completed: false })}>Save Draft</button>
+              <button 
+                style={(step === 5 && valErrs.length > 0) ? { ...mkBtn("primary"), opacity: 0.5, cursor: "not-allowed" } : mkBtn("primary")} 
+                onClick={() => {
+                  if (step < 5) setStep(step + 1); 
+                  else if (valErrs.length === 0) onSave({ ...jsa, completed: true });
+                }}
+              >
+                {step === 5 ? "Complete JSA" : "Next Step →"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

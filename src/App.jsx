@@ -3331,6 +3331,7 @@ function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, 
                       <div style={{ width: "65%", overflow: "hidden", paddingRight: 8 }}>
                         <div style={{ fontWeight: 700, fontSize: 13, color: C.txt, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{q.client || 'Unknown'}</div>
                         <div style={{ fontSize: 11, color: C.txtM, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{q.jobSite || q.description || q.job_description || "Not Specified"}</div>
+                        {!q.jsaData?.completed && <div style={{ fontSize: 10, color: C.red, fontWeight: 700, marginTop: 4 }}>⚠️ JSA not completed</div>}
                       </div>
                       <div style={{ textAlign: "right", width: "35%" }}>
                         <div style={{ fontSize: 12, fontWeight: 800, color: C.acc }}>{fmt(parseFloat(q.total || 0))}</div>
@@ -3374,6 +3375,7 @@ function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, 
                           <div style={{ fontSize: 13, color: C.txtM, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: 180 }}>
                             {q.jobSite || q.description || q.job_description || "Not Specified"}
                           </div>
+                          {!q.jsaData?.completed && <div style={{ fontSize: 10, color: C.red, fontWeight: 700, marginTop: 4 }}>⚠️ JSA not completed</div>}
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <div style={{ fontSize: 10, fontWeight: 700, color: C.txtS, textTransform: "uppercase", marginBottom: 4 }}>Status</div>
@@ -10898,6 +10900,10 @@ export default function App() {
   }
 
   function saveQuote(opts = {}) {
+    if (!active.salesAssoc?.trim()) {
+      alert("Estimator is required to save the quote.");
+      return;
+    }
     const cv = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     // Save Quote always preserves current status (keeps In Progress if that's where it is)
     // Unless a specific status override is passed
@@ -10932,6 +10938,10 @@ export default function App() {
   }
 
   function markWon(jn, cd) {
+    if (!active.salesAssoc?.trim()) {
+      alert("Estimator is required to mark the quote as won.");
+      return;
+    }
     if ((active.liftPlanRequired || checkCriticalLift(active)) && active.liftPlanStatus !== "Engineering Approved") {
       alert("Cannot mark job as Won: Critical Lift Plan must be 'Engineering Approved'.");
       return;
@@ -10947,6 +10957,10 @@ export default function App() {
   }
 
   function submitQuote() {
+    if (!active.salesAssoc?.trim()) {
+      alert("Estimator is required to submit the quote.");
+      return;
+    }
     const cv = calcQuote(active, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     const autoJobNum = active.job_num || active.jobNum || nextJobNumber(jobs, active.date);
     const upd = { ...active, ...cv, status: "In Review", job_num: autoJobNum, jobNum: autoJobNum };
@@ -11809,12 +11823,12 @@ export default function App() {
               {active.status !== "Lead" && (
                 <button 
                   onClick={() => setShowJSAModal(true)} 
-                  style={{ width: "100%", background: active.jsaData ? C.grnB : C.sur, color: active.jsaData ? C.grn : C.txtM, border: `1px solid ${active.jsaData ? C.grnBdr : C.bdr}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, transition: "all 0.1s" }}
+                  style={{ width: "100%", background: active.jsaData?.completed ? C.grnB : C.sur, color: active.jsaData?.completed ? C.grn : C.txtM, border: `1px solid ${active.jsaData?.completed ? C.grnBdr : C.bdr}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, transition: "all 0.1s" }}
                 >
                   <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>🛡️</span> {active.jsaData ? "JSA Completed" : "Conduct JSA"}
+                    <span style={{ fontSize: 14 }}>🛡️</span> {active.jsaData?.completed ? "JSA Completed" : active.jsaData ? "JSA In Progress" : "Conduct JSA"}
                   </span>
-                  {active.jsaData ? <span style={{ color: C.grn }}>✓</span> : <span style={{ color: C.acc, fontSize: 10 }}>REQUIRED</span>}
+                  {active.jsaData?.completed ? <span style={{ color: C.grn }}>✓</span> : <span style={{ color: C.acc, fontSize: 10 }}>REQUIRED</span>}
                 </button>
               )}
 
