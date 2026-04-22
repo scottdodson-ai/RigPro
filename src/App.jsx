@@ -11821,15 +11821,18 @@ export default function App() {
               )}
               
               {active.status !== "Lead" && (
-                <button 
-                  onClick={() => setShowJSAModal(true)} 
-                  style={{ width: "100%", background: active.jsaData?.completed ? C.grnB : C.sur, color: active.jsaData?.completed ? C.grn : C.txtM, border: `1px solid ${active.jsaData?.completed ? C.grnBdr : C.bdr}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, transition: "all 0.1s" }}
-                >
-                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>🛡️</span> {active.jsaData?.completed ? "JSA Completed" : active.jsaData ? "JSA In Progress" : "Conduct JSA"}
-                  </span>
-                  {active.jsaData?.completed ? <span style={{ color: C.grn }}>✓</span> : <span style={{ color: C.acc, fontSize: 10 }}>REQUIRED</span>}
-                </button>
+                <div style={{ background: C.grnB, border: `1px solid ${C.grnBdr}`, borderRadius: 6, padding: "12px", marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.grn, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 16 }}>🛡️</span> JOB SAFETY ANALYSIS (JSA)
+                  </div>
+                  <button 
+                    onClick={() => setShowJSAModal(true)} 
+                    style={{ width: "100%", background: C.sur, color: C.txtM, border: `1px solid ${C.bdr}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "all 0.1s" }}
+                  >
+                    <span>{active.jsaData?.completed ? "JSA Completed" : active.jsaData ? "JSA In Progress" : "Conduct JSA"}</span>
+                    {active.jsaData?.completed ? <span style={{ color: C.grn }}>✓</span> : <span style={{ color: C.acc, fontSize: 10 }}>REQUIRED</span>}
+                  </button>
+                </div>
               )}
 
               {active.status === "Lead" ? (
