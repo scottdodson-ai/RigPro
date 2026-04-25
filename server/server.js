@@ -410,37 +410,52 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       if (row.quote_data) {
         try { json = JSON.parse(row.quote_data); } catch { json = {}; }
       }
-      const jobNum = row.job_num || json.job_num || json.jobNum || '';
+      const find = (keys) => {
+        for (const k of keys) {
+          if (row[k] !== undefined && row[k] !== null) return row[k];
+          if (row[k.toUpperCase()] !== undefined && row[k.toUpperCase()] !== null) return row[k.toUpperCase()];
+          if (json[k] !== undefined && json[k] !== null) return json[k];
+        }
+        return '';
+      };
+
+      const qn = find(['qn', 'quote_number']);
+      const client = find(['client', 'customer_name', 'customer']);
+      const jobNum = find(['job_num', 'jobNum']);
+      
       return {
         ...json,
         ...row,
-        status: row.status_id || json.status || 'Draft',
-        qn: row.qn || json.qn || '',
-        quote_number: row.qn || json.qn || '',
-        client: row.client || row.customer_name || json.client || '',
-        jobSite: row.jobSite || row.job_site || json.jobSite || '',
-        street: row.street || json.street || json.jobSiteAddress1 || '',
-        city: row.city || json.city || json.jobSiteCity || '',
-        state: row.state || json.state || json.jobSiteState || '',
-        zipcode: row.zipcode || json.zipcode || json.jobSiteZip || '',
-        desc: row.jobDesc || row.desc || json.desc || '',
-        qtype: row.qtype || json.qtype || 'Contract',
-        salesAssoc: row.salesAssoc || json.salesAssoc || '',
+        id: row.id || row.ID || json.id,
+        status: row.status_id || row.STATUS_ID || json.status_id || json.status || 'Draft',
+        qn,
+        quote_number: qn,
+        client,
+        customer_name: client,
+        jobSite: find(['jobSite', 'job_site']),
+        street: find(['street', 'job_site_address1', 'jobSiteAddress1']),
+        city: find(['city', 'job_site_city', 'jobSiteCity']),
+        state: find(['state', 'job_site_state', 'jobSiteState']),
+        zipcode: find(['zipcode', 'job_site_zip', 'jobSiteZip']),
+        desc: find(['jobDesc', 'description', 'desc']),
+        qtype: find(['qtype', 'quote_type']) || 'Contract',
+        salesAssoc: find(['salesAssoc', 'sales_assoc']),
         job_num: jobNum,
         jobNum,
-        startDate: row.startDate || json.startDate || '',
-        compDate: row.compDate || json.compDate || '',
-        locked: Boolean(row.locked ?? json.locked),
-        total: parseFloat(row.total || json.total) || 0,
-        labor: parseFloat(row.labor || json.labor) || 0,
-        mats: parseFloat(row.materials || json.mats) || 0,
-        equip: parseFloat(row.equip || json.equip) || 0,
-        hauling: parseFloat(row.hauling || json.hauling) || 0,
-        travel: parseFloat(row.travel || json.travel) || 0,
+        startDate: find(['startDate', 'start_date']),
+        compDate: find(['compDate', 'comp_date', 'completion_date']),
+        locked: Boolean(row.locked ?? row.LOCKED ?? json.locked),
+        total: parseFloat(find(['total'])) || 0,
+        labor: parseFloat(find(['labor'])) || 0,
+        mats: parseFloat(find(['materials', 'mats'])),
+        equip: parseFloat(find(['equipment', 'equip'])),
+        hauling: parseFloat(find(['hauling'])),
+        travel: parseFloat(find(['travel'])),
       };
     });
 
-    let jobs = mappedQuotes;
+    const jobsList = mappedQuotes.filter(q => q.quote_number && String(q.status) !== '1');
+    let jobs = jobsList;
     const [masterJobsExists] = await db.query("SHOW TABLES LIKE 'master_jobs'");
     if (masterJobsExists.length) {
       const masterRows = await safeQuery('SELECT *, customer_name as client, job_number as job_num, total_billings as total FROM master_jobs');
@@ -478,8 +493,8 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         };
       });
       jobs = [
-        ...mappedQuotes,
-        ...mappedMaster.filter(m => !existingKeys.has(m.qn || `master:${m.id}`)),
+        ...jobsList,
+        ...mappedMaster.filter(m => (m.qn || m.quote_number) && !existingKeys.has(m.qn || `master:${m.id}`)),
       ];
     }
 

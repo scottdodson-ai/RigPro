@@ -7,46 +7,19 @@ import RigPro3InvestorDashboard from "./RigPro3InvestorDashboard";
 import LeadsBoard from "./LeadsBoard";
 import JSAWizardModal from "./JSAWizardModal";
 
+function fmt(n) { return "$" + Math.round(Number(n || 0)).toLocaleString(); }
+function fmtD(d) { return d ? new Date(d).toISOString().slice(0, 10) : ""; }
+let UID_SEQ = Date.now();
+function uid() { UID_SEQ++; return "uid-" + UID_SEQ; }
+const today = () => new Date().toISOString().slice(0, 10);
+function listKey(prefix, item, index) { return `${prefix}-${item?.id || index}-${index}`; }
+
+
 
 // ── BASE DATA ─────────────────────────────────────────────────────────────────
 
-const DEFAULT_LABOR = [
-  { role: "Foreman", reg: 88, ot: 132, costReg: 48.07, costOT: 66.09 },
-  { role: "Rigger", reg: 83.5, ot: 125.25, costReg: 46.79, costOT: 64.81 },
-  { role: "Labor", reg: 78, ot: 117, costReg: 42.96, costOT: 58.73 },
-  { role: "Operator", reg: 83.5, ot: 125.25, costReg: 46.79, costOT: 64.81 },
-  { role: "CDL Driver", reg: 78, ot: 117, costReg: 42.96, costOT: 58.73 },
-];
-
-const EQUIPMENT = [
-  { code: "242", category: "Forklift", name: "2000 Gradall 534D-9", capacity: "9,000 lb", daily_rate: 790 },
-  { code: "300", category: "Forklift", name: "Caterpillar GC35K", capacity: "15,500 lb", daily_rate: 840 },
-  { code: "301", category: "Forklift", name: "HysterS80XLBCS", capacity: "8,000 lb", daily_rate: 530 },
-  { code: "302", category: "Forklift", name: "Cat125D 12,500 LB Forklift", capacity: "12,500 lb", daily_rate: 850 },
-  { code: "308", category: "Forklift", name: "Cat T150D 15,000 LB Forklift", capacity: "15,000 lb", daily_rate: 950 },
-  { code: "320", category: "Forklift", name: "Royal T300B 30,000 lb", capacity: "30,000 lb", daily_rate: 1100 },
-  { code: "322", category: "Forklift", name: "Rigger's Special 80-100k", capacity: "100,000 lb", daily_rate: 1200 },
-  { code: "237", category: "Aerial Lift", name: "Skyjack SJ3226", capacity: "–", daily_rate: 250 },
-  { code: "251", category: "Aerial Lift", name: "JLG 450AJ Lift", capacity: "–", daily_rate: 525 },
-  { code: "254", category: "Aerial Lift", name: "JLG 600S Boom", capacity: "–", daily_rate: 650 },
-  { code: "255", category: "Aerial Lift", name: "2013 Skyjack SJ4632", capacity: "–", daily_rate: 375 },
-  { code: "259", category: "Aerial Lift", name: "2015 Skyjack SJ3219", capacity: "–", daily_rate: 155 },
-  { code: "250", category: "Crane", name: "2005 Broderson IC-200-3F 30-Ton Carry Deck", capacity: "30,000 lb", daily_rate: 1000 },
-  { code: "257", category: "Crane", name: "Broderson IC80-2D 17,000 lb Carry Deck", capacity: "17,000 lb", daily_rate: 750 },
-  { code: "RP8x10", category: "Misc", name: "8'×10' Steel Road Plates", capacity: "–", daily_rate: 90 },
-  { code: "RP4x10", category: "Misc", name: "4'×10' Steel Road Plates", capacity: "–", daily_rate: 90 },
-  { code: "RP8x12", category: "Misc", name: "8'×12' Steel Road Plates", capacity: "–", daily_rate: 90 },
-  { code: "RP8x20", category: "Misc", name: "8'×20' Steel Road Plates", capacity: "–", daily_rate: 100 },
-  { code: "GANG", category: "Tools", name: "Gang Box Charge", capacity: "–", daily_rate: 50 },
-  { code: "CONEX", category: "Tools", name: "Conex Job Trailer", capacity: "–", daily_rate: 50 },
-  { code: "TORCH", category: "Tools", name: "Torch Outfit", capacity: "–", daily_rate: 50 },
-  { code: "100D", category: "Truck", name: "2007 Inter 9200 Tractor", capacity: "–", daily_rate: 1000 },
-  { code: "110D", category: "Truck", name: "2008 Landall Trailer", capacity: "–", daily_rate: 1000 },
-  { code: "111D", category: "Truck", name: "1999 Fontaine Flatbed Trailer", capacity: "–", daily_rate: 1000 },
-  { code: "SEMI", category: "Truck", name: "Semi Truck and Trailer", capacity: "–", daily_rate: 1000 },
-  { code: "CONE", category: "Truck", name: "Semi Truck and Conestoga", capacity: "–", daily_rate: 1500 },
-  { code: "PICK", category: "Truck", name: "Pickup Truck", capacity: "–", daily_rate: 125 },
-];
+const DEFAULT_LABOR = [];
+const EQUIPMENT = [];
 
 const EQ_MAP = {};
 EQUIPMENT.forEach(e => { EQ_MAP[e.code] = e; });
@@ -94,283 +67,28 @@ export function SortTh({ label, sortKey, currentSort, currentDir, requestSort, s
   );
 }
 
-const CUSTOMERS = [
-  "Apex Industrial LLC", "Beacon Manufacturing Co.", "Cornerstone Plastics Inc.",
-  "Delta Fabrication Group", "Eagle Press & Die", "Frontier Castings Ltd.",
-  "Gateway Precision Tools", "Horizon Automotive Parts", "Icon Rubber Products",
-  "Junction Steel Works", "Keystone Die Casting", "Landmark Tooling Inc.",
-  "Meridian Extrusion Co.", "Northgate Aluminum", "Overland Transport Mfg.",
-  "Pinnacle Forge & Stamp", "Quartz Industrial Services", "Ridgeline Machine Works",
-  "Summit Plastics Group", "Titan Manufacturing LLC",
-];
-
+const CUSTOMERS = [];
+const SAMPLE_QUOTES = [];
+const SAMPLE_REQS = [];
+const INIT_CUST_DATA = {};
+const INIT_CUSTOMER_RATES = {};
+const DEFAULT_PROFILE_TEMPLATE = [];
 const DEFAULT_PER_DIEM = 50;
 const DEFAULT_HOTEL = 120;
-
-// ── SYSTEM PROMPTING ──────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = "RigPro v3.1 Unified Data Source Enabled. All future features are strictly referenced against the live MySQL database. System initialized with full historical dataset.";
-const SHOW_SEMANTIC_SEARCH = false;
-const SHOW_SYSTEM_PROMPT_BANNER = false;
-
 const DEFAULT_COMPANY = {
   name: "Shoemaker Rigging & Transport LLC",
   address: "3385 Miller Park Road · Akron, OH 44312",
   services: "Industrial Rigging · Machinery Moving · Heavy Haul Transport",
   logoSrc: null
 };
+const SHOW_SYSTEM_PROMPT_BANNER = false;
+const SHOW_SEMANTIC_SEARCH = false;
+const SYSTEM_PROMPT = "";
 
-const INIT_CUSTOMER_RATES = {
-  "Apex Industrial LLC": {
-    Foreman: { reg: 80, ot: 120 },
-    Rigger: { reg: 76, ot: 114 },
-    Labor: { reg: 70, ot: 105 },
-    Operator: { reg: 76, ot: 114 },
-    "CDL Driver": { reg: 70, ot: 105 },
-  },
-};
-
-const SAMPLE_QUOTES = [
-  // ── 2024 QUOTES ───────────────────────────────────────────────────────────
-  // Apex Industrial LLC
-  { id: 1, qn: "RIG-2024-001", client: "Apex Industrial LLC", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Press line relocation – Bay 4", date: "2024-02-12", status: "Won", qtype: "Contract", labor: 38400, equip: 32000, hauling: 9800, travel: 2400, mats: 4000, total: 84200, markup: 0, salesAssoc: "Dan M", job_num: "J-2024-012", startDate: "2024-03-10", compDate: "2024-03-15", locked: true, salesAdjustments: [{ id: 1, amount: 4200, reason: "Additional Work", note: "Added crane pick for Bay 5", date: "2024-03-12" }], notes: "Long-term client.", attachments: [], contactName: "James Whitfield", contactEmail: "j.whitfield@apexind.com", contactPhone: "330-555-0182", equipList: ["300", "250", "SEMI"] },
-  { id: 2, qn: "RIG-2024-008", client: "Apex Industrial LLC", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Overhead crane installation – Bay 7", date: "2024-08-20", status: "Won", qtype: "Contract", labor: 52000, equip: 44000, hauling: 11000, travel: 3200, mats: 6000, total: 112000, markup: 0.08, salesAssoc: "Dan M", job_num: "J-2024-088", startDate: "2024-09-08", compDate: "2024-09-13", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "James Whitfield", contactEmail: "j.whitfield@apexind.com", contactPhone: "330-555-0182", equipList: ["250", "320", "PICK"] },
-  { id: 3, qn: "RIG-2024-031", client: "Apex Industrial LLC", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Compressor skid installation – utility bay", date: "2024-11-05", status: "Won", qtype: "Contract", labor: 29500, equip: 24000, hauling: 7200, travel: 1800, mats: 3100, total: 63800, markup: 0.05, salesAssoc: "Sarah K", job_num: "J-2024-131", startDate: "2024-11-22", compDate: "2024-11-26", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Rick Torres", contactEmail: "r.torres@apexind.com", contactPhone: "330-555-0199", equipList: ["302", "PICK"] },
-  // Beacon Manufacturing Co.
-  { id: 4, qn: "RIG-2024-002", client: "Beacon Manufacturing Co.", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Hydraulic press installation", date: "2024-01-15", status: "Won", qtype: "Contract", labor: 56000, equip: 62000, hauling: 18000, travel: 6500, mats: 6500, total: 142500, markup: 0, salesAssoc: "Sarah K", job_num: "J-2024-002", startDate: "2024-02-10", compDate: "2024-02-17", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Carolyn Marsh", contactEmail: "c.marsh@beaconmfg.com", contactPhone: "937-555-0244", equipList: ["300", "257", "SEMI", "PICK"] },
-  { id: 5, qn: "RIG-2024-011", client: "Beacon Manufacturing Co.", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "CNC lathe bank relocation – Bldg B", date: "2024-09-15", status: "Won", qtype: "Contract", labor: 31000, equip: 27000, hauling: 8000, travel: 2200, mats: 3400, total: 71600, markup: 0.07, salesAssoc: "Sarah K", job_num: "J-2024-095", startDate: "2024-10-07", compDate: "2024-10-10", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Carolyn Marsh", contactEmail: "c.marsh@beaconmfg.com", contactPhone: "937-555-0244", equipList: ["300", "SEMI"] },
-  { id: 6, qn: "RIG-2024-024", client: "Beacon Manufacturing Co.", jobSite: "220 Warehouse Dr, Springfield, OH 45501", desc: "Warehouse conveyor system relocation", date: "2024-06-03", status: "Lost", qtype: "T&M", labor: 18000, equip: 14500, hauling: 4200, travel: 1100, mats: 1800, total: 39600, markup: 0, salesAssoc: "Mike R", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Lost on price.", attachments: [], contactName: "Doug Hensley", contactEmail: "d.hensley@beaconmfg.com", contactPhone: "937-555-0280", equipList: ["257", "PICK"] },
-  // Cornerstone Plastics Inc.
-  { id: 7, qn: "RIG-2024-003", client: "Cornerstone Plastics Inc.", jobSite: "800 Factory Dr, Columbus, OH 43219", desc: "Kiln dismantle & reinstall", date: "2024-03-18", status: "Won", qtype: "T&M", labor: 28000, equip: 24000, hauling: 7200, travel: 2400, mats: 2600, total: 61800, markup: 0, salesAssoc: "Dan M", job_num: "J-2024-018", startDate: "2024-04-05", compDate: "2024-04-09", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Pat Gilmore", contactEmail: "p.gilmore@cornerstone.com", contactPhone: "614-555-0312", equipList: ["308", "PICK"] },
-  { id: 8, qn: "RIG-2024-015", client: "Cornerstone Plastics Inc.", jobSite: "800 Factory Dr, Columbus, OH 43219", desc: "Blow mold machine relocation", date: "2024-10-08", status: "Lost", qtype: "Contract", labor: 22000, equip: 18000, hauling: 5200, travel: 1500, mats: 2100, total: 49500, markup: 0, salesAssoc: "Dan M", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Lost to competitor.", attachments: [], contactName: "Pat Gilmore", contactEmail: "p.gilmore@cornerstone.com", contactPhone: "614-555-0312", equipList: ["301"] },
-  // Delta Fabrication Group
-  { id: 9, qn: "RIG-2024-019", client: "Delta Fabrication Group", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Press brake relocation – north wing", date: "2024-04-30", status: "Won", qtype: "Contract", labor: 29000, equip: 24500, hauling: 7100, travel: 2000, mats: 3100, total: 65700, markup: 0.07, salesAssoc: "Mike R", job_num: "J-2024-049", startDate: "2024-05-20", compDate: "2024-05-23", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Sandra Voss", contactEmail: "s.voss@deltafab.com", contactPhone: "216-555-0415", equipList: ["300", "257", "SEMI"] },
-  { id: 10, qn: "RIG-2024-033", client: "Delta Fabrication Group", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Welding robot install – south bay", date: "2024-12-02", status: "Won", qtype: "Contract", labor: 34000, equip: 28000, hauling: 8500, travel: 2300, mats: 3800, total: 76600, markup: 0.06, salesAssoc: "Mike R", job_num: "J-2024-143", startDate: "2024-12-16", compDate: "2024-12-20", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Sandra Voss", contactEmail: "s.voss@deltafab.com", contactPhone: "216-555-0415", equipList: ["308", "SEMI"] },
-  // Eagle Press & Die
-  { id: 11, qn: "RIG-2024-022", client: "Eagle Press & Die", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Die spotting press removal", date: "2024-07-10", status: "Won", qtype: "Contract", labor: 18500, equip: 15500, hauling: 4800, travel: 1300, mats: 1900, total: 42800, markup: 0.08, salesAssoc: "Mike R", job_num: "J-2024-071", startDate: "2024-08-01", compDate: "2024-08-03", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Bob Trexler", contactEmail: "b.trexler@eaglepress.com", contactPhone: "330-555-0311", equipList: ["302", "PICK"] },
-  { id: 12, qn: "RIG-2024-029", client: "Eagle Press & Die", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Stamping press motor swap – Bay 3", date: "2024-10-22", status: "Lost", qtype: "T&M", labor: 12000, equip: 9500, hauling: 2800, travel: 900, mats: 1200, total: 26400, markup: 0, salesAssoc: "Dan M", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Customer did work in-house.", attachments: [], contactName: "Lisa Brandt", contactEmail: "l.brandt@eaglepress.com", contactPhone: "330-555-0322", equipList: ["PICK"] },
-  // Frontier Castings Ltd.
-  { id: 13, qn: "RIG-2024-027", client: "Frontier Castings Ltd.", jobSite: "900 Industrial Blvd, Youngstown, OH 44503", desc: "Sand casting conveyor relocation", date: "2024-09-22", status: "Won", qtype: "Contract", labor: 39000, equip: 33000, hauling: 9500, travel: 2900, mats: 4300, total: 88700, markup: 0.07, salesAssoc: "Sarah K", job_num: "J-2024-097", startDate: "2024-10-14", compDate: "2024-10-18", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Tony Ruiz", contactEmail: "t.ruiz@frontiercasting.com", contactPhone: "330-555-0518", equipList: ["300", "257", "SEMI"] },
-  { id: 14, qn: "RIG-2024-035", client: "Frontier Castings Ltd.", jobSite: "900 Industrial Blvd, Youngstown, OH 44503", desc: "Melt furnace refractory removal", date: "2024-12-10", status: "Won", qtype: "T&M", labor: 22000, equip: 19000, hauling: 5500, travel: 1800, mats: 2400, total: 50700, markup: 0.05, salesAssoc: "Dan M", job_num: "J-2024-155", startDate: "2024-12-20", compDate: "2024-12-24", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Angela Kim", contactEmail: "a.kim@frontiercasting.com", contactPhone: "330-555-0530", equipList: ["308", "PICK"] },
-  // Gateway Precision Tools
-  { id: 15, qn: "RIG-2024-004", client: "Gateway Precision Tools", jobSite: "2200 Gateway Blvd, Toledo, OH 43612", desc: "EDM machine relocation – clean room", date: "2024-02-28", status: "Won", qtype: "Contract", labor: 16500, equip: 13000, hauling: 3800, travel: 1200, mats: 1600, total: 36100, markup: 0.08, salesAssoc: "Sarah K", job_num: "J-2024-014", startDate: "2024-03-18", compDate: "2024-03-20", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Frank Nguyen", contactEmail: "f.nguyen@gatewaypt.com", contactPhone: "419-555-0601", equipList: ["302", "PICK"] },
-  { id: 16, qn: "RIG-2024-021", client: "Gateway Precision Tools", jobSite: "2200 Gateway Blvd, Toledo, OH 43612", desc: "CNC machining center install", date: "2024-07-18", status: "Won", qtype: "Contract", labor: 24000, equip: 20000, hauling: 5800, travel: 1700, mats: 2600, total: 54100, markup: 0.06, salesAssoc: "Sarah K", job_num: "J-2024-078", startDate: "2024-08-12", compDate: "2024-08-15", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Frank Nguyen", contactEmail: "f.nguyen@gatewaypt.com", contactPhone: "419-555-0601", equipList: ["308", "PICK"] },
-  // Horizon Automotive Parts
-  { id: 17, qn: "RIG-2024-006", client: "Horizon Automotive Parts", jobSite: "750 Assembly Dr, Findlay, OH 45840", desc: "Transfer press line relocation", date: "2024-05-14", status: "Won", qtype: "Contract", labor: 68000, equip: 72000, hauling: 22000, travel: 7200, mats: 8500, total: 172700, markup: 0.08, salesAssoc: "Mike R", job_num: "J-2024-055", startDate: "2024-06-02", compDate: "2024-06-09", locked: true, salesAdjustments: [{ id: 2, amount: 6500, reason: "Additional Work", note: "Extra rigging for subframe", date: "2024-06-05" }], notes: "Largest job of Q2.", attachments: [], contactName: "Donna Holt", contactEmail: "d.holt@horizonauto.com", contactPhone: "419-555-0712", equipList: ["320", "250", "SEMI", "PICK"] },
-  { id: 18, qn: "RIG-2024-025", client: "Horizon Automotive Parts", jobSite: "750 Assembly Dr, Findlay, OH 45840", desc: "Spot weld robot arm replacement", date: "2024-08-30", status: "Lost", qtype: "T&M", labor: 14000, equip: 11000, hauling: 3200, travel: 1100, mats: 1400, total: 30700, markup: 0, salesAssoc: "Mike R", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Customer used OEM crew.", attachments: [], contactName: "Donna Holt", contactEmail: "d.holt@horizonauto.com", contactPhone: "419-555-0712", equipList: ["PICK"] },
-  // Icon Rubber Products
-  { id: 19, qn: "RIG-2024-009", client: "Icon Rubber Products", jobSite: "5100 Rubber Ln, Barberton, OH 44203", desc: "Extruder relocation – Line 2", date: "2024-06-20", status: "Won", qtype: "T&M", labor: 21000, equip: 17500, hauling: 5100, travel: 1600, mats: 2200, total: 47400, markup: 0.05, salesAssoc: "Dan M", job_num: "J-2024-065", startDate: "2024-07-08", compDate: "2024-07-11", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Greg Owens", contactEmail: "g.owens@iconrubber.com", contactPhone: "330-555-0821", equipList: ["301", "PICK"] },
-  { id: 20, qn: "RIG-2024-032", client: "Icon Rubber Products", jobSite: "5100 Rubber Ln, Barberton, OH 44203", desc: "Banbury mixer overhaul lift", date: "2024-11-14", status: "Won", qtype: "Contract", labor: 27500, equip: 23000, hauling: 6600, travel: 2100, mats: 2900, total: 62100, markup: 0.06, salesAssoc: "Dan M", job_num: "J-2024-132", startDate: "2024-12-02", compDate: "2024-12-05", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Greg Owens", contactEmail: "g.owens@iconrubber.com", contactPhone: "330-555-0821", equipList: ["308", "SEMI"] },
-  // Junction Steel Works
-  { id: 21, qn: "RIG-2024-010", client: "Junction Steel Works", jobSite: "1800 Steel Way, Warren, OH 44483", desc: "Coil reel and straightener set", date: "2024-07-02", status: "Won", qtype: "Contract", labor: 45000, equip: 38000, hauling: 11500, travel: 3400, mats: 5200, total: 103100, markup: 0.07, salesAssoc: "Sarah K", job_num: "J-2024-067", startDate: "2024-07-22", compDate: "2024-07-26", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Ray Kowalski", contactEmail: "r.kowalski@junctionsteel.com", contactPhone: "330-555-0933", equipList: ["320", "250", "SEMI"] },
-  { id: 22, qn: "RIG-2024-028", client: "Junction Steel Works", jobSite: "1800 Steel Way, Warren, OH 44483", desc: "Shear line decommission", date: "2024-10-10", status: "Lost", qtype: "T&M", labor: 16000, equip: 13000, hauling: 3800, travel: 1300, mats: 1700, total: 35800, markup: 0, salesAssoc: "Sarah K", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "No budget this quarter.", attachments: [], contactName: "Ray Kowalski", contactEmail: "r.kowalski@junctionsteel.com", contactPhone: "330-555-0933", equipList: ["300", "PICK"] },
-  // Keystone Die Casting
-  { id: 23, qn: "RIG-2024-014", client: "Keystone Die Casting", jobSite: "620 Die Cast Dr, Massillon, OH 44646", desc: "Die cast machine #4 replacement", date: "2024-09-05", status: "Won", qtype: "Contract", labor: 51000, equip: 46000, hauling: 13500, travel: 4100, mats: 5800, total: 120400, markup: 0.08, salesAssoc: "Mike R", job_num: "J-2024-091", startDate: "2024-09-25", compDate: "2024-09-30", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Helen Marsh", contactEmail: "h.marsh@keystonedc.com", contactPhone: "330-555-1044", equipList: ["320", "250", "SEMI", "PICK"] },
-  // Landmark Tooling Inc.
-  { id: 24, qn: "RIG-2024-017", client: "Landmark Tooling Inc.", jobSite: "3300 Tool & Die Ave, Medina, OH 44256", desc: "Surface grinder relocation", date: "2024-10-17", status: "Won", qtype: "T&M", labor: 13500, equip: 11000, hauling: 3200, travel: 1000, mats: 1400, total: 30100, markup: 0.05, salesAssoc: "Dan M", job_num: "J-2024-107", startDate: "2024-11-04", compDate: "2024-11-06", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Phil Stevens", contactEmail: "p.stevens@landmarktool.com", contactPhone: "330-555-1155", equipList: ["302", "PICK"] },
-  { id: 25, qn: "RIG-2024-030", client: "Landmark Tooling Inc.", jobSite: "3300 Tool & Die Ave, Medina, OH 44256", desc: "Coordinate measuring machine install", date: "2024-11-20", status: "Lost", qtype: "Contract", labor: 8500, equip: 7000, hauling: 2000, travel: 700, mats: 900, total: 19100, markup: 0, salesAssoc: "Dan M", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Client postponed project.", attachments: [], contactName: "Phil Stevens", contactEmail: "p.stevens@landmarktool.com", contactPhone: "330-555-1155", equipList: ["PICK"] },
-  // Meridian Extrusion Co.
-  { id: 26, qn: "RIG-2024-013", client: "Meridian Extrusion Co.", jobSite: "4100 Extrusion Blvd, Sandusky, OH 44870", desc: "Die cart system installation", date: "2024-08-12", status: "Won", qtype: "Contract", labor: 33000, equip: 27500, hauling: 8200, travel: 2600, mats: 3600, total: 74900, markup: 0.06, salesAssoc: "Sarah K", job_num: "J-2024-083", startDate: "2024-09-02", compDate: "2024-09-06", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Carol Jensen", contactEmail: "c.jensen@meridianext.com", contactPhone: "419-555-1266", equipList: ["308", "SEMI"] },
-  // Northgate Aluminum
-  { id: 27, qn: "RIG-2024-016", client: "Northgate Aluminum", jobSite: "700 Smelter Rd, Lima, OH 45801", desc: "Rolling mill bearing replacement lift", date: "2024-10-01", status: "Won", qtype: "T&M", labor: 42000, equip: 36000, hauling: 10800, travel: 3500, mats: 4800, total: 97100, markup: 0.07, salesAssoc: "Mike R", job_num: "J-2024-101", startDate: "2024-10-21", compDate: "2024-10-25", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Bruce Tanner", contactEmail: "b.tanner@northgatealum.com", contactPhone: "419-555-1377", equipList: ["320", "250", "SEMI"] },
-
-  // ── 2025 QUOTES ───────────────────────────────────────────────────────────
-  // Apex Industrial LLC
-  { id: 28, qn: "RIG-2025-001", client: "Apex Industrial LLC", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Heat treat oven relocation – Bay 2", date: "2025-01-14", status: "Won", qtype: "Contract", labor: 31000, equip: 26500, hauling: 7800, travel: 2100, mats: 3400, total: 70800, markup: 0.06, salesAssoc: "Dan M", job_num: "J-2025-004", startDate: "2025-02-03", compDate: "2025-02-07", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "James Whitfield", contactEmail: "j.whitfield@apexind.com", contactPhone: "330-555-0182", equipList: ["300", "SEMI"] },
-  { id: 29, qn: "RIG-2025-007", client: "Apex Industrial LLC", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Injection mold press relocation", date: "2025-04-10", status: "Won", qtype: "T&M", labor: 24000, equip: 19000, hauling: 6500, travel: 1800, mats: 2800, total: 54100, markup: 0.05, salesAssoc: "Sarah K", job_num: "J-2025-042", startDate: "2025-05-01", compDate: "2025-05-05", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Rick Torres", contactEmail: "r.torres@apexind.com", contactPhone: "330-555-0199", equipList: ["302", "PICK"] },
-  { id: 30, qn: "RIG-2025-021", client: "Apex Industrial LLC", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Cooling tower pump skid installation", date: "2025-08-05", status: "Won", qtype: "Contract", labor: 27000, equip: 22500, hauling: 6800, travel: 1900, mats: 3000, total: 61200, markup: 0.05, salesAssoc: "Dan M", job_num: "J-2025-089", startDate: "2025-08-25", compDate: "2025-08-29", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "James Whitfield", contactEmail: "j.whitfield@apexind.com", contactPhone: "330-555-0182", equipList: ["300", "PICK"] },
-  // Beacon Manufacturing Co.
-  { id: 31, qn: "RIG-2025-003", client: "Beacon Manufacturing Co.", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Transformer set – electrical bay", date: "2025-01-22", status: "Won", qtype: "T&M", labor: 18000, equip: 21000, hauling: 5500, travel: 1600, mats: 2200, total: 48300, markup: 0, salesAssoc: "Mike R", job_num: "J-2025-008", startDate: "2025-02-10", compDate: "2025-02-13", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Doug Hensley", contactEmail: "d.hensley@beaconmfg.com", contactPhone: "937-555-0280", equipList: ["257", "PICK"] },
-  { id: 32, qn: "RIG-2025-018", client: "Beacon Manufacturing Co.", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Laser cutter installation – Bldg C", date: "2025-06-17", status: "Won", qtype: "Contract", labor: 22500, equip: 19000, hauling: 5700, travel: 1700, mats: 2500, total: 51400, markup: 0.05, salesAssoc: "Sarah K", job_num: "J-2025-071", startDate: "2025-07-07", compDate: "2025-07-10", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Carolyn Marsh", contactEmail: "c.marsh@beaconmfg.com", contactPhone: "937-555-0244", equipList: ["308", "PICK"] },
-  { id: 33, qn: "RIG-2025-031", client: "Beacon Manufacturing Co.", jobSite: "220 Warehouse Dr, Springfield, OH 45501", desc: "Robotic palletizer install", date: "2025-10-08", status: "Lost", qtype: "Contract", labor: 19000, equip: 15500, hauling: 4600, travel: 1400, mats: 2000, total: 42500, markup: 0, salesAssoc: "Mike R", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Lost on price to regional competitor.", attachments: [], contactName: "Doug Hensley", contactEmail: "d.hensley@beaconmfg.com", contactPhone: "937-555-0280", equipList: ["257", "PICK"] },
-  // Cornerstone Plastics Inc.
-  { id: 34, qn: "RIG-2025-009", client: "Cornerstone Plastics Inc.", jobSite: "1450 Westgate Blvd, Columbus, OH 43228", desc: "New facility equipment install", date: "2025-03-01", status: "Won", qtype: "Contract", labor: 41000, equip: 36000, hauling: 10500, travel: 3100, mats: 4800, total: 95400, markup: 0.08, salesAssoc: "Mike R", job_num: "J-2025-028", startDate: "2025-03-24", compDate: "2025-03-29", locked: true, salesAdjustments: [], notes: "New location.", attachments: [], contactName: "Pat Gilmore", contactEmail: "p.gilmore@cornerstone.com", contactPhone: "614-555-0312", equipList: ["320", "250", "SEMI"] },
-  { id: 35, qn: "RIG-2025-022", client: "Cornerstone Plastics Inc.", jobSite: "1450 Westgate Blvd, Columbus, OH 43228", desc: "Trim press relocation – west wing", date: "2025-07-14", status: "Won", qtype: "T&M", labor: 19500, equip: 16000, hauling: 4700, travel: 1500, mats: 2100, total: 43800, markup: 0.05, salesAssoc: "Dan M", job_num: "J-2025-076", startDate: "2025-08-04", compDate: "2025-08-07", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Pat Gilmore", contactEmail: "p.gilmore@cornerstone.com", contactPhone: "614-555-0312", equipList: ["302", "PICK"] },
-  // Delta Fabrication Group
-  { id: 36, qn: "RIG-2025-002", client: "Delta Fabrication Group", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Aluminum furnace relocation", date: "2025-01-08", status: "Lost", qtype: "Contract", labor: 21000, equip: 18500, hauling: 5800, travel: 1400, mats: 2000, total: 47300, markup: 0, salesAssoc: "Sarah K", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "", attachments: [], contactName: "Sandra Voss", contactEmail: "s.voss@deltafab.com", contactPhone: "216-555-0415", equipList: ["300", "PICK"] },
-  { id: 37, qn: "RIG-2025-011", client: "Delta Fabrication Group", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Stamping line expansion – Bay 9", date: "2025-05-20", status: "Won", qtype: "T&M", labor: 35000, equip: 31000, hauling: 9000, travel: 2700, mats: 4200, total: 81900, markup: 0, salesAssoc: "Dan M", job_num: "J-2025-055", startDate: "2025-06-09", compDate: "2025-06-13", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Sandra Voss", contactEmail: "s.voss@deltafab.com", contactPhone: "216-555-0415", equipList: ["320", "PICK"] },
-  { id: 38, qn: "RIG-2025-028", client: "Delta Fabrication Group", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Press room HVAC unit lift & set", date: "2025-09-11", status: "Won", qtype: "T&M", labor: 12000, equip: 9500, hauling: 2800, travel: 900, mats: 1200, total: 26400, markup: 0, salesAssoc: "Mike R", job_num: "J-2025-098", startDate: "2025-09-29", compDate: "2025-09-30", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Sandra Voss", contactEmail: "s.voss@deltafab.com", contactPhone: "216-555-0415", equipList: ["257", "PICK"] },
-  // Eagle Press & Die
-  { id: 39, qn: "RIG-2025-002B", client: "Eagle Press & Die", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Press relocation – Building B", date: "2025-02-14", status: "Won", qtype: "Contract", labor: 44000, equip: 38000, hauling: 12000, travel: 3200, mats: 5200, total: 98000, markup: 0.10, salesAssoc: "Mike R", job_num: "J-2025-018", startDate: "2025-03-06", compDate: "2025-03-11", locked: true, salesAdjustments: [], notes: "Priority client.", attachments: [], contactName: "Bob Trexler", contactEmail: "b.trexler@eaglepress.com", contactPhone: "330-555-0311", equipList: ["300", "250", "SEMI", "PICK"] },
-  { id: 40, qn: "RIG-2025-013", client: "Eagle Press & Die", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Robotic welding cell relocation", date: "2025-05-05", status: "Won", qtype: "T&M", labor: 27000, equip: 22000, hauling: 6200, travel: 1900, mats: 2800, total: 59900, markup: 0, salesAssoc: "Dan M", job_num: "J-2025-051", startDate: "2025-05-26", compDate: "2025-05-29", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Lisa Brandt", contactEmail: "l.brandt@eaglepress.com", contactPhone: "330-555-0322", equipList: ["308", "257"] },
-  { id: 41, qn: "RIG-2025-029", client: "Eagle Press & Die", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Blanking press electrical upgrade lift", date: "2025-09-22", status: "Lost", qtype: "Contract", labor: 16000, equip: 13000, hauling: 3800, travel: 1200, mats: 1700, total: 35700, markup: 0, salesAssoc: "Sarah K", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Deferred to 2026.", attachments: [], contactName: "Bob Trexler", contactEmail: "b.trexler@eaglepress.com", contactPhone: "330-555-0311", equipList: ["302", "PICK"] },
-  // Frontier Castings Ltd.
-  { id: 42, qn: "RIG-2025-006", client: "Frontier Castings Ltd.", jobSite: "900 Industrial Blvd, Youngstown, OH 44503", desc: "Furnace installation", date: "2025-02-28", status: "Won", qtype: "T&M", labor: 32000, equip: 28000, hauling: 8500, travel: 2800, mats: 3400, total: 74700, markup: 0.08, salesAssoc: "Dan M", job_num: "J-2025-022", startDate: "2025-03-20", compDate: "2025-03-25", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Tony Ruiz", contactEmail: "t.ruiz@frontiercasting.com", contactPhone: "330-555-0518", equipList: ["320", "SEMI"] },
-  { id: 43, qn: "RIG-2025-016", client: "Frontier Castings Ltd.", jobSite: "900 Industrial Blvd, Youngstown, OH 44503", desc: "Core room equipment upgrade", date: "2025-06-10", status: "Won", qtype: "Contract", labor: 19000, equip: 16500, hauling: 4800, travel: 1400, mats: 2100, total: 43800, markup: 0, salesAssoc: "Mike R", job_num: "J-2025-065", startDate: "2025-07-01", compDate: "2025-07-04", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Angela Kim", contactEmail: "a.kim@frontiercasting.com", contactPhone: "330-555-0530", equipList: ["308", "PICK"] },
-  // Gateway Precision Tools
-  { id: 44, qn: "RIG-2025-004", client: "Gateway Precision Tools", jobSite: "2200 Gateway Blvd, Toledo, OH 43612", desc: "5-axis machining center install", date: "2025-01-30", status: "Won", qtype: "Contract", labor: 28000, equip: 23500, hauling: 6900, travel: 2100, mats: 3100, total: 63600, markup: 0.06, salesAssoc: "Sarah K", job_num: "J-2025-011", startDate: "2025-02-18", compDate: "2025-02-22", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Frank Nguyen", contactEmail: "f.nguyen@gatewaypt.com", contactPhone: "419-555-0601", equipList: ["308", "SEMI"] },
-  { id: 45, qn: "RIG-2025-025", client: "Gateway Precision Tools", jobSite: "2200 Gateway Blvd, Toledo, OH 43612", desc: "Grinding center relocation – east wing", date: "2025-08-20", status: "Lost", qtype: "T&M", labor: 11500, equip: 9000, hauling: 2600, travel: 900, mats: 1200, total: 25200, markup: 0, salesAssoc: "Sarah K", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "", attachments: [], contactName: "Frank Nguyen", contactEmail: "f.nguyen@gatewaypt.com", contactPhone: "419-555-0601", equipList: ["302", "PICK"] },
-  // Horizon Automotive Parts
-  { id: 46, qn: "RIG-2025-008", client: "Horizon Automotive Parts", jobSite: "750 Assembly Dr, Findlay, OH 45840", desc: "Assembly conveyor extension", date: "2025-03-15", status: "Won", qtype: "Contract", labor: 55000, equip: 48000, hauling: 14500, travel: 4800, mats: 6500, total: 128800, markup: 0.07, salesAssoc: "Mike R", job_num: "J-2025-032", startDate: "2025-04-07", compDate: "2025-04-14", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Donna Holt", contactEmail: "d.holt@horizonauto.com", contactPhone: "419-555-0712", equipList: ["320", "250", "SEMI", "PICK"] },
-  { id: 47, qn: "RIG-2025-024", client: "Horizon Automotive Parts", jobSite: "750 Assembly Dr, Findlay, OH 45840", desc: "Paint line robot install", date: "2025-08-11", status: "Won", qtype: "Contract", labor: 37000, equip: 31000, hauling: 9200, travel: 3100, mats: 4100, total: 84400, markup: 0.06, salesAssoc: "Mike R", job_num: "J-2025-085", startDate: "2025-09-01", compDate: "2025-09-05", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Donna Holt", contactEmail: "d.holt@horizonauto.com", contactPhone: "419-555-0712", equipList: ["320", "SEMI", "PICK"] },
-  // Icon Rubber Products
-  { id: 48, qn: "RIG-2025-010", client: "Icon Rubber Products", jobSite: "5100 Rubber Ln, Barberton, OH 44203", desc: "Calendar roll change-out", date: "2025-04-03", status: "Won", qtype: "T&M", labor: 18000, equip: 15000, hauling: 4400, travel: 1400, mats: 1900, total: 40700, markup: 0.05, salesAssoc: "Dan M", job_num: "J-2025-038", startDate: "2025-04-22", compDate: "2025-04-24", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Greg Owens", contactEmail: "g.owens@iconrubber.com", contactPhone: "330-555-0821", equipList: ["308", "PICK"] },
-  // Junction Steel Works
-  { id: 49, qn: "RIG-2025-014", client: "Junction Steel Works", jobSite: "1800 Steel Way, Warren, OH 44483", desc: "Pipe mill stand replacement", date: "2025-05-28", status: "Won", qtype: "Contract", labor: 58000, equip: 52000, hauling: 15500, travel: 5100, mats: 7000, total: 137600, markup: 0.08, salesAssoc: "Sarah K", job_num: "J-2025-059", startDate: "2025-06-16", compDate: "2025-06-21", locked: true, salesAdjustments: [{ id: 3, amount: 5800, reason: "Additional Work", note: "Extra support rigging required", date: "2025-06-18" }], notes: "", attachments: [], contactName: "Ray Kowalski", contactEmail: "r.kowalski@junctionsteel.com", contactPhone: "330-555-0933", equipList: ["320", "250", "CONE", "PICK"] },
-  { id: 50, qn: "RIG-2025-030", client: "Junction Steel Works", jobSite: "1800 Steel Way, Warren, OH 44483", desc: "Slitting line tension roll swap", date: "2025-10-14", status: "Won", qtype: "T&M", labor: 24000, equip: 20500, hauling: 6000, travel: 2000, mats: 2700, total: 55200, markup: 0.05, salesAssoc: "Sarah K", job_num: "J-2025-108", startDate: "2025-11-03", compDate: "2025-11-06", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Ray Kowalski", contactEmail: "r.kowalski@junctionsteel.com", contactPhone: "330-555-0933", equipList: ["308", "SEMI"] },
-  // Keystone Die Casting
-  { id: 51, qn: "RIG-2025-012", client: "Keystone Die Casting", jobSite: "620 Die Cast Dr, Massillon, OH 44646", desc: "750-ton die cast press swap", date: "2025-05-06", status: "Won", qtype: "Contract", labor: 62000, equip: 57000, hauling: 17000, travel: 5600, mats: 7500, total: 149100, markup: 0.08, salesAssoc: "Mike R", job_num: "J-2025-053", startDate: "2025-05-27", compDate: "2025-06-02", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Helen Marsh", contactEmail: "h.marsh@keystonedc.com", contactPhone: "330-555-1044", equipList: ["320", "250", "SEMI", "PICK"] },
-  // Meridian Extrusion Co.
-  { id: 52, qn: "RIG-2025-019", client: "Meridian Extrusion Co.", jobSite: "4100 Extrusion Blvd, Sandusky, OH 44870", desc: "Extrusion press hydraulic unit swap", date: "2025-06-25", status: "Won", qtype: "Contract", labor: 29000, equip: 24000, hauling: 7100, travel: 2300, mats: 3200, total: 65600, markup: 0.06, salesAssoc: "Sarah K", job_num: "J-2025-073", startDate: "2025-07-14", compDate: "2025-07-18", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Carol Jensen", contactEmail: "c.jensen@meridianext.com", contactPhone: "419-555-1266", equipList: ["308", "SEMI"] },
-  // Northgate Aluminum
-  { id: 53, qn: "RIG-2025-015", client: "Northgate Aluminum", jobSite: "700 Smelter Rd, Lima, OH 45801", desc: "Casting table replacement", date: "2025-05-19", status: "Won", qtype: "Contract", labor: 47000, equip: 41000, hauling: 12200, travel: 4000, mats: 5500, total: 109700, markup: 0.07, salesAssoc: "Mike R", job_num: "J-2025-062", startDate: "2025-06-09", compDate: "2025-06-14", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Bruce Tanner", contactEmail: "b.tanner@northgatealum.com", contactPhone: "419-555-1377", equipList: ["320", "250", "SEMI"] },
-  // Overland Transport Mfg.
-  { id: 54, qn: "RIG-2025-005", client: "Overland Transport Mfg.", jobSite: "2800 Axle Dr, Springfield, OH 45505", desc: "Frame assembly jig install", date: "2025-02-20", status: "Won", qtype: "Contract", labor: 36000, equip: 30500, hauling: 9000, travel: 3000, mats: 4000, total: 82500, markup: 0.06, salesAssoc: "Dan M", job_num: "J-2025-019", startDate: "2025-03-12", compDate: "2025-03-17", locked: true, salesAdjustments: [], notes: "New account – strong prospect for repeat work.", attachments: [], contactName: "Walt Simmons", contactEmail: "w.simmons@overlandmfg.com", contactPhone: "937-555-1488", equipList: ["320", "SEMI", "PICK"] },
-  { id: 55, qn: "RIG-2025-027", client: "Overland Transport Mfg.", jobSite: "2800 Axle Dr, Springfield, OH 45505", desc: "Wheel end machining center relocation", date: "2025-09-03", status: "Won", qtype: "T&M", labor: 22000, equip: 18500, hauling: 5400, travel: 1800, mats: 2400, total: 50100, markup: 0, salesAssoc: "Dan M", job_num: "J-2025-096", startDate: "2025-09-22", compDate: "2025-09-25", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Walt Simmons", contactEmail: "w.simmons@overlandmfg.com", contactPhone: "937-555-1488", equipList: ["308", "PICK"] },
-  // Pinnacle Forge & Stamp
-  { id: 56, qn: "RIG-2025-020", client: "Pinnacle Forge & Stamp", jobSite: "1100 Forge Rd, Canton, OH 44705", desc: "Hammer forge press relocation", date: "2025-07-07", status: "Won", qtype: "Contract", labor: 53000, equip: 47000, hauling: 14000, travel: 4600, mats: 6200, total: 124800, markup: 0.08, salesAssoc: "Sarah K", job_num: "J-2025-079", startDate: "2025-07-28", compDate: "2025-08-01", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Liz Kowalczyk", contactEmail: "l.kowalczyk@pinnacleforge.com", contactPhone: "330-555-1599", equipList: ["320", "250", "SEMI"] },
-  // Quartz Industrial Services
-  { id: 57, qn: "RIG-2025-017", client: "Quartz Industrial Services", jobSite: "600 Industrial Ct, Mansfield, OH 44903", desc: "Industrial chiller skid set", date: "2025-06-02", status: "Won", qtype: "T&M", labor: 17000, equip: 14000, hauling: 4100, travel: 1300, mats: 1800, total: 38200, markup: 0, salesAssoc: "Mike R", job_num: "J-2025-068", startDate: "2025-06-23", compDate: "2025-06-25", locked: true, salesAdjustments: [], notes: "New account.", attachments: [], contactName: "Steve Mallory", contactEmail: "s.mallory@quartzind.com", contactPhone: "419-555-1610", equipList: ["257", "PICK"] },
-  // Ridgeline Machine Works
-  { id: 58, qn: "RIG-2025-023", client: "Ridgeline Machine Works", jobSite: "4500 Machinist Way, Ravenna, OH 44266", desc: "Horizontal boring mill relocation", date: "2025-07-30", status: "Won", qtype: "Contract", labor: 31500, equip: 26500, hauling: 7800, travel: 2500, mats: 3500, total: 71800, markup: 0.06, salesAssoc: "Dan M", job_num: "J-2025-082", startDate: "2025-08-18", compDate: "2025-08-22", locked: true, salesAdjustments: [], notes: "New account.", attachments: [], contactName: "Tom Garfield", contactEmail: "t.garfield@ridgelinemw.com", contactPhone: "330-555-1721", equipList: ["308", "SEMI", "PICK"] },
-  // Summit Plastics Group
-  { id: 59, qn: "RIG-2025-026", client: "Summit Plastics Group", jobSite: "3200 Polymer Dr, Akron, OH 44314", desc: "Blow mold line 4 expansion", date: "2025-09-08", status: "Won", qtype: "Contract", labor: 34500, equip: 29000, hauling: 8600, travel: 2800, mats: 3800, total: 78700, markup: 0.06, salesAssoc: "Sarah K", job_num: "J-2025-094", startDate: "2025-09-29", compDate: "2025-10-03", locked: true, salesAdjustments: [], notes: "New account – large expansion planned.", attachments: [], contactName: "Pam Rodriguez", contactEmail: "p.rodriguez@summitplastics.com", contactPhone: "330-555-1832", equipList: ["320", "SEMI", "PICK"] },
-  // Titan Manufacturing LLC
-  { id: 60, qn: "RIG-2025-032", client: "Titan Manufacturing LLC", jobSite: "8800 Titan Blvd, Lorain, OH 44052", desc: "Heavy press foundation anchor & set", date: "2025-10-21", status: "Won", qtype: "Contract", labor: 71000, equip: 65000, hauling: 19500, travel: 6400, mats: 8800, total: 170700, markup: 0.09, salesAssoc: "Mike R", job_num: "J-2025-112", startDate: "2025-11-10", compDate: "2025-11-17", locked: true, salesAdjustments: [{ id: 4, amount: 8500, reason: "Additional Work", note: "Secondary crane required for second bay", date: "2025-11-13" }], notes: "New account – flagship job.", attachments: [], contactName: "Steve Dolan", contactEmail: "s.dolan@titanmfg.com", contactPhone: "440-555-1943", equipList: ["320", "250", "CONE", "SEMI", "PICK"] },
-
-  // ── 2026 QUOTES (YTD + active pipeline) ──────────────────────────────────
-  // Apex Industrial LLC
-  { id: 61, qn: "RIG-2026-001", client: "Apex Industrial LLC", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Press line relocation – Bay 4 expansion", date: "2026-01-08", status: "Won", qtype: "Contract", labor: 42000, equip: 36000, hauling: 10500, travel: 2800, mats: 4500, total: 93800, markup: 0.06, salesAssoc: "Dan M", job_num: "J-2026-002", startDate: "2026-01-27", compDate: "2026-02-01", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "James Whitfield", contactEmail: "j.whitfield@apexind.com", contactPhone: "330-555-0182", equipList: ["300", "250", "SEMI"] },
-  { id: 62, qn: "RIG-2026-008", client: "Apex Industrial LLC", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Injection mold press – Bay 10", date: "2026-02-14", status: "Submitted", qtype: "T&M", labor: 26000, equip: 21500, hauling: 6200, travel: 1900, mats: 2900, total: 58500, markup: 0.05, salesAssoc: "Sarah K", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Follow up on approval.", attachments: [], contactName: "Rick Torres", contactEmail: "r.torres@apexind.com", contactPhone: "330-555-0199", equipList: ["302", "PICK"] },
-  // Beacon Manufacturing Co.
-  { id: 63, qn: "RIG-2026-003", client: "Beacon Manufacturing Co.", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Hydraulic press rebuild & set", date: "2026-01-20", status: "Won", qtype: "Contract", labor: 48000, equip: 43000, hauling: 12800, travel: 4200, mats: 5500, total: 113500, markup: 0.07, salesAssoc: "Sarah K", job_num: "J-2026-005", startDate: "2026-02-09", compDate: "2026-02-14", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Carolyn Marsh", contactEmail: "c.marsh@beaconmfg.com", contactPhone: "937-555-0244", equipList: ["300", "257", "SEMI", "PICK"] },
-  { id: 64, qn: "RIG-2026-014", client: "Beacon Manufacturing Co.", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Coolant system skid install", date: "2026-03-05", status: "Draft", qtype: "T&M", labor: 16000, equip: 13500, hauling: 3900, travel: 1300, mats: 1700, total: 36400, markup: 0, salesAssoc: "Mike R", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "", attachments: [], contactName: "Doug Hensley", contactEmail: "d.hensley@beaconmfg.com", contactPhone: "937-555-0280", equipList: ["257", "PICK"] },
-  // Cornerstone Plastics Inc.
-  { id: 65, qn: "RIG-2026-004", client: "Cornerstone Plastics Inc.", jobSite: "1450 Westgate Blvd, Columbus, OH 43228", desc: "Injection press line – Phase 2", date: "2026-01-27", status: "Won", qtype: "Contract", labor: 44500, equip: 39000, hauling: 11500, travel: 3400, mats: 5000, total: 103400, markup: 0.08, salesAssoc: "Mike R", job_num: "J-2026-007", startDate: "2026-02-16", compDate: "2026-02-21", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Pat Gilmore", contactEmail: "p.gilmore@cornerstone.com", contactPhone: "614-555-0312", equipList: ["320", "250", "SEMI"] },
-  // Delta Fabrication Group
-  { id: 66, qn: "RIG-2026-006", client: "Delta Fabrication Group", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Stamping press motor rebuild lift", date: "2026-02-03", status: "Won", qtype: "Contract", labor: 31500, equip: 27000, hauling: 8000, travel: 2500, mats: 3500, total: 72500, markup: 0.06, salesAssoc: "Dan M", job_num: "J-2026-009", startDate: "2026-02-23", compDate: "2026-02-27", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Sandra Voss", contactEmail: "s.voss@deltafab.com", contactPhone: "216-555-0415", equipList: ["300", "257", "SEMI"] },
-  { id: 67, qn: "RIG-2026-016", client: "Delta Fabrication Group", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Shear line Bay 5 upgrade", date: "2026-03-10", status: "Submitted", qtype: "T&M", labor: 23000, equip: 19000, hauling: 5500, travel: 1700, mats: 2500, total: 51700, markup: 0, salesAssoc: "Mike R", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "", attachments: [], contactName: "Sandra Voss", contactEmail: "s.voss@deltafab.com", contactPhone: "216-555-0415", equipList: ["308", "PICK"] },
-  // Eagle Press & Die
-  { id: 68, qn: "RIG-2026-005", client: "Eagle Press & Die", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Transfer press overhaul lift", date: "2026-01-31", status: "Won", qtype: "Contract", labor: 39000, equip: 33500, hauling: 9800, travel: 3100, mats: 4300, total: 89700, markup: 0.07, salesAssoc: "Mike R", job_num: "J-2026-008", startDate: "2026-02-19", compDate: "2026-02-24", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Bob Trexler", contactEmail: "b.trexler@eaglepress.com", contactPhone: "330-555-0311", equipList: ["300", "250", "SEMI", "PICK"] },
-  { id: 69, qn: "RIG-2026-015", client: "Eagle Press & Die", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Blanking press electrical upgrade lift", date: "2026-03-12", status: "Submitted", qtype: "Contract", labor: 17000, equip: 14000, hauling: 4100, travel: 1300, mats: 1800, total: 38200, markup: 0, salesAssoc: "Sarah K", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Deferred from 2025.", attachments: [], contactName: "Lisa Brandt", contactEmail: "l.brandt@eaglepress.com", contactPhone: "330-555-0322", equipList: ["302", "PICK"] },
-  // Frontier Castings Ltd.
-  { id: 70, qn: "RIG-2026-007", client: "Frontier Castings Ltd.", jobSite: "900 Industrial Blvd, Youngstown, OH 44503", desc: "Induction furnace replacement", date: "2026-02-10", status: "Won", qtype: "Contract", labor: 58000, equip: 52000, hauling: 15500, travel: 5000, mats: 7000, total: 137500, markup: 0.08, salesAssoc: "Dan M", job_num: "J-2026-011", startDate: "2026-03-02", compDate: "2026-03-08", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Tony Ruiz", contactEmail: "t.ruiz@frontiercasting.com", contactPhone: "330-555-0518", equipList: ["320", "250", "SEMI"] },
-  // Horizon Automotive Parts
-  { id: 71, qn: "RIG-2026-009", client: "Horizon Automotive Parts", jobSite: "750 Assembly Dr, Findlay, OH 45840", desc: "Body framing robot install – Line 3", date: "2026-02-18", status: "Won", qtype: "Contract", labor: 64000, equip: 57000, hauling: 17000, travel: 5600, mats: 7500, total: 151100, markup: 0.08, salesAssoc: "Mike R", job_num: "J-2026-013", startDate: "2026-03-10", compDate: "2026-03-17", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Donna Holt", contactEmail: "d.holt@horizonauto.com", contactPhone: "419-555-0712", equipList: ["320", "250", "CONE", "SEMI", "PICK"] },
-  { id: 72, qn: "RIG-2026-017", client: "Horizon Automotive Parts", jobSite: "750 Assembly Dr, Findlay, OH 45840", desc: "Weld fixture relocation – Line 7", date: "2026-03-14", status: "Submitted", qtype: "T&M", labor: 29000, equip: 24500, hauling: 7200, travel: 2400, mats: 3200, total: 66300, markup: 0, salesAssoc: "Mike R", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "", attachments: [], contactName: "Donna Holt", contactEmail: "d.holt@horizonauto.com", contactPhone: "419-555-0712", equipList: ["320", "SEMI", "PICK"] },
-  // Junction Steel Works
-  { id: 73, qn: "RIG-2026-010", client: "Junction Steel Works", jobSite: "1800 Steel Way, Warren, OH 44483", desc: "Coil straightener swap – Mill 2", date: "2026-02-25", status: "Won", qtype: "Contract", labor: 49000, equip: 43500, hauling: 13000, travel: 4300, mats: 5900, total: 115700, markup: 0.07, salesAssoc: "Sarah K", job_num: "J-2026-015", startDate: "2026-03-17", compDate: "2026-03-22", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Ray Kowalski", contactEmail: "r.kowalski@junctionsteel.com", contactPhone: "330-555-0933", equipList: ["320", "250", "SEMI"] },
-  // Keystone Die Casting
-  { id: 74, qn: "RIG-2026-011", client: "Keystone Die Casting", jobSite: "620 Die Cast Dr, Massillon, OH 44646", desc: "1000-ton press acquisition install", date: "2026-02-28", status: "Submitted", qtype: "Contract", labor: 78000, equip: 71000, hauling: 21000, travel: 6900, mats: 9500, total: 186400, markup: 0.09, salesAssoc: "Mike R", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Largest quote of the year.", attachments: [], contactName: "Helen Marsh", contactEmail: "h.marsh@keystonedc.com", contactPhone: "330-555-1044", equipList: ["320", "250", "CONE", "SEMI", "PICK"] },
-  // Titan Manufacturing LLC
-  { id: 75, qn: "RIG-2026-012", client: "Titan Manufacturing LLC", jobSite: "8800 Titan Blvd, Lorain, OH 44052", desc: "Secondary press bay equipment set", date: "2026-03-04", status: "Submitted", qtype: "Contract", labor: 62000, equip: 56000, hauling: 16800, travel: 5500, mats: 7800, total: 148100, markup: 0.08, salesAssoc: "Mike R", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "Follow-up on 2025 flagship job.", attachments: [], contactName: "Steve Dolan", contactEmail: "s.dolan@titanmfg.com", contactPhone: "440-555-1943", equipList: ["320", "250", "SEMI", "PICK"] },
-  // Northgate Aluminum
-  { id: 76, qn: "RIG-2026-013", client: "Northgate Aluminum", jobSite: "700 Smelter Rd, Lima, OH 45801", desc: "Furnace hearth replacement lift", date: "2026-03-11", status: "Draft", qtype: "Contract", labor: 44000, equip: 38500, hauling: 11500, travel: 3700, mats: 5200, total: 102900, markup: 0.07, salesAssoc: "Dan M", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "", attachments: [], contactName: "Bruce Tanner", contactEmail: "b.tanner@northgatealum.com", contactPhone: "419-555-1377", equipList: ["320", "250", "SEMI"] },
-  // Summit Plastics Group
-  { id: 77, qn: "RIG-2026-018", client: "Summit Plastics Group", jobSite: "3200 Polymer Dr, Akron, OH 44314", desc: "Extrusion line 2 relocation", date: "2026-03-17", status: "Draft", qtype: "T&M", labor: 28000, equip: 23500, hauling: 6900, travel: 2200, mats: 3100, total: 63700, markup: 0, salesAssoc: "Sarah K", job_num: "", startDate: "", compDate: "", locked: false, salesAdjustments: [], notes: "", attachments: [], contactName: "Pam Rodriguez", contactEmail: "p.rodriguez@summitplastics.com", contactPhone: "330-555-1832", equipList: ["308", "SEMI", "PICK"] },
-  // Pinnacle Forge & Stamp
-  { id: 78, qn: "RIG-2026-002", client: "Pinnacle Forge & Stamp", jobSite: "1100 Forge Rd, Canton, OH 44705", desc: "Forging press rebuild – Bay 1", date: "2026-01-15", status: "Won", qtype: "Contract", labor: 57000, equip: 51000, hauling: 15200, travel: 5000, mats: 6900, total: 135100, markup: 0.08, salesAssoc: "Sarah K", job_num: "J-2026-003", startDate: "2026-02-03", compDate: "2026-02-09", locked: true, salesAdjustments: [], notes: "", attachments: [], contactName: "Liz Kowalczyk", contactEmail: "l.kowalczyk@pinnacleforge.com", contactPhone: "330-555-1599", equipList: ["320", "250", "SEMI"] },
-];
-
-const SAMPLE_REQS = [
-  // ── 2024 Leads ─────────────────────────────────────────────────────────────
-  { id: 201, rn: "REQ-2024-001", company: "Apex Industrial LLC", requester: "James Whitfield", email: "j.whitfield@apexind.com", phone: "330-555-0182", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Relocate press line from Bay 3 to Bay 4, approx. 150ft.", notes: "Urgent – production line down.", date: "2024-01-28", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 202, rn: "REQ-2024-002", company: "Beacon Manufacturing Co.", requester: "Carolyn Marsh", email: "c.marsh@beaconmfg.com", phone: "937-555-0244", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Install new 500-ton hydraulic press, ground floor dock access.", notes: "Need by end of Q1.", date: "2024-01-10", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 203, rn: "REQ-2024-003", company: "Cornerstone Plastics Inc.", requester: "Pat Gilmore", email: "p.gilmore@cornerstone.com", phone: "614-555-0312", jobSite: "800 Factory Dr, Columbus, OH 43219", desc: "Dismantle and reinstall kiln, same building different bay.", notes: "", date: "2024-03-05", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 204, rn: "REQ-2024-004", company: "Gateway Precision Tools", requester: "Frank Nguyen", email: "f.nguyen@gatewaypt.com", phone: "419-555-0601", jobSite: "2200 Gateway Blvd, Toledo, OH 43612", desc: "Relocate EDM machine to clean room, tight tolerances required.", notes: "Clean room protocol required.", date: "2024-02-14", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 205, rn: "REQ-2024-005", company: "Delta Fabrication Group", requester: "Sandra Voss", email: "s.voss@deltafab.com", phone: "216-555-0415", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Press brake relocation, north wing expansion.", notes: "Coordinate with plant shutdown.", date: "2024-04-18", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 206, rn: "REQ-2024-006", company: "Horizon Automotive Parts", requester: "Donna Holt", email: "d.holt@horizonauto.com", phone: "419-555-0712", jobSite: "750 Assembly Dr, Findlay, OH 45840", desc: "Full transfer press line relocation, 5 presses, stamping bay.", notes: "Summer shutdown window only.", date: "2024-05-02", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 207, rn: "REQ-2024-007", company: "Icon Rubber Products", requester: "Greg Owens", email: "g.owens@iconrubber.com", phone: "330-555-0821", jobSite: "5100 Rubber Ln, Barberton, OH 44203", desc: "Extruder Line 2 move to Building B.", notes: "", date: "2024-06-10", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 208, rn: "REQ-2024-008", company: "Eagle Press & Die", requester: "Bob Trexler", email: "b.trexler@eaglepress.com", phone: "330-555-0311", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Remove die spotting press, building demo prep.", notes: "Demo crew takes over after removal.", date: "2024-06-28", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 209, rn: "REQ-2024-009", company: "Junction Steel Works", requester: "Ray Kowalski", email: "r.kowalski@junctionsteel.com", phone: "330-555-0933", jobSite: "1800 Steel Way, Warren, OH 44483", desc: "Coil reel and straightener installation, new line.", notes: "Crane capacity verification needed.", date: "2024-06-20", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 210, rn: "REQ-2024-010", company: "Keystone Die Casting", requester: "Helen Marsh", email: "h.marsh@keystonedc.com", phone: "330-555-1044", jobSite: "620 Die Cast Dr, Massillon, OH 44646", desc: "Replace die cast machine #4, 750-ton unit.", notes: "Union shop – certified riggers req.", date: "2024-08-22", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 211, rn: "REQ-2024-011", company: "Meridian Extrusion Co.", requester: "Carol Jensen", email: "c.jensen@meridianext.com", phone: "419-555-1266", jobSite: "4100 Extrusion Blvd, Sandusky, OH 44870", desc: "Install die cart system and rail, press bay.", notes: "", date: "2024-08-01", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 212, rn: "REQ-2024-012", company: "Northgate Aluminum", requester: "Bruce Tanner", email: "b.tanner@northgatealum.com", phone: "419-555-1377", jobSite: "700 Smelter Rd, Lima, OH 45801", desc: "Rolling mill bearing replacement – full lift & re-set.", notes: "High temp environment.", date: "2024-09-15", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 213, rn: "REQ-2024-013", company: "Frontier Castings Ltd.", requester: "Tony Ruiz", email: "t.ruiz@frontiercasting.com", phone: "330-555-0518", jobSite: "900 Industrial Blvd, Youngstown, OH 44503", desc: "Sand casting conveyor relocation, Building A to B.", notes: "Union cert docs required.", date: "2024-09-10", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 214, rn: "REQ-2024-014", company: "Landmark Tooling Inc.", requester: "Phil Stevens", email: "p.stevens@landmarktool.com", phone: "330-555-1155", jobSite: "3300 Tool & Die Ave, Medina, OH 44256", desc: "Surface grinder relocation to new precision room.", notes: "", date: "2024-10-07", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 215, rn: "REQ-2024-015", company: "Gateway Precision Tools", requester: "Frank Nguyen", email: "f.nguyen@gatewaypt.com", phone: "419-555-0601", jobSite: "2200 Gateway Blvd, Toledo, OH 43612", desc: "CNC machining center install, Building C.", notes: "", date: "2024-07-10", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 216, rn: "REQ-2024-016", company: "Frontier Castings Ltd.", requester: "Angela Kim", email: "a.kim@frontiercasting.com", phone: "330-555-0530", jobSite: "900 Industrial Blvd, Youngstown, OH 44503", desc: "Melt furnace refractory removal – outage window.", notes: "48hr window only.", date: "2024-12-02", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 217, rn: "REQ-2024-017", company: "Icon Rubber Products", requester: "Greg Owens", email: "g.owens@iconrubber.com", phone: "330-555-0821", jobSite: "5100 Rubber Ln, Barberton, OH 44203", desc: "Banbury mixer overhaul lift.", notes: "", date: "2024-11-04", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 218, rn: "REQ-2024-018", company: "Delta Fabrication Group", requester: "Sandra Voss", email: "s.voss@deltafab.com", phone: "216-555-0415", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Install welding robot in south bay.", notes: "Coordinate with automation vendor.", date: "2024-11-20", status: "Quoted", salesAssoc: "Mike R" },
-
-  // ── 2025 Leads ─────────────────────────────────────────────────────────────
-  { id: 219, rn: "REQ-2025-001", company: "Apex Industrial LLC", requester: "James Whitfield", email: "j.whitfield@apexind.com", phone: "330-555-0182", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Relocate 40-ton hydraulic press from Bay 3 to Bay 7, 200ft.", notes: "", date: "2025-01-06", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 220, rn: "REQ-2025-002", company: "Beacon Manufacturing Co.", requester: "Carolyn Marsh", email: "c.marsh@beaconmfg.com", phone: "937-555-0244", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Install transformer 15,000 lbs, second floor.", notes: "Need quote by end of week.", date: "2025-01-15", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 221, rn: "REQ-2025-003", company: "Overland Transport Mfg.", requester: "Walt Simmons", email: "w.simmons@overlandmfg.com", phone: "937-555-1488", jobSite: "2800 Axle Dr, Springfield, OH 45505", desc: "Frame assembly jig installation, new building.", notes: "New account – strong relationship.", date: "2025-02-10", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 222, rn: "REQ-2025-004", company: "Gateway Precision Tools", requester: "Frank Nguyen", email: "f.nguyen@gatewaypt.com", phone: "419-555-0601", jobSite: "2200 Gateway Blvd, Toledo, OH 43612", desc: "5-axis machining center installation.", notes: "", date: "2025-01-22", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 223, rn: "REQ-2025-005", company: "Eagle Press & Die", requester: "Bob Trexler", email: "b.trexler@eaglepress.com", phone: "330-555-0311", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Press Building B relocation, 800-ton unit.", notes: "Priority client.", date: "2025-02-05", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 224, rn: "REQ-2025-006", company: "Frontier Castings Ltd.", requester: "Tony Ruiz", email: "t.ruiz@frontiercasting.com", phone: "330-555-0518", jobSite: "900 Industrial Blvd, Youngstown, OH 44503", desc: "Furnace installation, new pour station.", notes: "Union shop.", date: "2025-02-20", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 225, rn: "REQ-2025-007", company: "Cornerstone Plastics Inc.", requester: "Pat Gilmore", email: "p.gilmore@cornerstone.com", phone: "614-555-0312", jobSite: "1450 Westgate Blvd, Columbus, OH 43228", desc: "Full facility equipment install, new location.", notes: "New location.", date: "2025-02-24", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 226, rn: "REQ-2025-008", company: "Horizon Automotive Parts", requester: "Donna Holt", email: "d.holt@horizonauto.com", phone: "419-555-0712", jobSite: "750 Assembly Dr, Findlay, OH 45840", desc: "Assembly conveyor extension, Line 4.", notes: "", date: "2025-03-06", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 227, rn: "REQ-2025-009", company: "Keystone Die Casting", requester: "Helen Marsh", email: "h.marsh@keystonedc.com", phone: "330-555-1044", jobSite: "620 Die Cast Dr, Massillon, OH 44646", desc: "750-ton die cast press swap.", notes: "Certified crane operator required.", date: "2025-04-28", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 228, rn: "REQ-2025-010", company: "Icon Rubber Products", requester: "Greg Owens", email: "g.owens@iconrubber.com", phone: "330-555-0821", jobSite: "5100 Rubber Ln, Barberton, OH 44203", desc: "Calendar roll change-out.", notes: "", date: "2025-03-27", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 229, rn: "REQ-2025-011", company: "Junction Steel Works", requester: "Ray Kowalski", email: "r.kowalski@junctionsteel.com", phone: "330-555-0933", jobSite: "1800 Steel Way, Warren, OH 44483", desc: "Pipe mill stand replacement.", notes: "Crane capacity check required.", date: "2025-05-19", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 230, rn: "REQ-2025-012", company: "Northgate Aluminum", requester: "Bruce Tanner", email: "b.tanner@northgatealum.com", phone: "419-555-1377", jobSite: "700 Smelter Rd, Lima, OH 45801", desc: "Casting table replacement.", notes: "", date: "2025-05-12", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 231, rn: "REQ-2025-013", company: "Meridian Extrusion Co.", requester: "Carol Jensen", email: "c.jensen@meridianext.com", phone: "419-555-1266", jobSite: "4100 Extrusion Blvd, Sandusky, OH 44870", desc: "Extrusion press hydraulic unit swap.", notes: "", date: "2025-06-18", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 232, rn: "REQ-2025-014", company: "Pinnacle Forge & Stamp", requester: "Liz Kowalczyk", email: "l.kowalczyk@pinnacleforge.com", phone: "330-555-1599", jobSite: "1100 Forge Rd, Canton, OH 44705", desc: "Hammer forge press relocation.", notes: "", date: "2025-06-30", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 233, rn: "REQ-2025-015", company: "Quartz Industrial Services", requester: "Steve Mallory", email: "s.mallory@quartzind.com", phone: "419-555-1610", jobSite: "600 Industrial Ct, Mansfield, OH 44903", desc: "Industrial chiller skid placement.", notes: "New account.", date: "2025-05-27", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 234, rn: "REQ-2025-016", company: "Ridgeline Machine Works", requester: "Tom Garfield", email: "t.garfield@ridgelinemw.com", phone: "330-555-1721", jobSite: "4500 Machinist Way, Ravenna, OH 44266", desc: "Horizontal boring mill relocation.", notes: "New account.", date: "2025-07-21", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 235, rn: "REQ-2025-017", company: "Summit Plastics Group", requester: "Pam Rodriguez", email: "p.rodriguez@summitplastics.com", phone: "330-555-1832", jobSite: "3200 Polymer Dr, Akron, OH 44314", desc: "Blow mold line 4 expansion.", notes: "New account.", date: "2025-08-29", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 236, rn: "REQ-2025-018", company: "Titan Manufacturing LLC", requester: "Steve Dolan", email: "s.dolan@titanmfg.com", phone: "440-555-1943", jobSite: "8800 Titan Blvd, Lorain, OH 44052", desc: "Heavy press foundation anchor and set – Bay 1.", notes: "New account – flagship.", date: "2025-10-13", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 237, rn: "REQ-2025-019", company: "Overland Transport Mfg.", requester: "Walt Simmons", email: "w.simmons@overlandmfg.com", phone: "937-555-1488", jobSite: "2800 Axle Dr, Springfield, OH 45505", desc: "Wheel end machining center relocation.", notes: "", date: "2025-08-25", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 238, rn: "REQ-2025-020", company: "Delta Fabrication Group", requester: "Sandra Voss", email: "s.voss@deltafab.com", phone: "216-555-0415", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Press room HVAC unit lift and set.", notes: "", date: "2025-09-03", status: "Quoted", salesAssoc: "Mike R" },
-
-  // ── 2026 Leads (active) ────────────────────────────────────────────────────
-  { id: 239, rn: "REQ-2026-001", company: "Apex Industrial LLC", requester: "James Whitfield", email: "j.whitfield@apexind.com", phone: "330-555-0182", jobSite: "1200 Industrial Pkwy, Akron, OH 44312", desc: "Injection mold press Bay 10 – 350-ton unit relocation.", notes: "Follow up on 2025 approval.", date: "2026-02-05", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 240, rn: "REQ-2026-002", company: "Keystone Die Casting", requester: "Helen Marsh", email: "h.marsh@keystonedc.com", phone: "330-555-1044", jobSite: "620 Die Cast Dr, Massillon, OH 44646", desc: "1000-ton press acquisition – full install, new bay.", notes: "Largest project to date.", date: "2026-02-20", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 241, rn: "REQ-2026-003", company: "Titan Manufacturing LLC", requester: "Steve Dolan", email: "s.dolan@titanmfg.com", phone: "440-555-1943", jobSite: "8800 Titan Blvd, Lorain, OH 44052", desc: "Secondary press bay equipment set – follow-on from J-2025-112.", notes: "", date: "2026-02-26", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 242, rn: "REQ-2026-004", company: "Horizon Automotive Parts", requester: "Donna Holt", email: "d.holt@horizonauto.com", phone: "419-555-0712", jobSite: "750 Assembly Dr, Findlay, OH 45840", desc: "Weld fixture relocation Line 7, coordinate with Line 3 job.", notes: "", date: "2026-03-06", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 243, rn: "REQ-2026-005", company: "Delta Fabrication Group", requester: "Sandra Voss", email: "s.voss@deltafab.com", phone: "216-555-0415", jobSite: "300 Metalworks Ave, Cleveland, OH 44124", desc: "Shear line Bay 5 upgrade – new shear and material handling.", notes: "", date: "2026-03-08", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 244, rn: "REQ-2026-006", company: "Eagle Press & Die", requester: "Lisa Brandt", email: "l.brandt@eaglepress.com", phone: "330-555-0322", jobSite: "500 Eagle Way, Canton, OH 44702", desc: "Blanking press electrical upgrade – deferred from 2025.", notes: "Deferred from 2025 bid.", date: "2026-03-10", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 245, rn: "REQ-2026-007", company: "Northgate Aluminum", requester: "Bruce Tanner", email: "b.tanner@northgatealum.com", phone: "419-555-1377", jobSite: "700 Smelter Rd, Lima, OH 45801", desc: "Furnace hearth replacement – outage window.", notes: "High temp environment.", date: "2026-03-09", status: "Quoted", salesAssoc: "Dan M" },
-  { id: 246, rn: "REQ-2026-008", company: "Summit Plastics Group", requester: "Pam Rodriguez", email: "p.rodriguez@summitplastics.com", phone: "330-555-1832", jobSite: "3200 Polymer Dr, Akron, OH 44314", desc: "Extrusion line 2 relocation.", notes: "", date: "2026-03-15", status: "Quoted", salesAssoc: "Sarah K" },
-  { id: 247, rn: "REQ-2026-009", company: "Beacon Manufacturing Co.", requester: "Doug Hensley", email: "d.hensley@beaconmfg.com", phone: "937-555-0280", jobSite: "500 Commerce Blvd, Dayton, OH 45402", desc: "Coolant system skid install – Bldg A.", notes: "", date: "2026-03-03", status: "Quoted", salesAssoc: "Mike R" },
-  { id: 248, rn: "REQ-2026-010", company: "Ridgeline Machine Works", requester: "Tom Garfield", email: "t.garfield@ridgelinemw.com", phone: "330-555-1721", jobSite: "4500 Machinist Way, Ravenna, OH 44266", desc: "Vertical turning lathe install.", notes: "", date: "2026-03-18", status: "New", salesAssoc: "" },
-  { id: 249, rn: "REQ-2026-011", company: "Quartz Industrial Services", requester: "Steve Mallory", email: "s.mallory@quartzind.com", phone: "419-555-1610", jobSite: "600 Industrial Ct, Mansfield, OH 44903", desc: "Cooling tower pump skid replacement.", notes: "", date: "2026-03-19", status: "New", salesAssoc: "" },
-  { id: 250, rn: "REQ-2026-012", company: "Landmark Tooling Inc.", requester: "Phil Stevens", email: "p.stevens@landmarktool.com", phone: "330-555-1155", jobSite: "3300 Tool & Die Ave, Medina, OH 44256", desc: "CNC turning center install – precision room.", notes: "Need quote ASAP.", date: "2026-03-20", status: "In Progress", salesAssoc: "Dan M" },
-  { id: 251, rn: "REQ-2026-013", company: "Pinnacle Forge & Stamp", requester: "Liz Kowalczyk", email: "l.kowalczyk@pinnacleforge.com", phone: "330-555-1599", jobSite: "1100 Forge Rd, Canton, OH 44705", desc: "Forging press rebuild Bay 2.", notes: "Follow-on from Jan job.", date: "2026-03-21", status: "In Progress", salesAssoc: "Sarah K" },
-  { id: 252, rn: "REQ-2026-014", company: "Junction Steel Works", requester: "Ray Kowalski", email: "r.kowalski@junctionsteel.com", phone: "330-555-0933", jobSite: "1800 Steel Way, Warren, OH 44483", desc: "Entry-end equipment upgrade – Mill 3.", notes: "", date: "2026-03-22", status: "New", salesAssoc: "" },
-];
-
-// Initial customer contact books and notes
-const INIT_CUST_DATA = {
-  "Apex Industrial LLC": { notes: "Long-term client since 2019. Always pays on time. Largest single account.", billingAddr: "1200 Industrial Pkwy, Akron, OH 44312", website: "www.apexindustrial.com", industry: "Heavy Manufacturing", paymentTerms: "Net 30", accountNum: "APX-001", contacts: [{ id: 1, name: "James Whitfield", title: "Plant Manager", email: "j.whitfield@apexind.com", phone: "330-555-0182", primary: true, locationId: "loc1" }, { id: 2, name: "Rick Torres", title: "Maintenance Supervisor", email: "r.torres@apexind.com", phone: "330-555-0199", primary: false, locationId: "loc1" }], locations: [{ id: "loc1", name: "Akron Main Plant", address: "1200 Industrial Pkwy, Akron, OH 44312", notes: "Primary facility" }] },
-  "Beacon Manufacturing Co.": { notes: "Mid-size shop. Multiple locations. Carolyn handles all rigging requests.", billingAddr: "500 Commerce Blvd, Dayton, OH 45402", website: "www.beaconmfg.com", industry: "Precision Manufacturing", paymentTerms: "Net 45", accountNum: "BCN-002", contacts: [{ id: 1, name: "Carolyn Marsh", title: "Facilities Director", email: "c.marsh@beaconmfg.com", phone: "937-555-0244", primary: true, locationId: "loc1" }, { id: 2, name: "Doug Hensley", title: "Maintenance Manager", email: "d.hensley@beaconmfg.com", phone: "937-555-0280", primary: false, locationId: "loc2" }], locations: [{ id: "loc1", name: "Dayton Facility", address: "500 Commerce Blvd, Dayton, OH 45402", notes: "HQ and main production" }, { id: "loc2", name: "Springfield Warehouse", address: "220 Warehouse Dr, Springfield, OH 45501", notes: "Secondary storage" }] },
-  "Cornerstone Plastics Inc.": { notes: "Growing account. New facility opened 2025. Repeat business expected.", billingAddr: "800 Factory Dr, Columbus, OH 43219", website: "", industry: "Plastics Manufacturing", paymentTerms: "Net 30", accountNum: "CRN-003", contacts: [{ id: 1, name: "Pat Gilmore", title: "Operations Manager", email: "p.gilmore@cornerstone.com", phone: "614-555-0312", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Columbus Plant", address: "800 Factory Dr, Columbus, OH 43219", notes: "" }, { id: "loc2", name: "Westgate Facility", address: "1450 Westgate Blvd, Columbus, OH 43228", notes: "New facility 2025" }] },
-  "Delta Fabrication Group": { notes: "Competitive bidding environment. Price-sensitive. Good volume.", billingAddr: "300 Metalworks Ave, Cleveland, OH 44124", website: "www.deltafab.com", industry: "Metal Fabrication", paymentTerms: "Net 30", accountNum: "DLT-004", contacts: [{ id: 1, name: "Sandra Voss", title: "Purchasing Manager", email: "s.voss@deltafab.com", phone: "216-555-0415", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Cleveland Fab Shop", address: "300 Metalworks Ave, Cleveland, OH 44124", notes: "" }] },
-  "Eagle Press & Die": { notes: "Excellent relationship. Repeat business every quarter. Priority client.", billingAddr: "500 Eagle Way, Canton, OH 44702", website: "www.eaglepress.com", industry: "Press & Die Manufacturing", paymentTerms: "Net 15", accountNum: "EGL-005", contacts: [{ id: 1, name: "Bob Trexler", title: "VP Operations", email: "b.trexler@eaglepress.com", phone: "330-555-0311", primary: true, locationId: "loc1" }, { id: 2, name: "Lisa Brandt", title: "Plant Engineer", email: "l.brandt@eaglepress.com", phone: "330-555-0322", primary: false, locationId: "loc1" }], locations: [{ id: "loc1", name: "Canton Facility", address: "500 Eagle Way, Canton, OH 44702", notes: "" }] },
-  "Frontier Castings Ltd.": { notes: "Union shop. Require certified rigging documentation. Strong relationship.", billingAddr: "900 Industrial Blvd, Youngstown, OH 44503", website: "", industry: "Metal Casting", paymentTerms: "Net 45", accountNum: "FRT-006", contacts: [{ id: 1, name: "Tony Ruiz", title: "Safety & Facilities", email: "t.ruiz@frontiercasting.com", phone: "330-555-0518", primary: true, locationId: null }, { id: 2, name: "Angela Kim", title: "Project Coordinator", email: "a.kim@frontiercasting.com", phone: "330-555-0530", primary: false, locationId: null }], locations: [{ id: "loc1", name: "Youngstown Plant", address: "900 Industrial Blvd, Youngstown, OH 44503", notes: "" }] },
-  "Gateway Precision Tools": { notes: "Clean room protocols required. Excellent payer. Expanding operations.", billingAddr: "2200 Gateway Blvd, Toledo, OH 43612", website: "www.gatewaypt.com", industry: "Precision Tooling", paymentTerms: "Net 30", accountNum: "GTW-007", contacts: [{ id: 1, name: "Frank Nguyen", title: "Facilities Engineer", email: "f.nguyen@gatewaypt.com", phone: "419-555-0601", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Toledo Facility", address: "2200 Gateway Blvd, Toledo, OH 43612", notes: "" }] },
-  "Horizon Automotive Parts": { notes: "Automotive tier 1 supplier. Large project volumes. Summer shutdown windows.", billingAddr: "750 Assembly Dr, Findlay, OH 45840", website: "www.horizonauto.com", industry: "Automotive Parts Manufacturing", paymentTerms: "Net 45", accountNum: "HRZ-008", contacts: [{ id: 1, name: "Donna Holt", title: "Plant Manager", email: "d.holt@horizonauto.com", phone: "419-555-0712", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Findlay Assembly Plant", address: "750 Assembly Dr, Findlay, OH 45840", notes: "" }] },
-  "Icon Rubber Products": { notes: "Consistent repeat business. High-temp environment jobs common.", billingAddr: "5100 Rubber Ln, Barberton, OH 44203", website: "", industry: "Rubber Products Manufacturing", paymentTerms: "Net 30", accountNum: "ICN-009", contacts: [{ id: 1, name: "Greg Owens", title: "Maintenance Director", email: "g.owens@iconrubber.com", phone: "330-555-0821", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Barberton Plant", address: "5100 Rubber Ln, Barberton, OH 44203", notes: "" }] },
-  "Junction Steel Works": { notes: "Heavy capacity jobs. Always needs crane certification docs. Good referral source.", billingAddr: "1800 Steel Way, Warren, OH 44483", website: "www.junctionsteel.com", industry: "Steel Manufacturing", paymentTerms: "Net 30", accountNum: "JCT-010", contacts: [{ id: 1, name: "Ray Kowalski", title: "Operations Director", email: "r.kowalski@junctionsteel.com", phone: "330-555-0933", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Warren Steel Works", address: "1800 Steel Way, Warren, OH 44483", notes: "" }] },
-  "Keystone Die Casting": { notes: "Union shop. Very large press work. Requires certified crew every job.", billingAddr: "620 Die Cast Dr, Massillon, OH 44646", website: "www.keystonedc.com", industry: "Die Casting", paymentTerms: "Net 30", accountNum: "KST-011", contacts: [{ id: 1, name: "Helen Marsh", title: "Facilities Manager", email: "h.marsh@keystonedc.com", phone: "330-555-1044", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Massillon Cast Shop", address: "620 Die Cast Dr, Massillon, OH 44646", notes: "" }] },
-  "Landmark Tooling Inc.": { notes: "Smaller jobs, precision required. Good relationship. Fast pay.", billingAddr: "3300 Tool & Die Ave, Medina, OH 44256", website: "", industry: "Tooling & Die", paymentTerms: "Net 15", accountNum: "LMK-012", contacts: [{ id: 1, name: "Phil Stevens", title: "Shop Foreman", email: "p.stevens@landmarktool.com", phone: "330-555-1155", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Medina Tool Shop", address: "3300 Tool & Die Ave, Medina, OH 44256", notes: "" }] },
-  "Meridian Extrusion Co.": { notes: "Extrusion-specific jobs. Heavy hydraulics. Reliable account.", billingAddr: "4100 Extrusion Blvd, Sandusky, OH 44870", website: "", industry: "Aluminum Extrusion", paymentTerms: "Net 45", accountNum: "MRD-013", contacts: [{ id: 1, name: "Carol Jensen", title: "Engineering Manager", email: "c.jensen@meridianext.com", phone: "419-555-1266", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Sandusky Extrusion Plant", address: "4100 Extrusion Blvd, Sandusky, OH 44870", notes: "" }] },
-  "Northgate Aluminum": { notes: "High temp smelting environment. Safety protocols strictly enforced.", billingAddr: "700 Smelter Rd, Lima, OH 45801", website: "", industry: "Aluminum Smelting", paymentTerms: "Net 30", accountNum: "NGA-014", contacts: [{ id: 1, name: "Bruce Tanner", title: "Safety Manager", email: "b.tanner@northgatealum.com", phone: "419-555-1377", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Lima Smelter", address: "700 Smelter Rd, Lima, OH 45801", notes: "" }] },
-  "Overland Transport Mfg.": { notes: "New account since 2025. Strong potential for repeat work. Good payer.", billingAddr: "2800 Axle Dr, Springfield, OH 45505", website: "", industry: "Transportation Equipment", paymentTerms: "Net 30", accountNum: "OVL-015", contacts: [{ id: 1, name: "Walt Simmons", title: "Plant Director", email: "w.simmons@overlandmfg.com", phone: "937-555-1488", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Springfield Plant", address: "2800 Axle Dr, Springfield, OH 45505", notes: "" }] },
-  "Pinnacle Forge & Stamp": { notes: "Heavy forge work. Large cranes required. Growing account.", billingAddr: "1100 Forge Rd, Canton, OH 44705", website: "", industry: "Forging & Stamping", paymentTerms: "Net 30", accountNum: "PNK-016", contacts: [{ id: 1, name: "Liz Kowalczyk", title: "Operations Manager", email: "l.kowalczyk@pinnacleforge.com", phone: "330-555-1599", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Canton Forge", address: "1100 Forge Rd, Canton, OH 44705", notes: "" }] },
-  "Quartz Industrial Services": { notes: "New account 2025. HVAC and utilities focus. Good referral potential.", billingAddr: "600 Industrial Ct, Mansfield, OH 44903", website: "", industry: "Industrial Services", paymentTerms: "Net 30", accountNum: "QTZ-017", contacts: [{ id: 1, name: "Steve Mallory", title: "Project Manager", email: "s.mallory@quartzind.com", phone: "419-555-1610", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Mansfield Office", address: "600 Industrial Ct, Mansfield, OH 44903", notes: "" }] },
-  "Ridgeline Machine Works": { notes: "New account 2025. CNC and boring mill specialty. Strong pipeline.", billingAddr: "4500 Machinist Way, Ravenna, OH 44266", website: "", industry: "Precision Machining", paymentTerms: "Net 30", accountNum: "RDG-018", contacts: [{ id: 1, name: "Tom Garfield", title: "Plant Engineer", email: "t.garfield@ridgelinemw.com", phone: "330-555-1721", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Ravenna Machine Shop", address: "4500 Machinist Way, Ravenna, OH 44266", notes: "" }] },
-  "Summit Plastics Group": { notes: "New account 2025. Large expansion plans for 2026–2027.", billingAddr: "3200 Polymer Dr, Akron, OH 44314", website: "", industry: "Plastics Manufacturing", paymentTerms: "Net 30", accountNum: "SMT-019", contacts: [{ id: 1, name: "Pam Rodriguez", title: "Facilities Director", email: "p.rodriguez@summitplastics.com", phone: "330-555-1832", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Akron Polymer Plant", address: "3200 Polymer Dr, Akron, OH 44314", notes: "" }] },
-  "Titan Manufacturing LLC": { notes: "New account 2025. Flagship job. Very large press capacity. High priority growth account.", billingAddr: "8800 Titan Blvd, Lorain, OH 44052", website: "", industry: "Heavy Manufacturing", paymentTerms: "Net 45", accountNum: "TTN-020", contacts: [{ id: 1, name: "Steve Dolan", title: "VP Operations", email: "s.dolan@titanmfg.com", phone: "440-555-1943", primary: true, locationId: null }], locations: [{ id: "loc1", name: "Lorain Titan Plant", address: "8800 Titan Blvd, Lorain, OH 44052", notes: "" }] },
-};
-
-const DEFAULT_PROFILE_TEMPLATE = [
-  { key: "street", label: "Address", type: "text", enabled: true },
-  { key: "city", label: "City", type: "text", enabled: true },
-  { key: "state", label: "State", type: "text", enabled: true },
-  { key: "zip", label: "ZIP Code", type: "text", enabled: true },
-  { key: "website", label: "Website", type: "text", enabled: true },
-  { key: "industry", label: "Industry", type: "text", enabled: true },
-  { key: "paymentTerms", label: "Payment Terms", type: "text", enabled: true },
-  { key: "accountNum", label: "Account Number", type: "text", enabled: true },
-  { key: "taxId", label: "Tax ID / EIN", type: "text", enabled: false },
-  { key: "creditLimit", label: "Credit Limit", type: "text", enabled: false },
-  { key: "certRequired", label: "Certifications Required", type: "text", enabled: false },
-  { key: "safetyContact", label: "Safety Contact", type: "text", enabled: false },
-  { key: "preferredContact", label: "Preferred Contact Method", type: "text", enabled: false },
-];
+const inp2 = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 5, color: "#1e293b", fontFamily: "inherit", fontSize: 13, padding: "6px 9px", width: "100%", boxSizing: "border-box", outline: "none" };
 
 
-// ── UTILS ─────────────────────────────────────────────────────────────────────
-const fmt = n => "$" + Math.round(n || 0).toLocaleString();
-const uid = () => Date.now() + Math.floor(Math.random() * 10000);
-const listKey = (prefix, item, index = 0) => {
-  const base = item && typeof item === "object"
-    ? (item.id ?? item.quote_number ?? item.qn ?? item.job_num ?? item.code ?? item.name ?? item.label)
-    : item;
-  return `${prefix}-${String(base ?? "na")}-${index}`;
-};
+
 function nextQN(quotes) {
   const year = String(new Date().getFullYear());
   const maxSeq = (quotes || []).reduce((mx, q) => {
@@ -394,7 +112,6 @@ function nextRN(reqs) {
   }, 0);
   return `REQ-${year}-${String(maxSeq + 1).padStart(3, "0")}`;
 }
-const today = () => new Date().toISOString().slice(0, 10);
 
 function nextJobNumber(quotes, dateValue) {
   const year = String(new Date(dateValue || Date.now()).getFullYear());
@@ -412,7 +129,7 @@ function defLaborRows(client, customerRates, baseLabor) {
   const cr = customerRates[client];
   const _baseLabor = baseLabor || DEFAULT_LABOR;
   return ["Foreman", "Rigger", "Labor", "Operator", "CDL Driver"].map(role => {
-    const b = _baseLabor.find(r => r.role === role) || _baseLabor[0];
+    const b = _baseLabor.find(r => r.role === role) || _baseLabor[0] || { reg: 0, ot: 0 };
     const sp = cr && cr[role];
     return {
       id: uid(), role, workers: 0, regHrs: 0, otHrs: 0, days: 0,
@@ -2783,7 +2500,6 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, leadStageFilter, setLeadSt
   );
 }
 
-const inp2 = { background: C.sur, border: `1px solid ${C.bdrM}`, borderRadius: 5, color: C.txt, fontFamily: "inherit", fontSize: 13, padding: "6px 9px", width: "100%", boxSizing: "border-box", outline: "none" };
 
 // ── RECENT QUOTES CARD ────────────────────────────────────────────────────────
 function RecentQuotesCard({ jobs, openEdit, setView, onBack }) {
@@ -4086,6 +3802,129 @@ function MarkDeadModal({ itemType, itemLabel, onConfirm, onClose }) {
     </div>
   );
 }
+function CopyQuoteModal({ jobs, onSelect, onClose, C, fmt, mkBtn, Card, Sec, Lbl, inp, sel }) {
+  const [q, setQ] = useState("");
+  const [selCust, setSelCust] = useState("");
+  const [selQN, setSelQN] = useState("");
+
+  const customers = useMemo(() => {
+    const names = (jobs || []).filter(j => j.quote_number || j.qn).map(j => j.customer_name || j.client).filter(Boolean);
+    return Array.from(new Set(names)).sort();
+  }, [jobs]);
+
+  const quoteNumbers = useMemo(() => {
+    let list = (jobs || []).filter(j => j.quote_number || j.qn);
+    if (selCust) list = list.filter(j => (j.customer_name || j.client) === selCust);
+    const qns = list.map(j => j.quote_number || j.qn).filter(Boolean);
+    return Array.from(new Set(qns)).sort();
+  }, [jobs, selCust]);
+
+  const filtered = useMemo(() => {
+    const s = q.toLowerCase();
+    return (jobs || []).filter(j => {
+      if (j.is_master_job || !(j.quote_number || j.qn)) return false;
+      if (selCust && (j.customer_name || j.client) !== selCust) return false;
+      if (selQN && (j.quote_number || j.qn) !== selQN) return false;
+      return (
+        (j.quote_number && String(j.quote_number).toLowerCase().includes(s)) || 
+        (j.qn && String(j.qn).toLowerCase().includes(s)) || 
+        (j.job_num && String(j.job_num).toLowerCase().includes(s)) || 
+        (j.customer_name && String(j.customer_name).toLowerCase().includes(s)) ||
+        (j.client && String(j.client).toLowerCase().includes(s)) ||
+        (j.desc && String(j.desc).toLowerCase().includes(s)) ||
+        (j.jobDesc && String(j.jobDesc).toLowerCase().includes(s))
+      );
+    }).sort((a,b) => (b.date || "").localeCompare(a.date || "")).slice(0, 15);
+  }, [jobs, q, selCust, selQN]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(2px)" }}>
+      <div style={{ background: C.sur, borderRadius: 12, padding: 24, width: "100%", maxWidth: 800, boxShadow: "0 20px 50px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", maxHeight: "85vh", animation: "popIn 0.2s ease-out" }}>
+        <style>{`@keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }`}</style>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: C.acc }}>Select Quote to Copy</div>
+            <div style={{ fontSize: 13, color: C.txtS }}>Line items, pricing, and markups will be imported</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: C.txtS }}>×</button>
+        </div>
+
+        <div style={{ marginBottom: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <Lbl c="SEARCH BY DESCRIPTION" />
+            <input 
+              style={{ ...inp, width: "100%", boxSizing: "border-box" }} 
+              placeholder="Type to search..." 
+              value={q} 
+              onChange={e => setQ(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div style={{ width: 220 }}>
+            <Lbl c="FILTER BY CUSTOMER" />
+            <select 
+              style={{ ...inp, width: "100%" }} 
+              value={selCust} 
+              onChange={e => { setSelCust(e.target.value); setSelQN(""); }}
+            >
+              <option value="">All Customers</option>
+              {customers.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{ width: 180 }}>
+            <Lbl c="QUOTE NUMBER" />
+            <select 
+              style={{ ...inp, width: "100%" }} 
+              value={selQN} 
+              onChange={e => setSelQN(e.target.value)}
+            >
+              <option value="">All Quotes</option>
+              {quoteNumbers.map(qn => <option key={qn} value={qn}>{qn}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 4 }}>
+          {filtered.length === 0 && <div style={{ textAlign: "center", padding: 40, color: C.txtS }}>No quotes found matching "{q}"</div>}
+          {filtered.map(j => (
+            <div 
+              key={j.id} 
+              onClick={() => onSelect(j)}
+              style={{ 
+                padding: 12, 
+                border: `1px solid ${C.bdr}`, 
+                borderRadius: 8, 
+                cursor: "pointer", 
+                transition: "0.2s",
+                background: "#fff",
+                position: "relative",
+                overflow: "hidden"
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.acc; e.currentTarget.style.background = C.accL; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = C.bdr; e.currentTarget.style.background = "#fff"; }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontWeight: 800, color: C.acc, fontSize: 13 }}>{j.quote_number || "—"}</span>
+                <span style={{ fontSize: 11, color: C.txtS }}>{j.date ? String(j.date).split('T')[0] : ""}</span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: C.txt }}>{j.customer_name || "No Customer Name"}</div>
+              <div style={{ fontSize: 12, color: C.txtM, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{j.desc}</div>
+              <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Badge status={j.status} />
+                <span style={{ fontWeight: 800, color: C.txt }}>{fmt(j.total || 0)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+          <button style={mkBtn("ghost")} onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {}, CUSTOMERS = [], jobs = [], C, fmt, mkBtn, Sec, Lbl, Card, inp, sel, AutoInput }) {
   const [isSaving, setIsSaving] = useState(false);
   const [lead, setLead] = useState({
@@ -5777,7 +5616,6 @@ function SalesAdjustmentModal({ quote, onSave, onClose }) {
     onClose();
   }
 
-  const fmt = n => "$" + Math.round(Math.abs(n)).toLocaleString();
   const inp2 = {
     background: "#fff", border: "1px solid #c8cdd5", borderRadius: 5, color: "#1c1f26",
     fontFamily: "inherit", fontSize: 13, padding: "7px 10px", width: "100%",
@@ -10541,7 +10379,7 @@ export default function App() {
   const [leadStageFilter, setLeadStageFilter] = useState("all");
   const [appUsers, setAppUsers] = useState([]);
   const [jobs, setJobs] = useState([]);
-  const [reqs, setReqs] = useState(SAMPLE_REQS);
+  const [reqs, setReqs] = useState([]);
   const [leads, setLeads] = useState([]);
   const [globalSitesCount, setGlobalSitesCount] = useState(0);
   const [statusList, setStatusList] = useState([]);
@@ -10554,6 +10392,7 @@ export default function App() {
   const [editR, setEditR] = useState(null);
   const [showWM, setShowWM] = useState(false);
   const [showDiscModal, setShowDiscModal] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
   const [showCustDoc, setShowCustDoc] = useState(false);
   const [showJobSiteModal, setShowJobSiteModal] = useState(false);
   const [attachModal, setAttachModal] = useState(null); // { job } for viewing all attachments
@@ -10572,7 +10411,7 @@ export default function App() {
   const eqMap = useMemo(() => { const m = {}; equipment.forEach(e => { m[e.code] = e; }); return m; }, [equipment]);
   const eqCats = useMemo(() => [...new Set(equipment.map(e => e.category))], [equipment]);
   const [eqOv, setEqOv] = useState({});
-  const [custData, setCustData] = useState(INIT_CUST_DATA);
+  const [custData, setCustData] = useState({});
   const [showCustModal, setShowCustModal] = useState(false);
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [profileTemplate, setProfileTemplate] = useState(DEFAULT_PROFILE_TEMPLATE);
@@ -10722,46 +10561,18 @@ export default function App() {
         const data = await resp.json();
 
         if (data.users && Array.isArray(data.users)) setAppUsers(data.users);
+        if (data.labor) setBaseLabor(data.labor);
         if (data.equipment) setEquipment(data.equipment);
-        if (data.jobs && data.jobs.length > 0) {
-          setJobs(data.jobs);
-          if (data.leads) setReqs(data.leads);
-          if (data.leads) setLeads(data.leads);
-          if (data.status) {
+        if (data.jobs) setJobs(data.jobs);
+        if (data.leads) setReqs(data.leads);
+        if (data.leads) setLeads(data.leads);
+        if (data.status) {
           setStatusList(data.status);
           window.STATUS_LIST = data.status;
         }
-          if (data.customers) setCustData(data.customers);
-          if (data.sitesCount !== undefined) setGlobalSitesCount(data.sitesCount);
-          setDbStatus("MySQL Live");
-        } else if ((Array.isArray(role) ? role : [role]).includes('admin')) {
-          // Automatic system prompting to migrate data if DB is empty
-          console.log("[System Prompt] Migrating local data to MySQL...");
-          setDbStatus("Initializing MySQL...");
-          const initRes = await fetch("/api/admin/init", {
-            method: "POST",
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              jobs: SAMPLE_QUOTES,
-              leads: SAMPLE_REQS,
-              customers: INIT_CUST_DATA
-            })
-          });
-          if (initRes.ok) {
-            localStorage.setItem("rigpro_db_seeded", "true");
-            const r2 = await fetch("/api/data", { headers: { 'Authorization': `Bearer ${token}` } });
-            const d2 = await r2.json();
-            setJobs(d2.jobs);
-            setReqs(d2.leads);
-            setCustData(d2.customers);
-            if (d2.sitesCount !== undefined) setGlobalSitesCount(d2.sitesCount);
-            if (d2.users) setAppUsers(d2.users);
-            setDbStatus("MySQL Live");
-          }
-        }
+        if (data.customers) setCustData(data.customers);
+        if (data.sitesCount !== undefined) setGlobalSitesCount(data.sitesCount);
+        setDbStatus("MySQL Live");
       } catch (e) {
         console.error("DB Sync error:", e);
       }
@@ -10899,6 +10710,27 @@ export default function App() {
       })
       .catch(e => console.error('Failed to save quote to backend:', e));
   }
+
+  const onSelectQuoteToCopy = (src) => {
+    setActive(prev => ({
+      ...prev,
+      laborRows: (src.laborRows || []).map(r => ({ ...r, id: uid() })),
+      travelRows: (src.travelRows || []).map(r => ({ ...r, id: uid() })),
+      equipRows: (src.equipRows || []).map(r => ({ ...r, id: uid() })),
+      subRows: (src.subRows || []).map(r => ({ ...r, id: uid() })),
+      permitRows: (src.permitRows || []).map(r => ({ ...r, id: uid() })),
+      haulingRows: (src.haulingRows || []).map(r => ({ ...r, id: uid() })),
+      matRows: (src.matRows || []).map(r => ({ ...r, id: uid() })),
+      markup: src.markup || 0,
+      markupCostOnly: src.markupCostOnly || false,
+      discounts: (src.discounts || []).map(d => ({ ...d, id: uid() })),
+      travelOther: src.travelOther || 0,
+      travelMarkup: src.travelMarkup || 0,
+      liftPlanRequired: src.liftPlanRequired || false,
+      maxLiftTons: src.maxLiftTons || "",
+    }));
+    setShowCopyModal(false);
+  };
 
   function saveQuote(opts = {}) {
     if (!active.salesAssoc?.trim()) {
@@ -11706,6 +11538,7 @@ export default function App() {
         {showCustDoc && <CustomerDocModal quote={{ ...active, total: cv.total }} onClose={() => setShowCustDoc(false)} />}
         {showJobSiteModal && <JobSiteModal token={token} clientName={active.client} custData={custData} onSave={site => { u("jobSites", [...(active.jobSites || []), site]); }} onClose={() => setShowJobSiteModal(false)} />}
         {showJSAModal && <JSAWizardModal quote={active} onSave={(jsa) => { u("jsaData", jsa); setShowJSAModal(false); }} onClose={() => setShowJSAModal(false)} />}
+        {showCopyModal && <CopyQuoteModal jobs={jobs} onSelect={onSelectQuoteToCopy} onClose={() => setShowCopyModal(false)} C={C} fmt={fmt} mkBtn={mkBtn} Card={Card} Sec={Sec} Lbl={Lbl} inp={inp} sel={sel} />}
         <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} crumb={active.qn + (active.isChangeOrder ? " (CO)" : "")} extra={
           <div style={{ display: "flex", gap: 5 }}>
             <button style={mkBtn("ghost")} onClick={goBack}>Cancel</button>
@@ -11725,6 +11558,18 @@ export default function App() {
               {unapprovedCritLifts.length > 0 && <div style={{ background: C.redB, border: `1px solid ${C.redBdr}`, borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.red, fontWeight: 700 }}>⚠️ {unapprovedCritLifts.length} equipment item(s) require Critical Lift Plan approval before saving.</div>}
             </div>
           </div>
+          {(!jobs.some(j => j.id === active.id) && !active.isChangeOrder) && (
+            <div style={{ background: '#f0f7ff', border: '1px solid #cce3ff', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, boxShadow: '0 4px 12px rgba(37, 99, 235, 0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ background: '#fff', width: 44, height: 44, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>📋</div>
+                <div>
+                  <div style={{ fontWeight: 800, color: '#2563eb', fontSize: 16 }}>Copy from Previous Quote</div>
+                  <div style={{ fontSize: 13, color: '#64748b' }}>Import line items & pricing from an existing quote</div>
+                </div>
+              </div>
+              <button style={{ ...mkBtn("outline"), borderColor: '#2563eb', color: '#2563eb', fontWeight: 700, padding: '10px 20px', borderRadius: 8, background: '#fff' }} onClick={() => setShowCopyModal(true)}>Select Quote to Copy</button>
+            </div>
+          )}
 
           <Card>
             <Sec c="Customer Information" />
