@@ -2353,22 +2353,52 @@ function DashboardMetrics({ jobs, reqs, onOpenReport, leadStageFilter, setLeadSt
   }
 
   function calcStats(qs, rs, start, end) {
-    const inRange = q => { const d = new Date(q.start_date || ""); return d >= start && d <= end; };
+    const inRange = q => { const d = new Date(q.start_date || q.date || ""); return d >= start && d <= end; };
     const inRangeR = r => { const d = new Date(r.date || ""); return d >= start && d <= end; };
-    // Literal Master jobs are won transactions
-    const won = qs.filter(q => inRange(q));
-    const closed = qs.filter(q => inRange(q));
+    
+    const isWon = q => q.status === "Won" || q.status === 5 || String(q.status) === "5" || (q.status_name || "").toLowerCase() === "accepted";
+    const isLost = q => q.status === "Lost" || q.status === 8 || String(q.status) === "8" || (q.status_name || "").toLowerCase() === "lost";
+    const isPending = q => {
+        const str = String(q.status).toLowerCase();
+        const nm = (q.status_name || "").toLowerCase();
+        return ["in progress", "in review", "approved", "adjustments needed", "submitted"].includes(str) ||
+               ["in progress", "in review", "approved", "adjustments needed", "submitted", "modification required"].includes(nm) ||
+               [2, 4, 6, 7].includes(Number(q.status));
+    };
+    const isDraft = q => {
+        const str = String(q.status).toLowerCase();
+        const nm = (q.status_name || "").toLowerCase();
+        return ["in progress"].includes(str) || ["in progress"].includes(nm) || Number(q.status) === 2;
+    };
+    const isSub = q => {
+        const str = String(q.status).toLowerCase();
+        const nm = (q.status_name || "").toLowerCase();
+        return ["submitted"].includes(str) || ["submitted"].includes(nm) || Number(q.status) === 7;
+    };
+
+    const won = qs.filter(q => inRange(q) && isWon(q));
+    const lost = qs.filter(q => inRange(q) && isLost(q));
+    const pending = qs.filter(q => inRange(q) && isPending(q));
+    const drafts = qs.filter(q => inRange(q) && isDraft(q));
+    const subs = qs.filter(q => inRange(q) && isSub(q));
+    
+    const wonCount = won.length;
+    const closedCount = wonCount + lost.length;
+    
     return {
       rev: won.reduce((s, q) => s + (parseFloat(q.total) || 0), 0),
-      wonN: won.length,
-      pipe: 0,
-      subN: 0,
-      wr: 100,
-      rn: rs.filter(r => r.status === "New" && inRangeR(r)).length,
-      draftN: 0,
-      draftV: 0,
-      lostN: 0,
-      lostV: 0,
+      wonN: wonCount,
+      pipe: pending.reduce((s, q) => s + (parseFloat(q.total) || 0), 0),
+      subN: subs.length,
+      wr: closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : 0,
+      rn: rs.filter(r => {
+        const isLead = r.status === "New" || r.status === 1 || String(r.status) === "1" || r.status_number === 1 || String(r.status).toLowerCase() === "lead";
+        return isLead && inRangeR(r);
+      }).length,
+      draftN: drafts.length,
+      draftV: drafts.reduce((s, q) => s + (parseFloat(q.total) || 0), 0),
+      lostN: lost.length,
+      lostV: lost.reduce((s, q) => s + (parseFloat(q.total) || 0), 0),
     };
   }
 
@@ -2640,7 +2670,7 @@ function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openN
   }
 
   const leadStatusObj = (statusList || []).find(s => (s.name || '').toLowerCase() === 'lead');
-  const pendingReqs = jobs.filter(q => String(q.status) === String(leadStatusObj?.id) || q.status_name === 'Lead').map(q => {
+  const pendingReqs = reqs.map(q => {
     let qd = {};
     if (typeof q.quote_data === 'string') { try { qd = JSON.parse(q.quote_data); } catch (e) { } } 
     else if (q.quote_data) qd = q.quote_data;
@@ -11067,10 +11097,10 @@ export default function App() {
   // ── DASHBOARD ──────────────────────────────────────────────────────────────
   if (view === "dash") {
     const dashLeadStatusId = (statusList || []).find(s => (s.name || '').toLowerCase() === 'lead')?.id;
-    const leadsFilterFn = q => String(q.status) === String(dashLeadStatusId) || q.status_name === 'Lead';
+    const leadsFilterFn = q => String(q.status) === "1" || String(q.status) === String(dashLeadStatusId) || (q.status_name || '').toLowerCase() === 'lead';
     const quoteStages = Array.from(new Set((statusList || []).filter(s => s.type === 'quote' && (s.name || '').toLowerCase() !== 'lead').map(s => s.name)));
     const jbFilterFn = q => quoteStages.includes(q.status_name || (statusList || []).find(s => String(s.id) === String(q.status))?.name);
-    const dashLeadsCount = jobs.filter(leadsFilterFn).length;
+    const dashLeadsCount = reqs.length;
     const dashMyJbCount = profileUser ? jobs.filter(q => (q.salesAssoc === profileUser.username || q.estimator === profileUser.username || q.salesAssoc === profileUser.first_name || q.estimator === profileUser.first_name) && jbFilterFn(q)).length : 0;
     const dashGlbJbCount = jobs.filter(jbFilterFn).length;
 

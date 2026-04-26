@@ -381,7 +381,9 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     // Load quotes from the working table first, then optionally append master_jobs history.
     const quotesRows = await safeQuery(`SELECT q.id,
                 q.quote_number as qn,
-                q.customer_name as client,
+                c.name as client,
+                c.name as customer_name,
+                q.customer_id,
                 q.job_site as jobSite,
                 q.description as jobDesc,
                 q.date,
@@ -401,9 +403,14 @@ app.get('/api/data', authenticateToken, async (req, res) => {
                 q.comp_date as compDate,
                 q.is_locked as locked,
                 q.notes,
-                q.quote_data
+                q.quote_data,
+                c.street as cust_street,
+                c.city as cust_city,
+                c.state as cust_state,
+                c.zip as cust_zip
            FROM quotes q
-           LEFT JOIN status s ON q.status = s.id`);
+           LEFT JOIN status s ON q.status = s.id
+           LEFT JOIN customers c ON q.customer_id = c.id`);
 
     const mappedQuotes = quotesRows.map((row) => {
       let json = {};
@@ -427,16 +434,17 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         ...json,
         ...row,
         id: row.id || row.ID || json.id,
+        status_name: row.status,
         status: row.status_id || row.STATUS_ID || json.status_id || json.status || 'Draft',
         qn,
         quote_number: qn,
         client,
         customer_name: client,
         jobSite: find(['jobSite', 'job_site']),
-        street: find(['street', 'job_site_address1', 'jobSiteAddress1']),
-        city: find(['city', 'job_site_city', 'jobSiteCity']),
-        state: find(['state', 'job_site_state', 'jobSiteState']),
-        zipcode: find(['zipcode', 'job_site_zip', 'jobSiteZip']),
+        street: find(['street', 'job_site_address1', 'jobSiteAddress1']) || row.cust_street || '',
+        city: find(['city', 'job_site_city', 'jobSiteCity']) || row.cust_city || '',
+        state: find(['state', 'job_site_state', 'jobSiteState']) || row.cust_state || '',
+        zipcode: find(['zipcode', 'job_site_zip', 'jobSiteZip']) || row.cust_zip || '',
         desc: find(['jobDesc', 'description', 'desc']),
         qtype: find(['qtype', 'quote_type']) || 'Contract',
         salesAssoc: find(['salesAssoc', 'sales_assoc']),
@@ -2168,27 +2176,46 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
     let custId = null;
     if (customerName) {
       const [existingCustomer] = await connection.query('SELECT id FROM customers WHERE name = ? LIMIT 1', [customerName]);
+      
+      const streetVal = String(quote.street || '').trim();
+      const cityVal = String(quote.city || '').trim();
+      const stateVal = String(quote.state || '').trim();
+      const zipVal = String(quote.zipcode || '').trim();
+      
       if (existingCustomer.length === 0) {
-        // Customers table no longer holds address fields natively due to normalization
         const [insertedCust] = await connection.query(
-          'INSERT INTO customers (name, notes) VALUES (?, ?)',
-          [customerName, 'Auto-created from quote save']
+          'INSERT INTO customers (name, street, city, state, zip, notes) VALUES (?, ?, ?, ?, ?, ?)',
+          [customerName, streetVal, cityVal, stateVal, zipVal, 'Auto-created from quote save']
         );
         custId = insertedCust.insertId;
 
-        // Auto-create initial master site containing the address payload
-        const [insertedSite] = await connection.query(
-          'INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)',
-          [custId, 'master_billing', String(quote.street || '').trim(), String(quote.city || '').trim(), String(quote.state || '').trim(), String(quote.zipcode || '').trim()]
-        );
-        
-        // Link primary site
-        await connection.query('UPDATE customers SET primary_site_id = ? WHERE id = ?', [insertedSite.insertId, custId]);
+        if (quote.contact_name || quote.contact_phone || quote.contact_email) {
+          await connection.query(
+            'INSERT INTO customer_contacts (customer_id, name, phone, email, is_primary) VALUES (?, ?, ?, ?, 1)',
+            [custId, String(quote.contact_name || '').trim(), String(quote.contact_phone || '').trim(), String(quote.contact_email || '').trim()]
+          );
+        }
       } else {
         custId = existingCustomer[0].id;
+        await connection.query(
+          'UPDATE customers SET street = COALESCE(NULLIF(?, ""), street), city = COALESCE(NULLIF(?, ""), city), state = COALESCE(NULLIF(?, ""), state), zip = COALESCE(NULLIF(?, ""), zip) WHERE id = ?',
+          [streetVal, cityVal, stateVal, zipVal, custId]
+        );
+        
+        if (quote.contact_name || quote.contact_phone || quote.contact_email) {
+           const cName = String(quote.contact_name || '').trim();
+           if (cName) {
+               const [existingContact] = await connection.query('SELECT id FROM customer_contacts WHERE customer_id = ? AND name = ? LIMIT 1', [custId, cName]);
+               if (existingContact.length === 0) {
+                   await connection.query(
+                     'INSERT INTO customer_contacts (customer_id, name, phone, email, is_primary) VALUES (?, ?, ?, ?, 0)',
+                     [custId, cName, String(quote.contact_phone || '').trim(), String(quote.contact_email || '').trim()]
+                   );
+               }
+           }
+        }
       }
     }
-
     // Resolve status name to ID if needed
     let resolvedStatusId = quote.status;
     if (isNaN(resolvedStatusId)) {
@@ -2207,15 +2234,19 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       return val;
     };
 
+    const quoteDataToSave = { ...quote };
+    delete quoteDataToSave.street;
+    delete quoteDataToSave.city;
+    delete quoteDataToSave.state;
+    delete quoteDataToSave.zipcode;
+    delete quoteDataToSave.contact_name;
+    delete quoteDataToSave.contact_phone;
+    delete quoteDataToSave.contact_email;
+
     const rowValues = [
       quote.qn || '',
       custId,
-      customerName,
       quote.jobSite || '',
-      quote.street || '',
-      quote.city || '',
-      quote.state || '',
-      quote.zipcode || '',
       quote.desc || '',
       formatDate(quote.date),
       resolvedStatusId,
@@ -2233,13 +2264,13 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       formatDate(quote.compDate),
       quote.locked ? 1 : 0,
       quote.notes || '',
-      JSON.stringify(quote)
+      JSON.stringify(quoteDataToSave)
     ];
 
     let savedId = targetId;
     if (targetId) {
       await connection.query(
-        'UPDATE quotes SET quote_number=?, customer_id=?, customer_name=?, job_site=?, street=?, city=?, state=?, zipcode=?, description=?, date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=? WHERE id=?',
+        'UPDATE quotes SET quote_number=?, customer_id=?, job_site=?, description=?, date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=? WHERE id=?',
         [...rowValues, targetId]
       );
       if (oldStatus !== (quote.status || 'Draft')) {
@@ -2282,7 +2313,7 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       }
     } else {
       const [insertResult] = await connection.query(
-        'INSERT INTO quotes (quote_number, customer_id, customer_name, job_site, street, city, state, zipcode, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO quotes (quote_number, customer_id, job_site, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         rowValues
       );
       savedId = insertResult.insertId;
