@@ -3808,13 +3808,13 @@ function CopyQuoteModal({ jobs, onSelect, onClose, C, fmt, mkBtn, Card, Sec, Lbl
   const [selQN, setSelQN] = useState("");
 
   const customers = useMemo(() => {
-    const names = (jobs || []).filter(j => j.quote_number || j.qn).map(j => j.customer_name || j.client).filter(Boolean);
+    const names = (jobs || []).filter(j => j.quote_number || j.qn).map(j => j.customer_name || j.client || j.customer).filter(Boolean);
     return Array.from(new Set(names)).sort();
   }, [jobs]);
 
   const quoteNumbers = useMemo(() => {
     let list = (jobs || []).filter(j => j.quote_number || j.qn);
-    if (selCust) list = list.filter(j => (j.customer_name || j.client) === selCust);
+    if (selCust) list = list.filter(j => (j.customer_name || j.client || j.customer) === selCust);
     const qns = list.map(j => j.quote_number || j.qn).filter(Boolean);
     return Array.from(new Set(qns)).sort();
   }, [jobs, selCust]);
@@ -3823,18 +3823,13 @@ function CopyQuoteModal({ jobs, onSelect, onClose, C, fmt, mkBtn, Card, Sec, Lbl
     const s = q.toLowerCase();
     return (jobs || []).filter(j => {
       if (j.is_master_job || !(j.quote_number || j.qn)) return false;
-      if (selCust && (j.customer_name || j.client) !== selCust) return false;
+      if (selCust && (j.customer_name || j.client || j.customer) !== selCust) return false;
       if (selQN && (j.quote_number || j.qn) !== selQN) return false;
-      return (
-        (j.quote_number && String(j.quote_number).toLowerCase().includes(s)) || 
-        (j.qn && String(j.qn).toLowerCase().includes(s)) || 
-        (j.job_num && String(j.job_num).toLowerCase().includes(s)) || 
-        (j.customer_name && String(j.customer_name).toLowerCase().includes(s)) ||
-        (j.client && String(j.client).toLowerCase().includes(s)) ||
-        (j.desc && String(j.desc).toLowerCase().includes(s)) ||
-        (j.jobDesc && String(j.jobDesc).toLowerCase().includes(s))
-      );
-    }).sort((a,b) => (b.date || "").localeCompare(a.date || "")).slice(0, 15);
+      const jQN = String(j.quote_number || j.qn || "").toLowerCase();
+      const jCN = String(j.customer_name || j.client || j.customer || "").toLowerCase();
+      const jDS = String(j.desc || j.jobDesc || "").toLowerCase();
+      return jQN.includes(s) || jCN.includes(s) || jDS.includes(s);
+    }).sort((a,b) => (b.date || "").localeCompare(a.date || "")).slice(0, 50);
   }, [jobs, q, selCust, selQN]);
 
   return (
@@ -3856,7 +3851,7 @@ function CopyQuoteModal({ jobs, onSelect, onClose, C, fmt, mkBtn, Card, Sec, Lbl
               style={{ ...inp, width: "100%", boxSizing: "border-box" }} 
               placeholder="Type to search..." 
               value={q} 
-              onChange={e => setQ(e.target.value)}
+              onChange={e => { setQ(e.target.value); setSelCust(""); setSelQN(""); }}
               autoFocus
             />
           </div>
@@ -3865,7 +3860,7 @@ function CopyQuoteModal({ jobs, onSelect, onClose, C, fmt, mkBtn, Card, Sec, Lbl
             <select 
               style={{ ...inp, width: "100%" }} 
               value={selCust} 
-              onChange={e => { setSelCust(e.target.value); setSelQN(""); }}
+              onChange={e => { setSelCust(e.target.value); setSelQN(""); setQ(""); }}
             >
               <option value="">All Customers</option>
               {customers.map(c => <option key={c} value={c}>{c}</option>)}
@@ -3876,7 +3871,14 @@ function CopyQuoteModal({ jobs, onSelect, onClose, C, fmt, mkBtn, Card, Sec, Lbl
             <select 
               style={{ ...inp, width: "100%" }} 
               value={selQN} 
-              onChange={e => setSelQN(e.target.value)}
+              onChange={e => {
+                const val = e.target.value;
+                setSelQN(val);
+                if (val) {
+                  const found = (jobs || []).find(j => (String(j.quote_number) === String(val) || String(j.qn) === String(val)) && (!selCust || (j.customer_name === selCust || j.client === selCust || j.customer === selCust)));
+                  if (found) onSelect(found);
+                }
+              }}
             >
               <option value="">All Quotes</option>
               {quoteNumbers.map(qn => <option key={qn} value={qn}>{qn}</option>)}
@@ -3897,20 +3899,26 @@ function CopyQuoteModal({ jobs, onSelect, onClose, C, fmt, mkBtn, Card, Sec, Lbl
                 cursor: "pointer", 
                 transition: "0.2s",
                 background: "#fff",
-                position: "relative",
-                overflow: "hidden"
+                position: "relative"
               }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.acc; e.currentTarget.style.background = C.accL; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = C.bdr; e.currentTarget.style.background = "#fff"; }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontWeight: 800, color: C.acc, fontSize: 13 }}>{j.quote_number || "—"}</span>
+                <span style={{ fontWeight: 800, color: C.acc, fontSize: 13 }}>{j.quote_number || j.qn || "—"}</span>
                 <span style={{ fontSize: 11, color: C.txtS }}>{j.date ? String(j.date).split('T')[0] : ""}</span>
               </div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: C.txt }}>{j.customer_name || "No Customer Name"}</div>
-              <div style={{ fontSize: 12, color: C.txtM, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{j.desc}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: C.txt }}>{j.customer_name || j.client || j.customer || "No Customer Name"}</div>
+              <div style={{ fontSize: 12, color: C.txtM, marginTop: 2 }}>{j.desc || j.jobDesc || "No Description"}</div>
               <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Badge status={j.status} />
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <Badge status={j.status} />
+                  {(j.laborRows?.length > 0 || j.equipRows?.length > 0) ? (
+                    <span style={{ fontSize: 9, background: C.grnB, color: C.grn, padding: "2px 6px", borderRadius: 4, fontWeight: 800, border: `1px solid ${C.grnBdr}` }}>✓ DETAILED</span>
+                  ) : (
+                    <span style={{ fontSize: 9, background: C.bg, color: C.txtS, padding: "2px 6px", borderRadius: 4, fontWeight: 700, border: `1px solid ${C.bdr}` }}>SUMMARY ONLY</span>
+                  )}
+                </div>
                 <span style={{ fontWeight: 800, color: C.txt }}>{fmt(j.total || 0)}</span>
               </div>
             </div>
@@ -10712,23 +10720,94 @@ export default function App() {
   }
 
   const onSelectQuoteToCopy = (src) => {
-    setActive(prev => ({
-      ...prev,
-      laborRows: (src.laborRows || []).map(r => ({ ...r, id: uid() })),
-      travelRows: (src.travelRows || []).map(r => ({ ...r, id: uid() })),
-      equipRows: (src.equipRows || []).map(r => ({ ...r, id: uid() })),
-      subRows: (src.subRows || []).map(r => ({ ...r, id: uid() })),
-      permitRows: (src.permitRows || []).map(r => ({ ...r, id: uid() })),
-      haulingRows: (src.haulingRows || []).map(r => ({ ...r, id: uid() })),
-      matRows: (src.matRows || []).map(r => ({ ...r, id: uid() })),
-      markup: src.markup || 0,
-      markupCostOnly: src.markupCostOnly || false,
-      discounts: (src.discounts || []).map(d => ({ ...d, id: uid() })),
-      travelOther: src.travelOther || 0,
-      travelMarkup: src.travelMarkup || 0,
-      liftPlanRequired: src.liftPlanRequired || false,
-      maxLiftTons: src.maxLiftTons || "",
-    }));
+    setActive(prev => {
+      const next = { ...prev };
+      
+      // 1. Copy Detailed Rows if they exist
+      const safeArr = (arr) => {
+        if (Array.isArray(arr)) return arr;
+        if (typeof arr === 'string') {
+          try { const p = JSON.parse(arr); return Array.isArray(p) ? p : []; } catch { return []; }
+        }
+        return [];
+      };
+
+      const lRows = safeArr(src.laborRows);
+      const tRows = safeArr(src.travelRows);
+      const eRows = safeArr(src.equipRows);
+      const sRows = safeArr(src.subRows);
+      const pRows = safeArr(src.permitRows);
+      const hRows = safeArr(src.haulingRows);
+      const mRows = safeArr(src.matRows);
+      const dRows = safeArr(src.discounts);
+
+      const hasDetailed = lRows.length > 0 || eRows.length > 0;
+      
+      if (lRows.length > 0) next.laborRows = lRows.map(r => ({ ...r, id: uid() }));
+      if (tRows.length > 0) next.travelRows = tRows.map(r => ({ ...r, id: uid() }));
+      if (eRows.length > 0) next.equipRows = eRows.map(r => ({ ...r, id: uid() }));
+      if (sRows.length > 0) next.subRows = sRows.map(r => ({ ...r, id: uid() }));
+      if (pRows.length > 0) next.permitRows = pRows.map(r => ({ ...r, id: uid() }));
+      if (hRows.length > 0) next.haulingRows = hRows.map(r => ({ ...r, id: uid() }));
+      if (mRows.length > 0) next.matRows = mRows.map(r => ({ ...r, id: uid() }));
+      if (dRows.length > 0) next.discounts = dRows.map(d => ({ ...d, id: uid() }));
+      
+      // 2. Fallback for Summary-Only Quotes (Imported)
+      // If we don't have detailed rows but have summary totals, populate a single row per section
+      if (!hasDetailed) {
+        let addedFallback = false;
+        if (src.labor > 0) {
+          next.laborRows = [{ id: uid(), role: "Labor (Imported)", workers: 1, days: 1, regHrs: 1, otHrs: 0, special: true, overReg: src.labor, overOT: 0, always: false }];
+          addedFallback = true;
+        }
+        if (src.equip > 0) {
+          next.equipRows = [{ id: uid(), code: "MISC", desc: "Equipment (Imported)", days: 1, overRate: true, overDaily: src.equip, ship: 0 }];
+          addedFallback = true;
+        }
+        if (src.hauling > 0) {
+          next.haulingRows = [{ id: uid(), vendor: "Imported", desc: "Hauling (Imported)", cost: src.hauling, markup: 0.15 }];
+          addedFallback = true;
+        }
+        if (src.mats > 0) {
+          next.matRows = [{ id: uid(), vendor: "Imported", desc: "Materials (Imported)", cost: src.mats, markup: 0.15 }];
+          addedFallback = true;
+        }
+        if (src.travel > 0) {
+          next.travelOther = src.travel;
+          next.travelMarkup = 0;
+          addedFallback = true;
+        }
+        if (!addedFallback) {
+          next.subRows = [{ id: uid(), vendor: "Imported", desc: "Total (Imported)", cost: src.total || 0, markup: 0 }];
+        }
+      }
+
+      // Copy markups and other settings
+      if (src.markup !== undefined) next.markup = src.markup || 0;
+      if (src.markupCostOnly !== undefined) next.markupCostOnly = src.markupCostOnly || false;
+      if (src.travelOther !== undefined && hasDetailed) next.travelOther = src.travelOther || 0;
+      if (src.travelMarkup !== undefined && hasDetailed) next.travelMarkup = src.travelMarkup || 0;
+      
+      // Copy description and notes (overwriting as this is an explicit copy action)
+      if (src.desc) next.desc = src.desc;
+      if (src.notes) next.notes = src.notes;
+      
+      // Copy customer and location details
+      if (src.client) next.client = src.client;
+      if (src.customer_name) next.customer_name = src.customer_name;
+      if (src.street) next.street = src.street;
+      if (src.city) next.city = src.city;
+      if (src.state) next.state = src.state;
+      if (src.zipcode) next.zipcode = src.zipcode;
+      if (src.jobSite) next.jobSite = src.jobSite;
+      if (src.salesAssoc) next.salesAssoc = src.salesAssoc;
+      
+      // Safety/Lift Plan info
+      if (src.liftPlanRequired !== undefined) next.liftPlanRequired = src.liftPlanRequired || false;
+      if (src.maxLiftTons !== undefined) next.maxLiftTons = src.maxLiftTons || "";
+      
+      return next;
+    });
     setShowCopyModal(false);
   };
 
