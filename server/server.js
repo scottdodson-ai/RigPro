@@ -373,7 +373,14 @@ app.get('/api/data', authenticateToken, async (req, res) => {
       }
     };
 
-    const labor = await safeQuery('SELECT * FROM base_labor');
+    const laborRaw = await safeQuery('SELECT * FROM base_labor');
+    const labor = laborRaw.map(l => ({
+      ...l,
+      reg: parseFloat(l.reg_rate) || 0,
+      ot: parseFloat(l.ot_rate) || 0,
+      costReg: parseFloat(l.cost_reg) || 0,
+      costOT: parseFloat(l.cost_ot) || 0
+    }));
     const equipment = await safeQuery('SELECT * FROM equipment');
     const customers = await safeQuery('SELECT * FROM customers');
     const sites = await safeQuery('SELECT * FROM sites');
@@ -1043,7 +1050,30 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
     });
     const setClause = keys.map(k => `\`${k}\` = ?`).join(', ');
 
-    const [result] = await db.query(`UPDATE \`${table}\` SET ${setClause} WHERE id = ?`, [...values, id]);
+    if (table === 'quotes') {
+      const statusIdx = keys.findIndex(k => k === 'status');
+      if (statusIdx !== -1) {
+        const newStatus = values[statusIdx];
+        if (newStatus > 1 && newStatus !== 9 && newStatus !== 10) {
+          const [existing] = await db.query('SELECT quote_number FROM quotes WHERE id = ?', [id]);
+          if (existing.length > 0 && (!existing[0].quote_number || existing[0].quote_number.trim() === '')) {
+            const year = String(new Date().getFullYear());
+            const [seqRows] = await db.query(
+              `SELECT MAX(CAST(SUBSTRING_INDEX(quote_number, '-', -1) AS UNSIGNED)) AS max_seq FROM quotes WHERE quote_number REGEXP ?`,
+              [`^RIG-${year}-[0-9]{3,}$`]
+            );
+            const nextSeq = Number(seqRows?.[0]?.max_seq || 0) + 1;
+            const newQn = `RIG-${year}-${String(nextSeq).padStart(3, '0')}`;
+            keys.push('quote_number');
+            values.push(newQn);
+          }
+        }
+      }
+    }
+
+    const finalSetClause = keys.map(k => `\`${k}\` = ?`).join(', ');
+
+    const [result] = await db.query(`UPDATE \`${table}\` SET ${finalSetClause} WHERE id = ?`, [...values, id]);
 
     if (table === 'sites') {
       db.query('SELECT address1, city, state, zip FROM sites WHERE id = ?', [id]).then(([r])=> {
@@ -2140,6 +2170,21 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
         oldEstimator = existingById[0].sales_assoc;
         oldQuoteNumber = existingById[0].quote_number;
       }
+    }
+
+    let resolvedQn = (quote.qn || quote.quote_number || oldQuoteNumber || '').trim();
+    if (!resolvedQn && !['Dead', 'Lost'].includes(quote.status || '')) {
+      const year = String(new Date(quote.date || Date.now()).getFullYear());
+      const [seqRows] = await connection.query(
+        `SELECT MAX(CAST(SUBSTRING_INDEX(quote_number, '-', -1) AS UNSIGNED)) AS max_seq
+           FROM quotes
+          WHERE quote_number REGEXP ?`,
+        [`^RIG-${year}-[0-9]{3,}$`]
+      );
+      const nextSeq = Number(seqRows?.[0]?.max_seq || 0) + 1;
+      resolvedQn = `RIG-${year}-${String(nextSeq).padStart(3, '0')}`;
+      quote.qn = resolvedQn;
+      quote.quote_number = resolvedQn;
     }
 
     // Fallback: resolve by quote number so client-side timestamp ids can still update correctly

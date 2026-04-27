@@ -291,7 +291,7 @@ const LeadsBoard = (props) => {
                            onClick={() => handleAssign(profileUser.username)}
                            style={{ background:C.blu, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontWeight:800, cursor:"pointer", fontSize:12, boxShadow:"0 2px 4px rgba(59,130,246,0.2)" }}
                          >
-                           ASSIGN TO ME
+                           GRAB THIS LEAD
                          </button>
                        )}
                     </div>
