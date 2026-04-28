@@ -26,8 +26,8 @@ EQUIPMENT.forEach(e => { EQ_MAP[e.code] = e; });
 const EQ_CATS = [...new Set(EQUIPMENT.map(e => e.cat))];
 
 export function useTableSort(items, initialKey = null, initialDir = 1) {
-  const [sortKey, setSortKey] = useState(initialKey);
-  const [sortDir, setSortDir] = useState(initialDir);
+  const [sortKey, setSortKey] = usePersistentState("rigpro_global_sort_key", initialKey);
+  const [sortDir, setSortDir] = usePersistentState("rigpro_global_sort_dir", initialDir);
   const requestSort = (key) => {
     if (sortKey === key) setSortDir(-sortDir);
     else { setSortKey(key); setSortDir(1); }
@@ -65,6 +65,34 @@ export function SortTh({ label, sortKey, currentSort, currentDir, requestSort, s
       {label} <span style={{ fontSize: 10, opacity: 0.6 }}>{isA ? (currentDir === 1 ? "▼" : "▲") : "↕"}</span>
     </th>
   );
+}
+
+/**
+ * Custom hook to persist state in localStorage
+ */
+function usePersistentState(key, initialValue) {
+  const [state, setState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved !== null && saved !== "undefined") {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn(`Error loading state for key "${key}" from localStorage:`, e);
+    }
+    return typeof initialValue === "function" ? initialValue() : initialValue;
+  });
+
+  useEffect(() => {
+    try {
+      if (state === undefined) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(state));
+    } catch (e) {
+      console.warn(`Error saving state for key "${key}" to localStorage:`, e);
+    }
+  }, [key, state]);
+
+  return [state, setState];
 }
 
 const CUSTOMERS = [];
@@ -511,6 +539,10 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");
+    // Clear all persistent state memory
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith("rigpro_")) localStorage.removeItem(k);
+    });
     if (setToken) setToken("");
     if (setRole) setRole("user");
     setView("landing");
@@ -1854,7 +1886,7 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
 
 function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOpenQuote, onOpenJobFolder, initialReportId = null, onClearInitialReport, onBack }) {
   const [catFilter, setCatFilter] = useState("Sales");
-  const [activeReport, setActiveReport] = useState(() => {
+  const [activeReport, setActiveReport] = usePersistentState("rigpro_active_report", () => {
     if (initialReportId) return BUILT_IN_REPORTS.find(r => r.id === initialReportId) || null;
     return null;
   });
@@ -1869,7 +1901,7 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
     }
     prevInitRef.current = initialReportId || prevInitRef.current;
   }, [initialReportId]);
-  const [customReports, setCustomReports] = useState(() => { try { return JSON.parse(localStorage.getItem("rigpro_custom_reports") || "[]"); } catch { return []; } });
+  const [customReports, setCustomReports] = usePersistentState("rigpro_custom_reports", []);
   const allReports = [
     ...BUILT_IN_REPORTS,
     ...customReports,
@@ -2074,7 +2106,7 @@ function ReportsPage({ jobs, reqs, role, username, jobFolders, globalCheck, onOp
                   ) : (
                     <div style={{ textAlign: "center", padding: "48px", color: C.txtS, background: C.bg, borderRadius: 8, border: `1px dashed ${C.bdr}` }}>
                       <div style={{ fontSize: 32, marginBottom: 12 }}>📉</div>
-                      <div style={{ fontSize: 15, fontWeight: 600 }}>No data available for this report criteria.</div>
+                      <div style={{ fontSize: 15 }}>No data available for this report criteria.</div>
                     </div>
                   )}
                 </>
@@ -10414,7 +10446,7 @@ export default function App() {
   };
 
   const [profileUser, setProfileUser] = useState(null);
-  const [leadStageFilter, setLeadStageFilter] = useState("all");
+  const [leadStageFilter, setLeadStageFilter] = usePersistentState("rigpro_lead_stage_filter", "all");
   const [appUsers, setAppUsers] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [reqs, setReqs] = useState([]);
@@ -10422,10 +10454,10 @@ export default function App() {
   const [globalSitesCount, setGlobalSitesCount] = useState(0);
   const [statusList, setStatusList] = useState([]);
   const [dbStatus, setDbStatus] = useState("Local Mode");
-  const [active, setActive] = useState(null);
+  const [active, setActive] = usePersistentState("rigpro_active_quote", null);
   const [globalSelectedQuote, setGlobalSelectedQuote] = useState(null);
-  const [selC, setSelC] = useState(null);
-  const [search, setSearch] = useState("");
+  const [selC, setSelC] = usePersistentState("rigpro_sel_customer", null);
+  const [search, setSearch] = usePersistentState("rigpro_global_search", "");
   const [showRM, setShowRM] = useState(false);
   const [editR, setEditR] = useState(null);
   const [showWM, setShowWM] = useState(false);
@@ -10436,12 +10468,12 @@ export default function App() {
   const [attachModal, setAttachModal] = useState(null); // { job } for viewing all attachments
   const [adjModal, setAdjModal] = useState(null);  // quote to adjust
   const [deadModal, setDeadModal] = useState(null);  // {type:"lead"|"quote", item}
-  const [dashReportId, setDashReportId] = useState(null); // report to open when navigating from dashboard
-  const [dashAcc, setDashAcc] = useState("leads"); // current open accordion in Dashboard
-  const [wonOnly, setWonOnly] = useState(false); // filter customers view
+  const [dashReportId, setDashReportId] = usePersistentState("rigpro_dash_report_id", null); // report to open when navigating from dashboard
+  const [dashAcc, setDashAcc] = usePersistentState("rigpro_dash_acc", "leads"); // current open accordion in Dashboard
+  const [wonOnly, setWonOnly] = usePersistentState("rigpro_won_only", false); // filter customers view
   const [showJSAModal, setShowJSAModal] = useState(false);
-  const [custView, setCustView] = useState("list"); // "list" or "card"
-  const [jobListFilter, setJobListFilter] = useState(null); // customer name to filter Master Jobs list
+  const [custView, setCustView] = usePersistentState("rigpro_cust_view", "list"); // "list" or "card"
+  const [jobListFilter, setJobListFilter] = usePersistentState("rigpro_job_list_filter", null); // customer name to filter Master Jobs list
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [customerRates, setCustomerRates] = useState(INIT_CUSTOMER_RATES);
   const [baseLabor, setBaseLabor] = useState(DEFAULT_LABOR);
@@ -10454,7 +10486,7 @@ export default function App() {
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [profileTemplate, setProfileTemplate] = useState(DEFAULT_PROFILE_TEMPLATE);
   const [showProfileTempl, setShowProfileTempl] = useState(false);
-  const [custFilter, setCustFilter] = useState("all"); // all | prospects | customers
+  const [custFilter, setCustFilter] = usePersistentState("rigpro_cust_filter", "all"); // all | prospects | customers
   const [globalCheck, setGlobalCheck] = useState([
     { id: 1, label: "Job Site Walk-through" },
     { id: 2, label: "Safety Plan Reviewed" },
@@ -10464,14 +10496,14 @@ export default function App() {
     { id: 6, label: "Bid Bond Required" },
     { id: 7, label: "Safety Orientation Required" },
   ]);
-  const [perDiemRate, setPerDiemRate] = useState(DEFAULT_PER_DIEM);
-  const [hotelRate, setHotelRate] = useState(DEFAULT_HOTEL);
+  const [perDiemRate, setPerDiemRate] = usePersistentState("rigpro_per_diem_rate", DEFAULT_PER_DIEM);
+  const [hotelRate, setHotelRate] = usePersistentState("rigpro_hotel_rate", DEFAULT_HOTEL);
   const [companyInfo, setCompanyInfo] = useState(() => {
     const s = localStorage.getItem("rigpro_company");
     return s ? JSON.parse(s) : DEFAULT_COMPANY;
   });
   useEffect(() => { localStorage.setItem("rigpro_company", JSON.stringify(companyInfo)); }, [companyInfo]);
-  const [liftTonThreshold, setLiftTonThreshold] = useState(10);
+  const [liftTonThreshold, setLiftTonThreshold] = usePersistentState("rigpro_lift_threshold", 10);
   const [jobFolders, setJobFolders] = useState({});
   const [showJFM, setShowJFM] = useState(null);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);

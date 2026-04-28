@@ -1,8 +1,35 @@
 import React, { useState, useMemo, useEffect } from 'react';
 
+/**
+ * Custom hook to persist state in localStorage
+ */
+function usePersistentState(key, initialValue) {
+  const [state, setState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved !== null) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn(`Error loading state for key "${key}" from localStorage:`, e);
+    }
+    return initialValue;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(state));
+    } catch (e) {
+      console.warn(`Error saving state for key "${key}" to localStorage:`, e);
+    }
+  }, [key, state]);
+
+  return [state, setState];
+}
+
 function useTableSort(items) {
-  const [sortKey, setSortKey] = useState("create_date");
-  const [sortDir, setSortDir] = useState(-1);
+  const [sortKey, setSortKey] = usePersistentState("rigpro_leads_sort_key", "create_date");
+  const [sortDir, setSortDir] = usePersistentState("rigpro_leads_sort_dir", -1);
   const requestSort = (key) => {
     if (sortKey === key) setSortDir(-sortDir);
     else { setSortKey(key); setSortDir(1); }
@@ -33,9 +60,9 @@ function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, c
 
 const LeadsBoard = (props) => {
   const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, setJobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount } = props;
-  const [search, setSearch] = useState("");
-  const [leadView, setLeadView] = useState("list");
-  const [selLead, setSelLead] = useState(null);
+  const [search, setSearch] = usePersistentState("rigpro_leads_search", "");
+  const [leadView, setLeadView] = usePersistentState("rigpro_leads_view", "list");
+  const [selLead, setSelLead] = usePersistentState("rigpro_sel_lead", null);
 
   const isEstimator = (u) => u.role === "estimator" || (u.roles || []).includes("estimator");
   const allEstimators = (appUsers || []).filter(isEstimator);
