@@ -171,7 +171,7 @@ const LeadsBoard = (props) => {
         (l.first_name || "").toLowerCase().includes(s) ||
         (l.last_name || "").toLowerCase().includes(s) ||
         (l.customer_name || "").toLowerCase().includes(s) ||
-        (l.description || "").toLowerCase().includes(s)
+        (l.description || l.desc || l.jobDesc || "").toLowerCase().includes(s)
       );
     });
   }, [leads, leadsSearch]);
@@ -433,14 +433,15 @@ const LeadsBoard = (props) => {
                       <div>
                         <div style={{ fontSize:16, fontWeight:900, color:C.txt, marginBottom:10, textTransform:"uppercase", letterSpacing:1 }}>Location</div>
                         <div style={{ background:C.bg, padding:30, borderRadius:20, marginTop:15, fontSize:15, fontWeight:600, color:C.txt, lineHeight:1.7, border:`1px solid ${C.bdrL}`, boxShadow:"inset 0 2px 4px rgba(0,0,0,0.02)" }}>
-                          {!selLead.address1 && !selLead.city && !selLead.state && !selLead.zip ? (
+                          {!(selLead.address1 || selLead.street) && !selLead.city && !selLead.state && !(selLead.zip || selLead.zipcode) && !selLead.jobSite ? (
                             <div style={{ color:C.txtS, fontStyle:"italic" }}>No address entered</div>
                           ) : (
                             <div style={{display:"flex", flexDirection:"column", gap:8}}>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{selLead.street || "—"}</span></div>
+                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Location:</span><span>{selLead.jobSite || "—"}</span></div>
+                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{selLead.address1 || selLead.street || "—"}</span></div>
                               <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>City:</span><span>{selLead.city || "—"}</span></div>
                               <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>State:</span><span>{selLead.state || "—"}</span></div>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{selLead.zipcode || "—"}</span></div>
+                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{selLead.zip || selLead.zipcode || "—"}</span></div>
                             </div>
                           )}
                         </div>
@@ -449,7 +450,7 @@ const LeadsBoard = (props) => {
 
                     <div>
                       <div style={{ fontSize:16, fontWeight:900, color:C.txt, marginBottom:10, textTransform:"uppercase", letterSpacing:1 }}>Lead Description</div>
-                      <div style={{ background:"#fffbeb", padding:30, borderRadius:20, border:`1px solid #fef3c7`, fontSize:16, color:C.txtM, lineHeight:1.8, minHeight:200, whiteSpace:"pre-wrap" }}>{selLead.description || "No description provided."}</div>
+                      <div style={{ background:"#fffbeb", padding:30, borderRadius:20, border:`1px solid #fef3c7`, fontSize:16, color:C.txtM, lineHeight:1.8, minHeight:200, whiteSpace:"pre-wrap" }}>{selLead.desc || selLead.description || selLead.jobDesc || "No description provided."}</div>
 
                       <div style={{ marginTop: 45 }}>
                         <Sec c="Authorized Personnel Directory"/>
