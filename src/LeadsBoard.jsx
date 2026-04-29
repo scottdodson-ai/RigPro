@@ -323,7 +323,17 @@ const LeadsBoard = (props) => {
                       <div style={{ fontSize:14, fontWeight:600, color:C.txtM, marginBottom:4 }}>{l.customer_name || "—"}</div>
                       <div style={{ fontSize: 11, color: C.txtS, marginBottom: 10 }}>Created: {l.create_date ? new Date(l.create_date).toLocaleString() : "Unknown"}</div>
                       <div style={{ display:"flex", gap:15, borderTop:`1px solid ${C.bdr}`, paddingTop:10, fontSize: 12, color: C.txtS }}>
-                        <div>{l.city ? `${l.city}${l.state ? `, ${l.state}` : ""}` : (l.jobSite || "No Location")}</div>
+                        <div>
+                          {(() => {
+                            const locs = custData && custData[l.customer_name] && custData[l.customer_name].locations;
+                            if (locs && locs.length > 0) {
+                              return locs.slice(0, 2).map((loc, i) => (
+                                <div key={i}>{loc.name ? `${loc.name}: ` : ''}{loc.address}{loc.city ? `, ${loc.city}` : ''}</div>
+                              )).concat(locs.length > 2 ? <div key="more" style={{ color: C.acc, fontSize: 10 }}>+{locs.length - 2} more sites</div> : []);
+                            }
+                            return l.city ? `${l.city}${l.state ? `, ${l.state}` : ""}` : (l.jobSite || "No Location");
+                          })()}
+                        </div>
                         <div style={{marginLeft:"auto", textAlign: "right"}}>
                            <div style={{fontWeight: 700, color: C.txtM}}>{tInfo.formatted} elapsed</div>
                         </div>
@@ -433,17 +443,35 @@ const LeadsBoard = (props) => {
                       <div>
                         <div style={{ fontSize:16, fontWeight:900, color:C.txt, marginBottom:10, textTransform:"uppercase", letterSpacing:1 }}>Location</div>
                         <div style={{ background:C.bg, padding:30, borderRadius:20, marginTop:15, fontSize:15, fontWeight:600, color:C.txt, lineHeight:1.7, border:`1px solid ${C.bdrL}`, boxShadow:"inset 0 2px 4px rgba(0,0,0,0.02)" }}>
-                          {!(selLead.address1 || selLead.street) && !selLead.city && !selLead.state && !(selLead.zip || selLead.zipcode) && !selLead.jobSite ? (
-                            <div style={{ color:C.txtS, fontStyle:"italic" }}>No address entered</div>
-                          ) : (
-                            <div style={{display:"flex", flexDirection:"column", gap:8}}>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Location:</span><span>{selLead.jobSite || "—"}</span></div>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{selLead.address1 || selLead.street || "—"}</span></div>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>City:</span><span>{selLead.city || "—"}</span></div>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>State:</span><span>{selLead.state || "—"}</span></div>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{selLead.zip || selLead.zipcode || "—"}</span></div>
-                            </div>
-                          )}
+                          {(() => {
+                            const locs = custData && custData[selLead.customer_name] && custData[selLead.customer_name].locations;
+                            if (locs && locs.length > 0) {
+                              return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+                                  {locs.map((loc, idx) => (
+                                    <div key={idx} style={{ paddingBottom: idx < locs.length - 1 ? 15 : 0, borderBottom: idx < locs.length - 1 ? `1px solid ${C.bdr}` : 'none' }}>
+                                      <div style={{ fontWeight: 800, color: C.acc, marginBottom: 4 }}>{loc.name || `Site ${idx+1}`}</div>
+                                      <div style={{ display:"flex", gap:10 }}><span style={{color:C.txtS, width:75}}>Street:</span><span>{loc.address || "—"}</span></div>
+                                      <div style={{ display:"flex", gap:10 }}><span style={{color:C.txtS, width:75}}>City:</span><span>{loc.city || "—"}</span></div>
+                                      <div style={{ display:"flex", gap:10 }}><span style={{color:C.txtS, width:75}}>State:</span><span>{loc.state || "—"}</span></div>
+                                      <div style={{ display:"flex", gap:10 }}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{loc.zip || "—"}</span></div>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return (!(selLead.address1 || selLead.street) && !selLead.city && !selLead.state && !(selLead.zip || selLead.zipcode) && !selLead.jobSite) ? (
+                              <div style={{ color:C.txtS, fontStyle:"italic" }}>No address entered</div>
+                            ) : (
+                              <div style={{display:"flex", flexDirection:"column", gap:8}}>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Location:</span><span>{selLead.jobSite || "—"}</span></div>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{selLead.address1 || selLead.street || "—"}</span></div>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>City:</span><span>{selLead.city || "—"}</span></div>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>State:</span><span>{selLead.state || "—"}</span></div>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{selLead.zip || selLead.zipcode || "—"}</span></div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
