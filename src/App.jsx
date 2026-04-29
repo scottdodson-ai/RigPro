@@ -7,6 +7,7 @@ import RigPro3InvestorDashboard from "./RigPro3InvestorDashboard";
 import LeadsBoard from "./LeadsBoard";
 import JSAWizardModal from "./JSAWizardModal";
 import { useAppStore } from "./store";
+import { getLeadTimeInfo } from './timeUtils';
 
 function fmt(n) { return "$" + Math.round(Number(n || 0)).toLocaleString(); }
 function fmtD(d) { return d ? new Date(d).toISOString().slice(0, 10) : ""; }
@@ -3142,12 +3143,14 @@ function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, 
                     >
                       <div style={{ width: "65%", overflow: "hidden", paddingRight: 8 }}>
                         <div style={{ fontWeight: 700, fontSize: 13, color: C.txt, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{q.client || 'Unknown'}</div>
+                        <div style={{ fontSize: 11, color: C.txtS, fontWeight: 600 }}>Wait time: {getLeadTimeInfo(q.create_date || q.start_date).formatted}</div>
                         <div style={{ fontSize: 11, color: C.txtM, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{q.jobSite || q.description || q.job_description || "Not Specified"}</div>
                         {!q.jsaData?.completed && <div style={{ fontSize: 10, color: C.red, fontWeight: 700, marginTop: 4 }}>⚠️ JSA not completed</div>}
                       </div>
                       <div style={{ textAlign: "right", width: "35%" }}>
                         <div style={{ fontSize: 12, fontWeight: 800, color: C.acc }}>{fmt(parseFloat(q.total || 0))}</div>
-                        <div style={{ fontSize: 10, color: C.txtM }}>{q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleDateString() : 'N/A'}</div>
+                        <div style={{ fontSize: 10, color: C.txtM }}>Created: {q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleString() : 'N/A'}</div>
+                        <div style={{ fontSize: 10, color: C.txtM }}>Modified: {q.last_modified ? new Date(q.last_modified).toLocaleString() : 'N/A'}</div>
                         {(role || []).includes('admin') && (
                           <button style={{ padding: "2px 6px", fontSize: 9, background: C.red, color: "#fff", border: "none", borderRadius: 4, marginTop: 4, cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteQuote(q.id); }}>Delete</button>
                         )}
@@ -3176,7 +3179,9 @@ function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, 
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: C.txtS, textTransform: "uppercase" }}>Customer</span>
                         <div style={{ textAlign: "right" }}>
-                          <div style={{ fontSize: 11, color: C.txtM, fontWeight: 600 }}>{q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleDateString() : ''}</div>
+                          <div style={{ fontSize: 11, color: C.txtM, fontWeight: 600 }}>Created: {q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleString() : ''}</div>
+                          <div style={{ fontSize: 11, color: C.txtM, fontWeight: 600 }}>Modified: {q.last_modified ? new Date(q.last_modified).toLocaleString() : ''}</div>
+                          <div style={{ fontWeight: 700, color: C.txtM, fontSize: 11 }}>{getLeadTimeInfo(q.create_date || q.start_date).formatted} elapsed</div>
                         </div>
                       </div>
                       <div style={{ fontWeight: 700, color: C.txt, fontSize: 15, marginBottom: 8 }}>

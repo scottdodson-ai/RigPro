@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from './store';
+import { getLeadTimeInfo } from './timeUtils';
 
 /**
  * Custom hook to persist state in localStorage
@@ -79,6 +80,15 @@ const LeadsBoard = (props) => {
     const inProgStatus = (statusList || []).find(s => s.name === "In Progress")?.id || "In Progress"; 
     const pName = profileUser ? (profileUser.username || profileUser.first_name || "") : ""; 
     openEdit({ ...lead, status: inProgStatus, client: lead.client || lead.customer_name || lead.company, salesAssoc: pName, sales_assoc: pName, estimator: pName, estimator_id: pName });
+  };
+
+  const getLeadSlaColor = (l) => {
+    if (l.estimator_id) return { bg: "#ffffff", blink: false };
+    const { bDays } = getLeadTimeInfo(l.create_date);
+    if (bDays === 0) return { bg: "#dcfce7", blink: false }; // light green
+    if (bDays === 1) return { bg: "#fef08a", blink: false }; // yellow
+    if (bDays === 2) return { bg: "#fee2e2", blink: false }; // light red
+    return { bg: "#fee2e2", blink: true }; // >2 days: blinking light red
   };
 
   const handleAssign = async (usernameTarget, targetLead = selLead) => {
@@ -168,11 +178,7 @@ const LeadsBoard = (props) => {
 
   const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filteredLeads);
 
-  useEffect(() => {
-    if (!selLead && sortedItems.length > 0 && leadsView === "list") {
-      setSelLead(sortedItems[0]);
-    }
-  }, [sortedItems, selLead, setSelLead, leadsView]);
+
 
   const formatAssocName = (username) => {
     const user = (appUsers || []).find(u => u.username === username);
@@ -250,21 +256,30 @@ const LeadsBoard = (props) => {
                   <table style={{ width:"100%", borderCollapse:"collapse" }}>
                     <thead>
                       <tr>
-                        <SortTh style={{ ...thS, width: "40%" }} label="Customer" sortKey="customer_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh style={{ ...thS, width: "40%" }} label="Contact" sortKey="last_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <th style={{ ...thS, width: "20%" }}></th>
+                        <SortTh style={{ ...thS, width: "30%" }} label="Customer" sortKey="customer_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "25%" }} label="Contact" sortKey="last_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "30%" }} label="Timing" sortKey="create_date" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <th style={{ ...thS, width: "15%" }}></th>
                       </tr>
                     </thead>
                     <tbody>
                       {sortedItems.map(l => {
                         const isSel = selLead && selLead.id === l.id;
+                        const sla = getLeadSlaColor(l);
+                        const tInfo = getLeadTimeInfo(l.create_date);
                         return (
-                          <tr key={l.id} style={{ background: isSel ? C.accL : "transparent", cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
-                            <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 180, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={l.customer_name || ""}>{l.customer_name || "—"}</td>
-                            <td style={{ ...tdS, color:C.txtM, fontSize:13, maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.customer_name || `Lead #${l.id}`}
+                          <tr key={l.id} className={!isSel && sla.blink ? "bg-blink-red" : ""} style={{ background: isSel ? C.accL : (sla.blink ? undefined : sla.bg), cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
+                            <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 160, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              <div title={l.customer_name || ""}>{l.customer_name || "—"}</div>
                             </td>
-                            <td style={{ ...tdS, width: 140, textAlign: "right" }}>
+                            <td style={{ ...tdS, color:C.txtM, fontSize:13, maxWidth: 160, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : `Lead #${l.id}`}
+                            </td>
+                            <td style={{ ...tdS, color:C.txtM, fontSize:12, maxWidth: 180, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              <div style={{ color: C.txtS, fontWeight: 500 }}>Created: {l.create_date ? new Date(l.create_date).toLocaleString() : "Unknown"}</div>
+                              <div style={{ color: C.acc, fontWeight: 700, marginTop: 4 }}>Time Elapsed: {tInfo.formatted}</div>
+                            </td>
+                            <td style={{ ...tdS, width: 120, textAlign: "right" }}>
                               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                                 {isAdmin && (
                                   <button
@@ -294,18 +309,24 @@ const LeadsBoard = (props) => {
                   </table>
               ) : (
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:15 }}>
-                  {sortedItems.map(l => (
-                    <div key={l.id} style={{ cursor:"pointer", padding:20, borderRadius:16, transition:"0.2s", background: "#fff", border: `1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
+                  {sortedItems.map(l => {
+                    const sla = getLeadSlaColor(l);
+                    const tInfo = getLeadTimeInfo(l.create_date);
+                    return (
+                    <div key={l.id} className={sla.blink ? "bg-blink-red" : ""} style={{ cursor:"pointer", padding:20, borderRadius:16, transition:"0.2s", background: sla.blink ? undefined : sla.bg, border: `1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
                         <div style={{ fontWeight:900, fontSize:16, color: C.txt }}>
                           {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.customer_name || `Lead #${l.id}`}
                         </div>
                         <span style={{ background:C.accL, color:C.acc, borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>{formatStatusName(l.status_number)}</span>
                       </div>
-                      <div style={{ fontSize:14, fontWeight:600, color:C.txtM, marginBottom:10 }}>{l.customer_name || "—"}</div>
+                      <div style={{ fontSize:14, fontWeight:600, color:C.txtM, marginBottom:4 }}>{l.customer_name || "—"}</div>
+                      <div style={{ fontSize: 11, color: C.txtS, marginBottom: 10 }}>Created: {l.create_date ? new Date(l.create_date).toLocaleString() : "Unknown"}</div>
                       <div style={{ display:"flex", gap:15, borderTop:`1px solid ${C.bdr}`, paddingTop:10, fontSize: 12, color: C.txtS }}>
-                        <div>{l.city ? `${l.city}${l.state ? `, ${l.state}` : ""}` : "No Location"}</div>
-                        <div style={{marginLeft:"auto"}}>{new Date(l.create_date).toLocaleDateString()}</div>
+                        <div>{l.city ? `${l.city}${l.state ? `, ${l.state}` : ""}` : (l.jobSite || "No Location")}</div>
+                        <div style={{marginLeft:"auto", textAlign: "right"}}>
+                           <div style={{fontWeight: 700, color: C.txtM}}>{tInfo.formatted} elapsed</div>
+                        </div>
                       </div>
                       {(l.estimator_id !== (profileUser ? profileUser.username : null) || isAdmin) && (
                         <div style={{ borderTop: `1px solid ${C.bdr}`, paddingTop: 10, marginTop: 10, display: "flex", justifyContent: "flex-end", gap: 10 }}>
@@ -326,7 +347,8 @@ const LeadsBoard = (props) => {
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

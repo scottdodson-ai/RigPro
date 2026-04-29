@@ -393,7 +393,9 @@ app.get('/api/data', authenticateToken, async (req, res) => {
                 q.customer_id,
                 q.job_site as jobSite,
                 q.description as jobDesc,
-                q.date,
+                q.create_date as date,
+                q.create_date,
+                q.last_modified,
                 s.name as status,
                 q.status as status_id,
                 q.quote_type as qtype,
@@ -1071,7 +1073,8 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
       }
     }
 
-    const finalSetClause = keys.map(k => `\`${k}\` = ?`).join(', ');
+    let finalSetClause = keys.map(k => `\`${k}\` = ?`).join(', ');
+    if (table === 'quotes') finalSetClause += ', last_modified = NOW()';
 
     const [result] = await db.query(`UPDATE \`${table}\` SET ${finalSetClause} WHERE id = ?`, [...values, id]);
 
@@ -1273,7 +1276,7 @@ app.post('/api/admin/init', authenticateToken, authenticateAdmin, async (req, re
     // 2. Insert Quotes
     for (const q of quotes) {
       await connection.query(
-        'INSERT INTO quotes (quote_number, customer_name, job_site, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO quotes (quote_number, customer_name, job_site, description, create_date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [passStr(q.qn), passStr(q.client), passStr(q.jobSite), passStr(q.desc), passDate(q.date), passStr(q.status), passStr(q.qtype), passNum(q.labor), passNum(q.equip), passNum(q.hauling), passNum(q.travel), passNum(q.mats), passNum(q.total), passNum(q.markup), passStr(q.salesAssoc), passStr(q.jobNum), passDate(q.startDate), passDate(q.compDate), q.locked ? 1 : 0]
       );
     }
@@ -2358,7 +2361,7 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       }
     } else {
       const [insertResult] = await connection.query(
-        'INSERT INTO quotes (quote_number, customer_id, job_site, description, date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO quotes (quote_number, customer_id, job_site, description, create_date, status, quote_type, labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         rowValues
       );
       savedId = insertResult.insertId;
