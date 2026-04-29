@@ -92,7 +92,23 @@ const LeadsBoard = (props) => {
   };
 
   const handleAssign = async (usernameTarget, targetLead = selLead) => {
-    if (!targetLead) return;
+    if (!targetLead || !usernameTarget) return;
+
+    if (!targetLead.estimator_id || String(targetLead.estimator_id).trim() === "") {
+      if (!openEdit) return;
+      const inProgStatus = (statusList || []).find(s => s.name === "In Progress")?.id || "In Progress"; 
+      openEdit({ 
+        ...targetLead, 
+        status: inProgStatus, 
+        client: targetLead.client || targetLead.customer_name || targetLead.company, 
+        salesAssoc: usernameTarget, 
+        sales_assoc: usernameTarget, 
+        estimator: usernameTarget, 
+        estimator_id: usernameTarget 
+      });
+      return;
+    }
+
     try {
       // Map estimator update payload to quotes schema
       const payload = { sales_assoc: usernameTarget, status: 2 }; // status 2 is Quote Requested / In Progress
@@ -385,24 +401,14 @@ const LeadsBoard = (props) => {
                  <div style={{ maxWidth:950, margin:"0 auto" }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
                     <div style={{ display:"flex", gap:15, alignItems:"center", justifyContent:"flex-end", flexWrap: "wrap" }}>
-                       {(role || []).includes('admin') && (
-                         <select 
-                           style={{ padding:"5px 10px", borderRadius:6, border:`1px solid ${C.bdr}`, cursor:"pointer", color:C.txt, outline:"none", fontSize:12, background:"#f8fafc", fontWeight:600 }}
-                           value={selLead.status_number || 1}
-                           onChange={e => handleStatusChange(e.target.value)}
-                         >
-                           {statusList && statusList.filter(s => s.type === 'quote').map(s => (
-                             <option key={s.id} value={s.id}>{s.name}</option>
-                           ))}
-                         </select>
-                       )}
+
                        {selLead.estimator_id && <span style={{ background:C.accL, padding:"6px 12px", borderRadius:6, color:C.acc, fontWeight:800 }}>Est: {formatAssocName(selLead.estimator_id)}</span>}
                        <select 
                          style={{ padding:"5px 10px", borderRadius:6, border:`1px solid ${C.bdr}`, cursor:"pointer", color:C.txtM, outline:"none", fontSize:12, background:"#fff" }}
                          value={selLead.estimator_id || ""}
                          onChange={e => handleAssign(e.target.value)}
                        >
-                         <option value="">-- Assign Other Estimator --</option>
+                         <option value="">-- Assign Estimator --</option>
                          {otherEstimators.map(u => (
                            <option key={u.id} value={u.username}>{u.first_name} {u.last_name||""}</option>
                          ))}

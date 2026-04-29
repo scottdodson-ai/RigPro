@@ -4109,11 +4109,19 @@ function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {},
       if (!res.ok) throw new Error("Failed to create lead");
       const created = await res.json();
       const mappedLead = {
+        ...lead,
         ...created,
+        id: created.id,
+        date: lead.create_date,
+        create_date: lead.create_date,
+        status: "Lead",
         customer_name: created.customer_name || created.client || lead.customer_name,
+        company: created.customer_name || created.client || lead.customer_name,
         status_number: Number(created.status) || 1,
         estimator_id: created.sales_assoc || lead.estimator_id,
-        description: created.description || created.desc || lead.description
+        salesAssoc: created.sales_assoc || lead.estimator_id,
+        description: created.description || created.desc || lead.description,
+        desc: lead.description
       };
       onSave(mappedLead);
       onClose();
@@ -4626,12 +4634,6 @@ function LeadModal({ init, onSave, onClose, appUsers = [], custData = {}, setCus
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            <div style={{ flex: "1 1 120px" }}>
-              <Lbl c="STATUS" />
-              <select style={{ ...sel, width: "100%", boxSizing: "border-box" }} value={f.status} onChange={e => u("status", e.target.value)}>
-                {["New", "In Progress", "Quoted", "Dead"].map(x => <option key={x}>{x}</option>)}
-              </select>
-            </div>
             <div style={{ flex: "1 1 120px" }}>
               <Lbl c="ESTIMATOR" />
               <select style={{ ...sel, width: "100%", boxSizing: "border-box" }} value={f.salesAssoc || ""} onChange={e => u("salesAssoc", e.target.value)}>

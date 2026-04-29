@@ -9,66 +9,54 @@ async function run() {
     database: 'rigpro'
   });
 
-  console.log('Starting migration...');
+  console.log('Starting migration to normalize customer address data to sites table...');
 
-  // 1. Add columns back to customers if missing
   try {
-    await db.query('ALTER TABLE customers ADD COLUMN street VARCHAR(255)');
-    await db.query('ALTER TABLE customers ADD COLUMN city VARCHAR(100)');
-    await db.query('ALTER TABLE customers ADD COLUMN state VARCHAR(50)');
-    await db.query('ALTER TABLE customers ADD COLUMN zip VARCHAR(20)');
-    console.log('Added address columns to customers.');
+    // 1. Move address data from customers to sites
+    const [customers] = await db.query('SELECT id, name, street, city, state, zip FROM customers WHERE street IS NOT NULL OR city IS NOT NULL OR zip IS NOT NULL');
+    console.log(`Found ${customers.length} customers with address data to migrate.`);
+    
+    for (const cust of customers) {
+      if (cust.street || cust.city || cust.state || cust.zip) {
+        // Check if site already exists
+        const [existingSites] = await db.query(
+          'SELECT id FROM sites WHERE customer_id = ? AND (address1 = ? OR city = ? OR zip = ?) LIMIT 1',
+          [cust.id, cust.street || '', cust.city || '', cust.zip || '']
+        );
+        
+        let siteId;
+        if (existingSites.length > 0) {
+          siteId = existingSites[0].id;
+        } else {
+          // Insert new site
+          const [insertedSite] = await db.query(
+            'INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)',
+            [cust.id, 'Main', cust.street || '', cust.city || '', cust.state || '', cust.zip || '']
+          );
+          siteId = insertedSite.insertId;
+          console.log(`Created new site ${siteId} for customer ${cust.id}`);
+        }
+        
+        // Link site to customer record
+        await db.query('UPDATE customers SET site_id = ?, primary_site_id = ? WHERE id = ?', [siteId, siteId, cust.id]);
+        
+        // Also update any quotes for this customer that don't have a site_id
+        await db.query('UPDATE quotes SET site_id = ? WHERE customer_id = ? AND (site_id IS NULL OR site_id = 0)', [siteId, cust.id]);
+      }
+    }
+    console.log('Migrated data from customers to sites.');
   } catch (e) {
-    console.log('Address columns might already exist in customers.', e.message);
+    console.log('Failed to migrate from customers to sites:', e.message);
   }
 
-  // 2. Move data from sites (primary site) to customers
-  try {
-    await db.query(`
-      UPDATE customers c 
-      JOIN sites s ON c.primary_site_id = s.id 
-      SET c.street = s.address1, c.city = s.city, c.state = s.state, c.zip = s.zip
-    `);
-    console.log('Migrated data from sites to customers.');
-  } catch (e) {
-    console.log('Failed to migrate from sites:', e.message);
-  }
-
-  // 3. Move data from quotes to customers where customer address is empty
-  try {
-    await db.query(`
-      UPDATE customers c 
-      JOIN quotes q ON c.id = q.customer_id 
-      SET c.street = COALESCE(NULLIF(c.street, ''), q.street),
-          c.city = COALESCE(NULLIF(c.city, ''), q.city),
-          c.state = COALESCE(NULLIF(c.state, ''), q.state),
-          c.zip = COALESCE(NULLIF(c.zip, ''), q.zipcode)
-    `);
-    console.log('Migrated data from quotes to customers.');
-  } catch (e) {
-    console.log('Failed to migrate from quotes:', e.message);
-  }
-
-  // 4. Drop customer_num from customers
-  try {
-    await db.query('ALTER TABLE customers DROP COLUMN customer_num');
-    console.log('Dropped customer_num from customers.');
-  } catch (e) {
-    console.log('Failed to drop customer_num:', e.message);
-  }
-
-  // 5. Drop customer columns from quotes
-  const dropQuoteCols = [
-    'customer_name', 'street', 'city', 'state', 'zipcode', 
-    'first_name', 'last_name', 'contact_phone', 'contact_email'
-  ];
-
-  for (let col of dropQuoteCols) {
+  // 2. Drop legacy columns from customers
+  const dropCols = ['street', 'city', 'state', 'zip'];
+  for (let col of dropCols) {
     try {
-      await db.query(`ALTER TABLE quotes DROP COLUMN ${col}`);
-      console.log(`Dropped ${col} from quotes.`);
+      await db.query(`ALTER TABLE customers DROP COLUMN ${col}`);
+      console.log(`Dropped ${col} from customers.`);
     } catch (e) {
-      console.log(`Failed to drop ${col} from quotes:`, e.message);
+      console.log(`Column ${col} might already be dropped or an error occurred:`, e.message);
     }
   }
 

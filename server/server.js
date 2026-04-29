@@ -525,13 +525,20 @@ app.get('/api/data', authenticateToken, async (req, res) => {
     const statusRaw = await safeQuery('SELECT * FROM status ORDER BY sort_order ASC');
     const status = statusRaw.map(s => ({ ...s, type: 'quote' }));
     const leadsRaw = await safeQuery('SELECT q.*, c.name AS c_name FROM quotes q LEFT JOIN customers c ON q.customer_id = c.id WHERE q.status = 1 ORDER BY q.id DESC');
-    const leads = leadsRaw.map(l => ({ 
-      ...l, 
-      customer_name: l.c_name || l.customer_name || l.client,
-      status_number: Number(l.status) || 1,
-      estimator_id: l.sales_assoc,
-      description: l.description || l.desc || ''
-    }));
+    const leads = leadsRaw.map(l => {
+      let json = {};
+      if (l.quote_data) {
+        try { json = JSON.parse(l.quote_data); } catch { }
+      }
+      return {
+        ...json,
+        ...l, 
+        customer_name: l.c_name || l.customer_name || l.client || json.customer_name || json.client,
+        status_number: Number(l.status) || 1,
+        estimator_id: l.sales_assoc || json.salesAssoc || json.estimator_id,
+        description: l.description || l.desc || json.description || json.desc || ''
+      };
+    });
 
     // Map customers array back to the object structure expected by App.jsx
     const custData = {};
@@ -963,8 +970,12 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
 
 
   try {
-    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at' && !(table === 'sites' && k === 'customer_name'));
-    if (keys.length === 0) return res.status(400).json({ error: 'No data provided' });
+    const skipKeys = ['id', 'created_at', 'updated_at'];
+    if (table === 'customers') {
+       skipKeys.push('street', 'city', 'state', 'zip', 'address1');
+    }
+    const keys = Object.keys(data).filter(k => !skipKeys.includes(k) && !(table === 'sites' && k === 'customer_name'));
+    if (keys.length === 0 && table !== 'customers') return res.status(400).json({ error: 'No data provided' });
 
     const values = keys.map(k => {
       let val = data[k];
@@ -990,7 +1001,13 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
     const columns = keys.map(k => `\`${k}\``).join(', ');
     const placeholders = keys.map(() => '?').join(', ');
 
-    const [result] = await db.query(`INSERT INTO \`${table}\` (${columns}) VALUES (${placeholders})`, values);
+    let result;
+    if (keys.length > 0) {
+      [result] = await db.query(`INSERT INTO \`${table}\` (${columns}) VALUES (${placeholders})`, values);
+    } else {
+      // Fallback for customers if no valid columns are provided
+      [result] = await db.query(`INSERT INTO \`${table}\` () VALUES ()`);
+    }
     
     // Fetch the newly created row to return it
     const [newRow] = await db.query(`SELECT * FROM \`${table}\` WHERE id = ?`, [result.insertId]);
@@ -999,6 +1016,22 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
        triggerGeocodeUpdate(result.insertId, data.address1, data.city, data.state, data.zip);
     }
 
+    if (table === 'customers') {
+      const streetVal = String(data.street || data.address1 || '').trim();
+      const cityVal = String(data.city || '').trim();
+      const stateVal = String(data.state || '').trim();
+      const zipVal = String(data.zip || data.zipcode || '').trim();
+      
+      if (streetVal || cityVal || stateVal || zipVal) {
+        const [insertedSite] = await db.query(
+          'INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)',
+          [result.insertId, 'Main', streetVal, cityVal, stateVal, zipVal]
+        );
+        await db.query('UPDATE customers SET site_id = ?, primary_site_id = ? WHERE id = ?', [insertedSite.insertId, insertedSite.insertId, result.insertId]);
+        newRow[0].site_id = insertedSite.insertId;
+        newRow[0].primary_site_id = insertedSite.insertId;
+      }
+    }
 
     res.json(newRow[0]);
   } catch (error) {
@@ -1028,8 +1061,12 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
 
   try {
 
-    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at' && k !== 'updated_at' && !(table === 'sites' && k === 'customer_name'));
-    if (keys.length === 0) return res.json({ message: 'No change needed' });
+    const skipKeys = ['id', 'created_at', 'updated_at'];
+    if (table === 'customers') {
+      skipKeys.push('street', 'city', 'state', 'zip', 'address1');
+    }
+    const keys = Object.keys(data).filter(k => !skipKeys.includes(k) && !(table === 'sites' && k === 'customer_name'));
+    if (keys.length === 0 && table !== 'customers') return res.json({ message: 'No change needed' });
 
     const values = keys.map(k => {
       let val = data[k];
@@ -1080,12 +1117,37 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
     let finalSetClause = keys.map(k => `\`${k}\` = ?`).join(', ');
     if (table === 'quotes') finalSetClause += ', last_modified = NOW()';
 
-    const [result] = await db.query(`UPDATE \`${table}\` SET ${finalSetClause} WHERE id = ?`, [...values, id]);
+    if (keys.length > 0 || table === 'quotes') {
+      await db.query(`UPDATE \`${table}\` SET ${finalSetClause} WHERE id = ?`, [...values, id]);
+    }
 
     if (table === 'sites') {
       db.query('SELECT address1, city, state, zip FROM sites WHERE id = ?', [id]).then(([r])=> {
         if (r.length > 0) triggerGeocodeUpdate(id, r[0].address1, r[0].city, r[0].state, r[0].zip);
       }).catch(()=>{});
+    }
+
+    if (table === 'customers') {
+      const streetVal = String(data.street || data.address1 || '').trim();
+      const cityVal = String(data.city || '').trim();
+      const stateVal = String(data.state || '').trim();
+      const zipVal = String(data.zip || data.zipcode || '').trim();
+      
+      if (streetVal || cityVal || stateVal || zipVal) {
+        const [existingSites] = await db.query('SELECT id FROM sites WHERE customer_id = ? AND site_type = "Main" LIMIT 1', [id]);
+        if (existingSites.length > 0) {
+          await db.query(
+            'UPDATE sites SET address1 = ?, city = ?, state = ?, zip = ? WHERE id = ?',
+            [streetVal, cityVal, stateVal, zipVal, existingSites[0].id]
+          );
+        } else {
+          const [insertedSite] = await db.query(
+            'INSERT INTO sites (customer_id, site_type, address1, city, state, zip) VALUES (?, ?, ?, ?, ?, ?)',
+            [id, 'Main', streetVal, cityVal, stateVal, zipVal]
+          );
+          await db.query('UPDATE customers SET site_id = ?, primary_site_id = ? WHERE id = ?', [insertedSite.insertId, insertedSite.insertId, id]);
+        }
+      }
     }
 
 
@@ -2359,7 +2421,7 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
     let savedId = targetId;
     if (targetId) {
       await connection.query(
-        'UPDATE quotes SET quote_number=?, customer_id=?, site_id=?, job_site=?, description=?, date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=?, creator_id=COALESCE(creator_id, ?) WHERE id=?',
+        'UPDATE quotes SET quote_number=?, customer_id=?, site_id=?, job_site=?, description=?, create_date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=?, creator_id=COALESCE(creator_id, ?) WHERE id=?',
         [...rowValues, targetId]
       );
       if (oldStatus !== (quote.status || 'Draft')) {
@@ -2403,7 +2465,7 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
     } else {
       const [insertResult] = await connection.query(
         `INSERT INTO quotes (
-          quote_number, customer_id, site_id, job_site, description, date, status, quote_type,
+          quote_number, customer_id, site_id, job_site, description, create_date, status, quote_type,
           labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data, creator_id
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         rowValues
