@@ -6669,7 +6669,7 @@ function ProfileTemplateModal({ template, setTemplate, onClose }) {
 }
 
 // ── CUSTOMER MODAL ─────────────────────────────────────────────────────────────
-function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, setCustData, profileTemplate, onOpenQuote, onOpenJobFolder, onClose }) {
+function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, setCustData, profileTemplate, onOpenQuote, onOpenJobFolder, onClose, statusList = [], profileUser = null }) {
   const data = custData[custName] || { notes: "", contacts: [], locations: [], billingAddr: "", website: "", industry: "", paymentTerms: "", accountNum: "" };
 
   const [notes, setNotes] = useState(data.notes || "");
@@ -6691,6 +6691,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
   const [newContact, setNewContact] = useState({ name: "", title: "", email: "", phone: "", primary: false, locationId: null });
   const [newLoc, setNewLoc] = useState({ name: "", address: "", notes: "" });
   const [editLoc, setEditLoc] = useState({ name: "", address: "", notes: "" });
+  const [leadsViewMode, setLeadsViewMode] = useState("list");
 
   const won = jobs.filter(q => q.status === "Won");
   const revenue = won.reduce((s, q) => s + (q.total || 0), 0);
@@ -7176,11 +7177,23 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
                       ) : (
                         <div style={{ fontSize: 10, color: C.txtS, fontStyle: "italic", textAlign: "right" }}>No quote yet</div>
                       )}
-                      <button
-                        onClick={() => onOpenJobFolder && onOpenJobFolder(r)}
-                        style={{ background: isDead ? "#1f2937" : "#fff", color: isDead ? "#9ca3af" : C.acc, border: `1px solid ${isDead ? "#374151" : C.accB}`, borderRadius: 5, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", marginTop: 2 }}>
-                        Job Folder
-                      </button>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        <button
+                          onClick={() => {
+                            const inProgStatus = statusList.find(s => s.name === "In Progress")?.id || "In Progress";
+                            const pName = profileUser ? (profileUser.username || profileUser.first_name || "") : "";
+                            onOpenQuote({ ...r, status: inProgStatus, client: r.client || r.customer_name || r.company, salesAssoc: pName, sales_assoc: pName, estimator: pName, estimator_id: pName });
+                            onClose();
+                          }}
+                          style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", marginTop: 2, boxShadow: "0 2px 4px rgba(59,130,246,0.2)" }}>
+                          Grab this lead
+                        </button>
+                        <button
+                          onClick={() => onOpenJobFolder && onOpenJobFolder(r)}
+                          style={{ background: isDead ? "#1f2937" : "#fff", color: isDead ? "#9ca3af" : C.acc, border: `1px solid ${isDead ? "#374151" : C.accB}`, borderRadius: 5, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", marginTop: 2 }}>
+                          Job Folder
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -11426,7 +11439,7 @@ export default function App() {
           showJFM, setShowJFM, deadModal, setDeadModal,
           profileTemplate, showProfileTempl, setShowProfileTempl,
           openEdit, openNew, liftTonThreshold, globalCheck, setGlobalCheck, appUsers,
-          setReqs, setJobs, jobListFilter, setJobListFilter, statusList,
+          setReqs, setJobs, jobListFilter, setJobListFilter, statusList, profileUser,
           Header, LeadModal, JobFolderModal, MarkDeadModal, CustomerModal, CompanySummaryModal, SearchResultsModal, SalesAdjustmentModal, ProfileTemplateModal
         }}
       />
@@ -11466,7 +11479,7 @@ export default function App() {
         C={C} fmt={fmt} thS={thS} tdS={tdS} leads={leads} setLeads={setLeads} reqs={reqs} jobs={jobs} setJobs={setJobs}
         actBtns={actBtns} Header={Header} token={token} setToken={setToken} role={role} setRole={setRole} view={view} setView={setView}
         appUsers={appUsers} profileUser={profileUser} statusList={statusList} custData={custData} customers={customers} globalSitesCount={globalSitesCount}
-        Sec={Sec} onAddLead={() => setShowLeadModal(true)} mkBtn={mkBtn} AutoInput={AutoInput} Lbl={Lbl} Card={Card} inp={inp} sel={sel}
+        Sec={Sec} onAddLead={() => setShowLeadModal(true)} mkBtn={mkBtn} AutoInput={AutoInput} Lbl={Lbl} Card={Card} inp={inp} sel={sel} openEdit={openEdit}
       />
     </div>
   );

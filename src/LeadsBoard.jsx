@@ -60,7 +60,7 @@ function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, c
 }
 
 const LeadsBoard = (props) => {
-  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, setJobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount } = props;
+  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, setJobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount, openEdit } = props;
   const leadsSearch = useAppStore(state => state.leadsSearch);
   const setLeadsSearch = useAppStore(state => state.setLeadsSearch);
   const leadsView = useAppStore(state => state.leadsView);
@@ -73,30 +73,40 @@ const LeadsBoard = (props) => {
   const amIEstimator = profileUser && (isEstimator(profileUser) || role === "admin" || profileUser.role === "admin" || (profileUser.roles || []).includes("admin"));
   const otherEstimators = allEstimators.filter(u => profileUser && u.username !== profileUser.username);
 
-  const handleAssign = async (usernameTarget) => {
+  const grabLead = (lead) => {
+    if (!openEdit) return;
+    const inProgStatus = (statusList || []).find(s => s.name === "In Progress")?.id || "In Progress"; 
+    const pName = profileUser ? (profileUser.username || profileUser.first_name || "") : ""; 
+    openEdit({ ...lead, status: inProgStatus, client: lead.client || lead.customer_name || lead.company, salesAssoc: pName, sales_assoc: pName, estimator: pName, estimator_id: pName });
+  };
+
+  const handleAssign = async (usernameTarget, targetLead = selLead) => {
+    if (!targetLead) return;
     try {
       // Map estimator update payload to quotes schema
       const payload = { sales_assoc: usernameTarget, status: 2 }; // status 2 is Quote Requested / In Progress
-      const res = await fetch(`${fmt.api || "/api"}/admin/tables/quotes/${selLead.id}`, {
+      const res = await fetch(`${fmt.api || "/api"}/admin/tables/quotes/${targetLead.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error("Failed to assign lead to estimator. You might lack permissions.");
       
-      const updated = { ...selLead, estimator_id: usernameTarget, sales_assoc: usernameTarget };
+      const updated = { ...targetLead, estimator_id: usernameTarget, sales_assoc: usernameTarget };
       if (usernameTarget) updated.status_number = 2; // Server backend inherently trips it to 'In Progress' Quote Mode
       
       if (setLeads) {
-        setLeads((prev) => prev.filter(l => l.id !== selLead.id));
+        setLeads((prev) => prev.filter(l => l.id !== targetLead.id));
       }
       if (setJobs) {
         setJobs(prev => {
-          if (prev.find(q => q.id === selLead.id)) return prev.map(q => q.id === selLead.id ? updated : q);
+          if (prev.find(q => q.id === targetLead.id)) return prev.map(q => q.id === targetLead.id ? updated : q);
           return [updated, ...prev];
         });
       }
-      setSelLead(null);
+      if (selLead && selLead.id === targetLead.id) {
+        setSelLead(null);
+      }
     } catch (e) {
       console.error(e);
       alert("Error assigning lead: " + e.message);
@@ -158,10 +168,10 @@ const LeadsBoard = (props) => {
   const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filteredLeads);
 
   useEffect(() => {
-    if (!selLead && sortedItems.length > 0) {
+    if (!selLead && sortedItems.length > 0 && leadsView === "list") {
       setSelLead(sortedItems[0]);
     }
-  }, [sortedItems, selLead, setSelLead]);
+  }, [sortedItems, selLead, setSelLead, leadsView]);
 
   const formatAssocName = (username) => {
     const user = (appUsers || []).find(u => u.username === username);
@@ -239,8 +249,9 @@ const LeadsBoard = (props) => {
                   <table style={{ width:"100%", borderCollapse:"collapse" }}>
                     <thead>
                       <tr>
-                        <SortTh style={{ ...thS, width: "45%" }} label="Customer" sortKey="customer_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh style={{ ...thS, width: "55%" }} label="Contact" sortKey="last_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "40%" }} label="Customer" sortKey="customer_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "40%" }} label="Contact" sortKey="last_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <th style={{ ...thS, width: "20%" }}></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -251,6 +262,15 @@ const LeadsBoard = (props) => {
                             <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 180, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={l.customer_name || ""}>{l.customer_name || "—"}</td>
                             <td style={{ ...tdS, color:C.txtM, fontSize:13, maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.customer_name || `Lead #${l.id}`}
+                            </td>
+                            <td style={{ ...tdS, width: 120, textAlign: "right" }}>
+                              {l.estimator_id !== (profileUser ? profileUser.username : null) && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); grabLead(l); }}
+                                  style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(59,130,246,0.2)" }}>
+                                  Grab this lead
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );
@@ -277,6 +297,15 @@ const LeadsBoard = (props) => {
                         <div>{l.city ? `${l.city}${l.state ? `, ${l.state}` : ""}` : "No Location"}</div>
                         <div style={{marginLeft:"auto"}}>{new Date(l.create_date).toLocaleDateString()}</div>
                       </div>
+                      {l.estimator_id !== (profileUser ? profileUser.username : null) && (
+                        <div style={{ borderTop: `1px solid ${C.bdr}`, paddingTop: 10, marginTop: 10, display: "flex", justifyContent: "flex-end" }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); grabLead(l); }}
+                            style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(59,130,246,0.2)" }}>
+                            Grab this lead
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -329,8 +358,8 @@ const LeadsBoard = (props) => {
                        </select>
                        {selLead.estimator_id !== (profileUser ? profileUser.username : null) && (
                          <button 
-                           onClick={() => handleAssign(profileUser?.username)}
-                           style={{ background:C.blu, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontWeight:800, cursor:"pointer", fontSize:12, boxShadow:"0 2px 4px rgba(59,130,246,0.2)" }}
+                           onClick={() => grabLead(selLead)}
+                           style={{ background:C.blue, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontWeight:800, cursor:"pointer", fontSize:12, boxShadow:"0 2px 4px rgba(37,99,235,0.2)" }}
                          >
                            GRAB THIS LEAD
                          </button>
