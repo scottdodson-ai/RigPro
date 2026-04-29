@@ -70,7 +70,7 @@ const LeadsBoard = (props) => {
 
   const isEstimator = (u) => u.role === "estimator" || (u.roles || []).includes("estimator");
   const allEstimators = (appUsers || []).filter(isEstimator);
-  const amIEstimator = profileUser && isEstimator(profileUser);
+  const amIEstimator = profileUser && (isEstimator(profileUser) || role === "admin" || profileUser.role === "admin" || (profileUser.roles || []).includes("admin"));
   const otherEstimators = allEstimators.filter(u => profileUser && u.username !== profileUser.username);
 
   const handleAssign = async (usernameTarget) => {
@@ -139,7 +139,7 @@ const LeadsBoard = (props) => {
 
   const toggleView = (v) => {
     if (v === "card") setSelLead(null);
-    setLeadView(v);
+    setLeadsView(v);
   };
 
   const filteredLeads = useMemo(() => {
@@ -157,6 +157,11 @@ const LeadsBoard = (props) => {
 
   const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filteredLeads);
 
+  useEffect(() => {
+    if (!selLead && sortedItems.length > 0) {
+      setSelLead(sortedItems[0]);
+    }
+  }, [sortedItems, selLead, setSelLead]);
 
   const formatAssocName = (username) => {
     const user = (appUsers || []).find(u => u.username === username);
@@ -322,9 +327,9 @@ const LeadsBoard = (props) => {
                            <option key={u.id} value={u.username}>{u.first_name} {u.last_name||""}</option>
                          ))}
                        </select>
-                       {amIEstimator && selLead.estimator_id !== (profileUser ? profileUser.username : null) && (
+                       {selLead.estimator_id !== (profileUser ? profileUser.username : null) && (
                          <button 
-                           onClick={() => handleAssign(profileUser.username)}
+                           onClick={() => handleAssign(profileUser?.username)}
                            style={{ background:C.blu, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontWeight:800, cursor:"pointer", fontSize:12, boxShadow:"0 2px 4px rgba(59,130,246,0.2)" }}
                          >
                            GRAB THIS LEAD
