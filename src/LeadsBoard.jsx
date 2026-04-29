@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useAppStore } from './store';
 
 /**
  * Custom hook to persist state in localStorage
@@ -60,9 +61,12 @@ function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, c
 
 const LeadsBoard = (props) => {
   const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, setJobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount } = props;
-  const [search, setSearch] = usePersistentState("rigpro_leads_search", "");
-  const [leadView, setLeadView] = usePersistentState("rigpro_leads_view", "list");
-  const [selLead, setSelLead] = usePersistentState("rigpro_sel_lead", null);
+  const leadsSearch = useAppStore(state => state.leadsSearch);
+  const setLeadsSearch = useAppStore(state => state.setLeadsSearch);
+  const leadsView = useAppStore(state => state.leadsView);
+  const setLeadsView = useAppStore(state => state.setLeadsView);
+  const selLead = useAppStore(state => state.selLead);
+  const setSelLead = useAppStore(state => state.setSelLead);
 
   const isEstimator = (u) => u.role === "estimator" || (u.roles || []).includes("estimator");
   const allEstimators = (appUsers || []).filter(isEstimator);
@@ -140,8 +144,8 @@ const LeadsBoard = (props) => {
 
   const filteredLeads = useMemo(() => {
     return (leads || []).filter(l => {
-      if (!search) return true;
-      const s = search.toLowerCase();
+      if (!leadsSearch) return true;
+      const s = leadsSearch.toLowerCase();
       return (
         (l.first_name || "").toLowerCase().includes(s) ||
         (l.last_name || "").toLowerCase().includes(s) ||
@@ -149,7 +153,7 @@ const LeadsBoard = (props) => {
         (l.description || "").toLowerCase().includes(s)
       );
     });
-  }, [leads, search]);
+  }, [leads, leadsSearch]);
 
   const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filteredLeads);
 
@@ -187,10 +191,10 @@ const LeadsBoard = (props) => {
                  <input 
                    style={{ width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px", paddingRight: 35, boxSizing:"border-box", fontSize:14 }} 
                    placeholder="Search by name, company, or description..." 
-                   value={search} 
-                   onChange={e=>setSearch(e.target.value)}
+                   value={leadsSearch} 
+                   onChange={e=>setLeadsSearch(e.target.value)}
                  />
-                 {search && <span onClick={() => setSearch("")} style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
+                 {leadsSearch && <span onClick={() => setLeadsSearch("")} style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
                </div>
             </div>
             <div style={{ display:"flex", flexDirection:"column" }}>
@@ -198,13 +202,13 @@ const LeadsBoard = (props) => {
               <div style={{ display:"flex", background:C.bg, borderRadius:10, padding:4, border:`1px solid ${C.bdr}` }}>
                 <button 
                   onClick={() => toggleView("card")} 
-                  style={{ background: leadView === "card" ? "#fff" : "transparent", color: leadView === "card" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: leadView === "card" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
+                  style={{ background: leadsView === "card" ? "#fff" : "transparent", color: leadsView === "card" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: leadsView === "card" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
                 >
                   <span style={{ marginRight:6 }}>🗂️</span> Grid
                 </button>
                 <button 
                   onClick={() => toggleView("list")} 
-                  style={{ background: leadView === "list" ? "#fff" : "transparent", color: leadView === "list" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: leadView === "list" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
+                  style={{ background: leadsView === "list" ? "#fff" : "transparent", color: leadsView === "list" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: leadsView === "list" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
                 >
                   <span style={{ marginRight:6 }}>📋</span> List
                 </button>
@@ -220,13 +224,13 @@ const LeadsBoard = (props) => {
 
         {/* DATA TABLE */}
         {/* VIEW MODE RENDERER: SPLIT SCREEN OR FULL GRID */}
-        <div className={leadView === "list" ? "app-split-layout" : ""} style={{ display: leadView === "list" ? "grid" : "block", gridTemplateColumns: leadView === "list" ? "420px 1fr" : "none", gap:30, marginTop: 15, alignItems:"flex-start" }}>
+        <div className={leadsView === "list" ? "app-split-layout" : ""} style={{ display: leadsView === "list" ? "grid" : "block", gridTemplateColumns: leadsView === "list" ? "420px 1fr" : "none", gap:30, marginTop: 15, alignItems:"flex-start" }}>
           
           {/* LEFT: LIST VIEW / CARDS */}
-          {(!selLead || leadView === "list") && (
-          <div className="leads-left-col" style={{ background: leadView === "list" ? "#fff" : "transparent", border: leadView === "list" ? `1px solid ${C.bdrL}` : "none", borderRadius:20, overflow:"hidden", display:"flex", flexDirection:"column", height: leadView === "list" ? "calc(100vh - 160px)" : "auto" }}>
-            <div style={{ overflow:"auto", flex:1, padding: leadView === "list" ? 15 : 0 }}>
-              {leadView === "list" ? (
+          {(!selLead || leadsView === "list") && (
+          <div className="leads-left-col" style={{ background: leadsView === "list" ? "#fff" : "transparent", border: leadsView === "list" ? `1px solid ${C.bdrL}` : "none", borderRadius:20, overflow:"hidden", display:"flex", flexDirection:"column", height: leadsView === "list" ? "calc(100vh - 160px)" : "auto" }}>
+            <div style={{ overflow:"auto", flex:1, padding: leadsView === "list" ? 15 : 0 }}>
+              {leadsView === "list" ? (
                   <table style={{ width:"100%", borderCollapse:"collapse" }}>
                     <thead>
                       <tr>
@@ -277,14 +281,19 @@ const LeadsBoard = (props) => {
           )}
 
           {/* RIGHT: DETAILS VIEW */}
-          {(selLead || leadView === "list") && (
+          {(selLead || leadsView === "list") && (
           <div className="leads-right-col" style={{ background:"#fff", borderRadius:20, boxShadow:"0 5px 25px rgba(0,0,0,0.03)", border:`1px solid ${C.bdrL}`, height:"calc(100vh - 160px)", overflowY:"auto" }}>
             {selLead ? (
-               <div style={{ flex:1, padding:"30px 40px", background:"#fff" }}>
-                 {(leadView === "card" || leadView === "list") && (
-                   <div className={leadView === "list" ? "mobile-only-return-btn" : ""} style={{ marginBottom: 20 }}>
+              !leads.some(l => l.id === selLead.id) ? (
+                <div style={{ padding: 40, textAlign: "center", color: C.txtS, fontStyle: "italic", height: 400, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  This lead has been claimed or deleted.
+                </div>
+              ) : (
+                <div style={{ flex:1, padding:"30px 40px", background:"#fff" }}>
+                 {(leadsView === "card" || leadsView === "list") && (
+                   <div className={leadsView === "list" ? "mobile-only-return-btn" : ""} style={{ marginBottom: 20 }}>
                      <button style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, border: `1px solid ${C.bdr}`, color: C.txtM, background: "#fff", cursor:"pointer" }} onClick={() => setSelLead(null)}>
-                       ← Back to {leadView === "list" ? "List" : "Grid"}
+                       ← Back to {leadsView === "list" ? "List" : "Grid"}
                      </button>
                    </div>
                  )}
@@ -395,6 +404,7 @@ const LeadsBoard = (props) => {
                   </div>
                  </div>
                </div>
+              )
             ) : (
                <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", height:"100%", color:C.txtM, fontSize:15, flexDirection:"column", gap:10, padding:40, textAlign:"center" }}>
                  <div style={{ fontSize:40 }}>👤</div>

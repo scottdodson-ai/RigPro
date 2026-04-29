@@ -6,6 +6,7 @@ import RigPro3FinanceDashboard from "./RigPro3FinanceDashboard";
 import RigPro3InvestorDashboard from "./RigPro3InvestorDashboard";
 import LeadsBoard from "./LeadsBoard";
 import JSAWizardModal from "./JSAWizardModal";
+import { useAppStore } from "./store";
 
 function fmt(n) { return "$" + Math.round(Number(n || 0)).toLocaleString(); }
 function fmtD(d) { return d ? new Date(d).toISOString().slice(0, 10) : ""; }
@@ -14,7 +15,13 @@ function uid() { UID_SEQ++; return "uid-" + UID_SEQ; }
 const today = () => new Date().toISOString().slice(0, 10);
 function listKey(prefix, item, index) { return `${prefix}-${item?.id || index}-${index}`; }
 
-
+export function formatE164(val) {
+  if (!val) return "";
+  const digits = val.replace(/\D/g, "");
+  if (!digits) return val.startsWith("+") ? "+" : "";
+  if (val.startsWith("+")) return "+" + digits.slice(0, 15);
+  return "+1" + digits.slice(0, 14);
+}
 
 // ── BASE DATA ─────────────────────────────────────────────────────────────────
 
@@ -249,13 +256,13 @@ function calcQuote(q, customerRates, eqOv, eqMapArg, baseLabor, perDiemRate = DE
   const _eqMap = eqMapArg || EQ_MAP;
   const _baseLabor = baseLabor || DEFAULT_LABOR;
   const labor = (q.laborRows || []).reduce((s, r) => {
-    const b = _baseLabor.find(x => x.role === r.role) || _baseLabor[0];
+    const b = _baseLabor.find(x => x.role === r.role) || _baseLabor[0] || { reg: 0, ot: 0 };
     const rR = r.special ? Number(r.overReg) : b.reg;
     const oR = r.special ? Number(r.overOT) : b.ot;
     return s + (rR * r.workers * (r.regHrs || 0) * r.days) + (oR * r.workers * (r.otHrs || 0) * r.days);
   }, 0);
   const laborCost = (q.laborRows || []).reduce((s, r) => {
-    const b = _baseLabor.find(x => x.role === r.role) || _baseLabor[0];
+    const b = _baseLabor.find(x => x.role === r.role) || _baseLabor[0] || { costReg: 0, costOT: 0 };
     const rR = r.special ? Number(r.overReg) : b.costReg;
     const oR = r.special ? Number(r.overOT) : b.costOT;
     return s + (rR * r.workers * (r.regHrs || 0) * r.days) + (oR * r.workers * (r.otHrs || 0) * r.days);
@@ -768,7 +775,7 @@ function Header({ view, setView, extra, crumb, role, token, setToken, setRole, p
               </div>
               <div>
                 <Lbl c="CELL PHONE" />
-                <input id="profile-cell-phone" name="cell_phone" autoComplete="tel" style={inp} value={profileForm.cell_phone} onChange={(e) => setProfileForm(p => ({ ...p, cell_phone: e.target.value }))} />
+                <input id="profile-cell-phone" name="cell_phone" autoComplete="tel" style={inp} value={profileForm.cell_phone} onChange={(e) => setProfileForm(p => ({ ...p, cell_phone: formatE164(e.target.value) }))} />
               </div>
               <div>
                 <Lbl c="ROLE" />
@@ -3019,17 +3026,29 @@ function LeadListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setS
 // ── MASTER JOB LIST ───────────────────────────────────────────────────────────
 // ── QUOTES PAGE VIEW ─────────────────────────────────────────────────────────
 
-function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, selectedQuote, setSelectedQuote, role, profileUser, statusList }) {
+function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, selectedQuote, setSelectedQuote, role, profileUser, statusList, deleteQuote }) {
   const [filter, setFilter] = useState('');
   const [viewMode, setViewMode] = useState('card');
+  const [sortBy, setSortBy] = useState('date_desc');
 
   const quotes = useMemo(() => {
     return jobs.filter(q =>
       !q.is_master_job && String(q.status) !== "1"
     ).sort((a, b) => {
-      return new Date(b.date || b.start_date || 0) - new Date(a.date || a.start_date || 0);
+      if (sortBy === 'date_desc') {
+        return new Date(b.date || b.start_date || 0) - new Date(a.date || a.start_date || 0);
+      } else if (sortBy === 'date_asc') {
+        return new Date(a.date || a.start_date || 0) - new Date(b.date || b.start_date || 0);
+      } else if (sortBy === 'total_desc') {
+        return (parseFloat(b.total) || 0) - (parseFloat(a.total) || 0);
+      } else if (sortBy === 'total_asc') {
+        return (parseFloat(a.total) || 0) - (parseFloat(b.total) || 0);
+      } else if (sortBy === 'client_asc') {
+        return (a.client || "").localeCompare(b.client || "");
+      }
+      return 0;
     });
-  }, [jobs]);
+  }, [jobs, sortBy]);
 
   const filtered = useMemo(() => {
     if (!filter) return quotes;
@@ -3060,6 +3079,20 @@ function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, 
                />
                {filter && <span onClick={() => setFilter("")} style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
              </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column" }}>
+            <div style={{fontSize:11, fontWeight:800, color:C.txtS, marginBottom:6, letterSpacing:0.8}}>SORT BY</div>
+            <select 
+              value={sortBy} 
+              onChange={e => setSortBy(e.target.value)} 
+              style={{ minHeight:42, border:`1px solid ${C.bdr}`, borderRadius:10, padding:"0 15px", fontSize:13, background:"#fff", cursor:"pointer", color:C.txt }}
+            >
+              <option value="date_desc">Date (Newest First)</option>
+              <option value="date_asc">Date (Oldest First)</option>
+              <option value="total_desc">Total ($ High to Low)</option>
+              <option value="total_asc">Total ($ Low to High)</option>
+              <option value="client_asc">Customer (A-Z)</option>
+            </select>
           </div>
           <div style={{ display:"flex", flexDirection:"column" }}>
             <div style={{fontSize:11, fontWeight:800, color:C.txtS, marginBottom:6, letterSpacing:0.8}}>VIEW MODE</div>
@@ -3115,6 +3148,9 @@ function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, 
                       <div style={{ textAlign: "right", width: "35%" }}>
                         <div style={{ fontSize: 12, fontWeight: 800, color: C.acc }}>{fmt(parseFloat(q.total || 0))}</div>
                         <div style={{ fontSize: 10, color: C.txtM }}>{q.date || q.start_date ? new Date(q.date || q.start_date).toLocaleDateString() : 'N/A'}</div>
+                        {(role || []).includes('admin') && (
+                          <button style={{ padding: "2px 6px", fontSize: 9, background: C.red, color: "#fff", border: "none", borderRadius: 4, marginTop: 4, cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteQuote(q.id); }}>Delete</button>
+                        )}
                       </div>
                     </div>
                   );
@@ -3172,6 +3208,11 @@ function QuotesPageView({ jobs, setJobs, setLeads, custData, setView, openEdit, 
                           {q.qn && <span style={{ fontSize: 11, background: C.accL, color: C.acc, padding: "3px 10px", borderRadius: 6, fontWeight: 700 }}>{q.qn}</span>}
                         </div>
                       </div>
+                      {(role || []).includes('admin') && (
+                        <div style={{ marginTop: 10, textAlign: "right", borderTop: `1px solid ${C.bdr}33`, paddingTop: 10 }}>
+                          <button style={{ padding: "4px 10px", fontSize: 11, background: C.red, color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteQuote(q.id); }}>Delete Quote</button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -4129,7 +4170,7 @@ function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {},
                   <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT LAST NAME" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={lead.last_name} onChange={e => u("last_name", e.target.value)} /></div>
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                  <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT PHONE" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={lead.contact_phone} onChange={e => u("contact_phone", e.target.value)} /></div>
+                  <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT PHONE" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={lead.contact_phone} onChange={e => u("contact_phone", formatE164(e.target.value))} /></div>
                   <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT EMAIL" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={lead.contact_email} onChange={e => u("contact_email", e.target.value)} /></div>
                 </div>
 
@@ -4471,11 +4512,7 @@ function LeadModal({ init, onSave, onClose, appUsers = [], custData = {}, setCus
                 value={f.phone}
                 placeholder="XXX-XXX-XXXX"
                 onChange={e => {
-                  const d = e.target.value.replace(/\D/g, "");
-                  let fmt = d;
-                  if (d.length > 6) fmt = d.slice(0, 3) + "-" + d.slice(3, 6) + "-" + d.slice(6, 10);
-                  else if (d.length > 3) fmt = d.slice(0, 3) + "-" + d.slice(3);
-                  u("phone", fmt);
+                  u("phone", formatE164(e.target.value));
                 }}
               />
               {canSave && !f.phone && (
@@ -6864,7 +6901,7 @@ function CustomerModal({ custName, jobs, reqs = [], jobFolders = {}, custData, s
                     <div className="app-two-col" style={{ gap: 7 }}>
                       <div style={{ gridColumn: "1/-1" }}><div style={{ fontSize: 11, color: "#4a5060", fontWeight: 600, marginBottom: 2 }}>NAME *</div><input style={inp2} value={newContact.name} placeholder="Full name" onChange={e => setNewContact(x => ({ ...x, name: e.target.value }))} /></div>
                       <div><div style={{ fontSize: 11, color: "#4a5060", fontWeight: 600, marginBottom: 2 }}>TITLE</div><input style={inp2} value={newContact.title} placeholder="Job title" onChange={e => setNewContact(x => ({ ...x, title: e.target.value }))} /></div>
-                      <div><div style={{ fontSize: 11, color: "#4a5060", fontWeight: 600, marginBottom: 2 }}>PHONE</div><input style={inp2} value={newContact.phone} placeholder="XXX-XXX-XXXX" onChange={e => setNewContact(x => ({ ...x, phone: e.target.value }))} /></div>
+                      <div><div style={{ fontSize: 11, color: "#4a5060", fontWeight: 600, marginBottom: 2 }}>PHONE</div><input style={inp2} value={newContact.phone} placeholder="+1XXXXXXXXXX" onChange={e => setNewContact(x => ({ ...x, phone: formatE164(e.target.value) }))} /></div>
                       <div style={{ gridColumn: "1/-1" }}><div style={{ fontSize: 11, color: "#4a5060", fontWeight: 600, marginBottom: 2 }}>EMAIL</div><input style={inp2} value={newContact.email} placeholder="email@company.com" onChange={e => setNewContact(x => ({ ...x, email: e.target.value }))} /></div>
                       {locations.length > 0 && <div style={{ gridColumn: "1/-1" }}>
                         <div style={{ fontSize: 11, color: "#4a5060", fontWeight: 600, marginBottom: 2 }}>LOCATION</div>
@@ -9988,7 +10025,7 @@ function AdminPage({ token, profileUser, appUsers = [], setAppUsers, companyInfo
                 </div>
                 <div>
                   <Lbl c="CELL PHONE" />
-                  <input id="new-account-cell-phone" name="cell_phone" type="text" style={inp} value={newUser.cell_phone} onChange={e => setNewUser(p => ({ ...p, cell_phone: e.target.value }))} placeholder="Phone" />
+                  <input id="new-account-cell-phone" name="cell_phone" type="text" style={inp} value={newUser.cell_phone} onChange={e => setNewUser(p => ({ ...p, cell_phone: formatE164(e.target.value) }))} placeholder="Phone" />
                 </div>
                 <div>
                   <Lbl c="PASSWORD" />
@@ -10072,7 +10109,7 @@ function AdminPage({ token, profileUser, appUsers = [], setAppUsers, companyInfo
                 </div>
                 <div>
                   <Lbl c="CELL PHONE" />
-                  <input id="edit-account-cell-phone" name="cell_phone" type="text" style={inp} value={editingUser.cell_phone || ""} onChange={e => setEditingUser({ ...editingUser, cell_phone: e.target.value })} />
+                  <input id="edit-account-cell-phone" name="cell_phone" type="text" style={inp} value={editingUser.cell_phone || ""} onChange={e => setEditingUser({ ...editingUser, cell_phone: formatE164(e.target.value) })} />
                 </div>
                 <div>
                   <Lbl c="ROLE" />
@@ -10446,18 +10483,29 @@ export default function App() {
   };
 
   const [profileUser, setProfileUser] = useState(null);
-  const [leadStageFilter, setLeadStageFilter] = usePersistentState("rigpro_lead_stage_filter", "all");
-  const [appUsers, setAppUsers] = useState([]);
-  const [jobs, setJobs] = useState([]);
-  const [reqs, setReqs] = useState([]);
-  const [leads, setLeads] = useState([]);
-  const [globalSitesCount, setGlobalSitesCount] = useState(0);
-  const [statusList, setStatusList] = useState([]);
+  const leadStageFilter = useAppStore(state => state.leadStageFilter);
+  const setLeadStageFilter = useAppStore(state => state.setLeadStageFilter);
+  const appUsers = useAppStore(state => state.appUsers);
+  const setAppUsers = useAppStore(state => state.setAppUsers);
+  const jobs = useAppStore(state => state.jobs);
+  const setJobs = useAppStore(state => state.setJobs);
+  const reqs = useAppStore(state => state.reqs);
+  const setReqs = useAppStore(state => state.setReqs);
+  const leads = useAppStore(state => state.leads);
+  const setLeads = useAppStore(state => state.setLeads);
+  const globalSitesCount = useAppStore(state => state.globalSitesCount);
+  const setGlobalSitesCount = useAppStore(state => state.setGlobalSitesCount);
+  const statusList = useAppStore(state => state.statusList);
+  const setStatusList = useAppStore(state => state.setStatusList);
   const [dbStatus, setDbStatus] = useState("Local Mode");
-  const [active, setActive] = usePersistentState("rigpro_active_quote", null);
-  const [globalSelectedQuote, setGlobalSelectedQuote] = useState(null);
-  const [selC, setSelC] = usePersistentState("rigpro_sel_customer", null);
-  const [search, setSearch] = usePersistentState("rigpro_global_search", "");
+  const active = useAppStore(state => state.active);
+  const setActive = useAppStore(state => state.setActive);
+  const globalSelectedQuote = useAppStore(state => state.globalSelectedQuote);
+  const setGlobalSelectedQuote = useAppStore(state => state.setGlobalSelectedQuote);
+  const selC = useAppStore(state => state.selC);
+  const setSelC = useAppStore(state => state.setSelC);
+  const search = useAppStore(state => state.search);
+  const setSearch = useAppStore(state => state.setSearch);
   const [showRM, setShowRM] = useState(false);
   const [editR, setEditR] = useState(null);
   const [showWM, setShowWM] = useState(false);
@@ -10468,20 +10516,28 @@ export default function App() {
   const [attachModal, setAttachModal] = useState(null); // { job } for viewing all attachments
   const [adjModal, setAdjModal] = useState(null);  // quote to adjust
   const [deadModal, setDeadModal] = useState(null);  // {type:"lead"|"quote", item}
-  const [dashReportId, setDashReportId] = usePersistentState("rigpro_dash_report_id", null); // report to open when navigating from dashboard
-  const [dashAcc, setDashAcc] = usePersistentState("rigpro_dash_acc", "leads"); // current open accordion in Dashboard
-  const [wonOnly, setWonOnly] = usePersistentState("rigpro_won_only", false); // filter customers view
+  const dashReportId = useAppStore(state => state.dashReportId);
+  const setDashReportId = useAppStore(state => state.setDashReportId);
+  const dashAcc = useAppStore(state => state.dashAcc);
+  const setDashAcc = useAppStore(state => state.setDashAcc);
+  const wonOnly = useAppStore(state => state.wonOnly);
+  const setWonOnly = useAppStore(state => state.setWonOnly);
   const [showJSAModal, setShowJSAModal] = useState(false);
-  const [custView, setCustView] = usePersistentState("rigpro_cust_view", "list"); // "list" or "card"
-  const [jobListFilter, setJobListFilter] = usePersistentState("rigpro_job_list_filter", null); // customer name to filter Master Jobs list
+  const custView = useAppStore(state => state.custView);
+  const setCustView = useAppStore(state => state.setCustView);
+  const jobListFilter = useAppStore(state => state.jobListFilter);
+  const setJobListFilter = useAppStore(state => state.setJobListFilter);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [customerRates, setCustomerRates] = useState(INIT_CUSTOMER_RATES);
-  const [baseLabor, setBaseLabor] = useState(DEFAULT_LABOR);
-  const [equipment, setEquipment] = useState(EQUIPMENT);
+  const baseLabor = useAppStore(state => state.baseLabor);
+  const setBaseLabor = useAppStore(state => state.setBaseLabor);
+  const equipment = useAppStore(state => state.equipment);
+  const setEquipment = useAppStore(state => state.setEquipment);
   const eqMap = useMemo(() => { const m = {}; equipment.forEach(e => { m[e.code] = e; }); return m; }, [equipment]);
   const eqCats = useMemo(() => [...new Set(equipment.map(e => e.category))], [equipment]);
   const [eqOv, setEqOv] = useState({});
-  const [custData, setCustData] = useState({});
+  const custData = useAppStore(state => state.custData);
+  const setCustData = useAppStore(state => state.setCustData);
   const [showCustModal, setShowCustModal] = useState(false);
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [profileTemplate, setProfileTemplate] = useState(DEFAULT_PROFILE_TEMPLATE);
@@ -10874,6 +10930,29 @@ export default function App() {
     setShowCopyModal(false);
   };
 
+  const deleteQuote = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this Quote? This action cannot be undone.")) return;
+    try {
+      const res = await fetch(`${fmt.api || "/api"}/admin/tables/quotes/batch`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ ids: [id] })
+      });
+      if (!res.ok) {
+        throw new Error("Failed to delete quote");
+      }
+      setJobs(prev => prev.filter(j => j.id !== id));
+      if (view === "editor" && active && active.id === id) {
+        setView("dash");
+      } else if (globalSelectedQuote && globalSelectedQuote.id === id) {
+        setGlobalSelectedQuote(null);
+      }
+    } catch (e) {
+      console.error("Delete quote error:", e);
+      alert("Failed to delete Quote.");
+    }
+  };
+
   function saveQuote(opts = {}) {
     if (!active.salesAssoc?.trim()) {
       alert("Estimator is required to save the quote.");
@@ -10906,6 +10985,9 @@ export default function App() {
       if (Object.keys(newRates).length > 0) setCustomerRates(prev => ({ ...prev, [upd.client]: { ...(prev[upd.client] || {}), ...newRates } }));
     }
     setJobs(prev => { const ix = prev.findIndex(q => q.id === upd.id); return ix >= 0 ? prev.map((q, i) => i === ix ? upd : q) : [upd, ...prev]; });
+    if (String(upd.status) !== "1" && upd.status !== "Lead") {
+      setLeads(prev => prev.filter(l => l.id !== upd.id));
+    }
     if (upd.fromReqId) {
       if (upd.status === "Dead") {
         setReqs(prev => prev.map(r => r.id === upd.fromReqId ? { ...r, status: "Dead", deadNote: upd.deadNote || "Quote marked dead" } : r));
@@ -10938,6 +11020,9 @@ export default function App() {
     const cv = calcQuote(upd, customerRates, eqOv, eqMap, baseLabor, perDiemRate, hotelRate);
     const fin = { ...upd, ...cv };
     setJobs(prev => { const ix = prev.findIndex(q => q.id === fin.id); return ix >= 0 ? prev.map((q, i) => i === ix ? fin : q) : [fin, ...prev]; });
+    if (String(fin.status) !== "1" && fin.status !== "Lead") {
+      setLeads(prev => prev.filter(l => l.id !== fin.id));
+    }
     persistQuote(fin);
     setShowWM(false);
     setView("dash");
@@ -10958,6 +11043,9 @@ export default function App() {
     const isCrit = active.liftPlanRequired || checkCriticalLift(active, eqMap);
     const upd = { ...active, ...cv, status: "In Review", job_num: autoJobNum, jobNum: autoJobNum, liftPlanRequired: isCrit };
     setJobs(prev => { const ix = prev.findIndex(q => q.id === upd.id); return ix >= 0 ? prev.map((q, i) => i === ix ? upd : q) : [upd, ...prev]; });
+    if (String(upd.status) !== "1" && upd.status !== "Lead") {
+      setLeads(prev => prev.filter(l => l.id !== upd.id));
+    }
     setNotifs(p => [{ id: uid(), qn: upd.qn, client: upd.client, total: upd.total, at: new Date().toLocaleTimeString(), status: "Pending Review" }, ...p]);
     persistQuote(upd);
     setView("dash");
@@ -11133,7 +11221,7 @@ export default function App() {
     const leadsFilterFn = q => String(q.status) === "1" || String(q.status) === String(dashLeadStatusId) || (q.status_name || '').toLowerCase() === 'lead';
     const quoteStages = Array.from(new Set((statusList || []).filter(s => s.type === 'quote' && (s.name || '').toLowerCase() !== 'lead').map(s => s.name)));
     const jbFilterFn = q => quoteStages.includes(q.status_name || (statusList || []).find(s => String(s.id) === String(q.status))?.name);
-    const dashLeadsCount = reqs.length;
+    const dashLeadsCount = leads.length;
     const dashMyJbCount = profileUser ? jobs.filter(q => (q.salesAssoc === profileUser.username || q.estimator === profileUser.username || q.salesAssoc === profileUser.first_name || q.estimator === profileUser.first_name) && jbFilterFn(q)).length : 0;
     const dashGlbJbCount = jobs.filter(jbFilterFn).length;
 
@@ -11209,7 +11297,7 @@ export default function App() {
           onToggle={open => setDashAcc(open ? "leads" : null)}
         >
           <LeadDashCard
-            reqs={reqs}
+            reqs={leads}
             jobs={jobs}
             jobFolders={jobFolders}
             setJobFolders={setJobFolders}
@@ -11366,7 +11454,7 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: C.bg, color: C.txt, fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>
       {showLeadModal && <LeadRecordModal onClose={() => setShowLeadModal(false)} onSave={l => { setLeads(p => [l, ...p]); setReqs(p => [l, ...p]); }} token={token} appUsers={appUsers} custData={custData} CUSTOMERS={CUSTOMERS} jobs={jobs} C={C} fmt={fmt} mkBtn={mkBtn} Sec={Sec} Lbl={Lbl} Card={Card} inp={inp} sel={sel} AutoInput={AutoInput} />}
       <Header leadCount={leads.length} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => !q.is_master_job && String(q.status) !== "1").length} jobCount={jobs.filter(q => q.is_master_job).length} siteCount={globalSitesCount} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} profileUser={profileUser} setProfileUser={setProfileUser} extra={actBtns} />
-      <QuotesPageView jobs={jobs} setJobs={setJobs} setLeads={setLeads} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} role={role} profileUser={profileUser} statusList={statusList} />
+      <QuotesPageView jobs={jobs} setJobs={setJobs} setLeads={setLeads} custData={custData} setView={setView} openEdit={openEdit} selectedQuote={globalSelectedQuote} setSelectedQuote={setGlobalSelectedQuote} role={role} profileUser={profileUser} statusList={statusList} deleteQuote={deleteQuote} />
     </div>
   );
 
@@ -11855,14 +11943,14 @@ export default function App() {
                     <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT LAST NAME" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={active.last_name || ""} onChange={e => u("last_name", e.target.value)} disabled={active.locked} /></div>
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                    <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT PHONE" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={active.contact_phone || ""} onChange={e => u("contact_phone", e.target.value)} disabled={active.locked} /></div>
+                    <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT PHONE" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={active.contact_phone || ""} onChange={e => u("contact_phone", formatE164(e.target.value))} disabled={active.locked} /></div>
                     <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT EMAIL" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={active.contact_email || ""} onChange={e => u("contact_email", e.target.value)} disabled={active.locked} /></div>
                   </div>
                 </>
               ) : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                   <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT NAME" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={active.contactName || ""} onChange={e => u("contactName", e.target.value)} disabled={active.locked} /></div>
-                  <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT PHONE" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={active.contactPhone || ""} onChange={e => u("contactPhone", e.target.value)} disabled={active.locked} /></div>
+                  <div style={{ flex: "1 1 140px" }}><Lbl c="CONTACT PHONE" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={active.contactPhone || ""} onChange={e => u("contactPhone", formatE164(e.target.value))} disabled={active.locked} /></div>
                   <div style={{ flex: "2 1 200px" }}><Lbl c="CONTACT EMAIL" /><input style={{...inp, width: "100%", boxSizing: "border-box"}} value={active.contactEmail || ""} onChange={e => u("contactEmail", e.target.value)} disabled={active.locked} /></div>
                 </div>
               )}
@@ -12215,6 +12303,11 @@ export default function App() {
           <div className="mobile-only-return-btn" style={{ marginTop: 20, marginBottom: 40, textAlign: "center" }}>
             <button style={{ ...mkBtn("outline"), padding: "12px 24px", fontSize: 16, width: "100%", maxWidth: 350, margin: "0 auto", background: "#fff" }} onClick={() => setView("dash")}>← Return to Home</button>
           </div>
+          {(role || []).includes('admin') && !active.is_master_job && (
+            <div style={{ marginTop: 10, marginBottom: 40, textAlign: "center" }}>
+              <button style={{ ...mkBtn("danger"), padding: "10px 24px", fontSize: 14, width: "100%", maxWidth: 350, margin: "0 auto", opacity: 0.85 }} onClick={() => deleteQuote(active.id)}>Delete Quote</button>
+            </div>
+          )}
           <style>{`
             @media (min-width: 951px) {
               .mobile-only-return-btn { display: none !important; }
