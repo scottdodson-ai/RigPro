@@ -60,7 +60,7 @@ function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, c
 }
 
 const LeadsBoard = (props) => {
-  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, setJobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount, openEdit } = props;
+  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, setJobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount, openEdit, deleteQuote } = props;
   const leadsSearch = useAppStore(state => state.leadsSearch);
   const setLeadsSearch = useAppStore(state => state.setLeadsSearch);
   const leadsView = useAppStore(state => state.leadsView);
@@ -70,7 +70,8 @@ const LeadsBoard = (props) => {
 
   const isEstimator = (u) => u.role === "estimator" || (u.roles || []).includes("estimator");
   const allEstimators = (appUsers || []).filter(isEstimator);
-  const amIEstimator = profileUser && (isEstimator(profileUser) || role === "admin" || profileUser.role === "admin" || (profileUser.roles || []).includes("admin"));
+  const isAdmin = role === "admin" || (profileUser && (profileUser.role === "admin" || (profileUser.roles || []).includes("admin")));
+  const amIEstimator = profileUser && (isEstimator(profileUser) || isAdmin);
   const otherEstimators = allEstimators.filter(u => profileUser && u.username !== profileUser.username);
 
   const grabLead = (lead) => {
@@ -263,14 +264,23 @@ const LeadsBoard = (props) => {
                             <td style={{ ...tdS, color:C.txtM, fontSize:13, maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.customer_name || `Lead #${l.id}`}
                             </td>
-                            <td style={{ ...tdS, width: 120, textAlign: "right" }}>
-                              {l.estimator_id !== (profileUser ? profileUser.username : null) && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); grabLead(l); }}
-                                  style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(59,130,246,0.2)" }}>
-                                  Grab this lead
-                                </button>
-                              )}
+                            <td style={{ ...tdS, width: 140, textAlign: "right" }}>
+                              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                {isAdmin && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); deleteQuote(l.id); }}
+                                    style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(239,68,68,0.2)" }}>
+                                    Delete
+                                  </button>
+                                )}
+                                {l.estimator_id !== (profileUser ? profileUser.username : null) && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); grabLead(l); }}
+                                    style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(59,130,246,0.2)" }}>
+                                    Grab this lead
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -297,13 +307,22 @@ const LeadsBoard = (props) => {
                         <div>{l.city ? `${l.city}${l.state ? `, ${l.state}` : ""}` : "No Location"}</div>
                         <div style={{marginLeft:"auto"}}>{new Date(l.create_date).toLocaleDateString()}</div>
                       </div>
-                      {l.estimator_id !== (profileUser ? profileUser.username : null) && (
-                        <div style={{ borderTop: `1px solid ${C.bdr}`, paddingTop: 10, marginTop: 10, display: "flex", justifyContent: "flex-end" }}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); grabLead(l); }}
-                            style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(59,130,246,0.2)" }}>
-                            Grab this lead
-                          </button>
+                      {(l.estimator_id !== (profileUser ? profileUser.username : null) || isAdmin) && (
+                        <div style={{ borderTop: `1px solid ${C.bdr}`, paddingTop: 10, marginTop: 10, display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteQuote(l.id); }}
+                              style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 5, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(239,68,68,0.2)" }}>
+                              Delete
+                            </button>
+                          )}
+                          {l.estimator_id !== (profileUser ? profileUser.username : null) && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); grabLead(l); }}
+                              style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(59,130,246,0.2)" }}>
+                              Grab this lead
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -356,6 +375,14 @@ const LeadsBoard = (props) => {
                            <option key={u.id} value={u.username}>{u.first_name} {u.last_name||""}</option>
                          ))}
                        </select>
+                       {isAdmin && (
+                         <button 
+                           onClick={() => { if (selLead) deleteQuote(selLead.id); }}
+                           style={{ background:"#ef4444", color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontWeight:800, cursor:"pointer", fontSize:12, boxShadow:"0 2px 4px rgba(239,68,68,0.2)" }}
+                         >
+                           DELETE
+                         </button>
+                       )}
                        {selLead.estimator_id !== (profileUser ? profileUser.username : null) && (
                          <button 
                            onClick={() => grabLead(selLead)}

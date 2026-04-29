@@ -10944,7 +10944,7 @@ export default function App() {
   };
 
   const deleteQuote = async (id) => {
-    if (!window.confirm("Are you sure you want to permanently delete this Quote? This action cannot be undone.")) return;
+    if (!window.confirm("Are you sure you want to permanently delete this record? This action cannot be undone.")) return;
     try {
       const res = await fetch(`${fmt.api || "/api"}/admin/tables/quotes/batch`, {
         method: 'DELETE',
@@ -10952,17 +10952,19 @@ export default function App() {
         body: JSON.stringify({ ids: [id] })
       });
       if (!res.ok) {
-        throw new Error("Failed to delete quote");
+        throw new Error("Failed to delete record");
       }
       setJobs(prev => prev.filter(j => j.id !== id));
+      setLeads(prev => prev.filter(j => j.id !== id));
+      setReqs(prev => prev.filter(j => j.id !== id));
       if (view === "editor" && active && active.id === id) {
         setView("dash");
       } else if (globalSelectedQuote && globalSelectedQuote.id === id) {
         setGlobalSelectedQuote(null);
       }
     } catch (e) {
-      console.error("Delete quote error:", e);
-      alert("Failed to delete Quote.");
+      console.error("Delete record error:", e);
+      alert("Failed to delete record.");
     }
   };
 
@@ -11479,7 +11481,7 @@ export default function App() {
         C={C} fmt={fmt} thS={thS} tdS={tdS} leads={leads} setLeads={setLeads} reqs={reqs} jobs={jobs} setJobs={setJobs}
         actBtns={actBtns} Header={Header} token={token} setToken={setToken} role={role} setRole={setRole} view={view} setView={setView}
         appUsers={appUsers} profileUser={profileUser} statusList={statusList} custData={custData} customers={customers} globalSitesCount={globalSitesCount}
-        Sec={Sec} onAddLead={() => setShowLeadModal(true)} mkBtn={mkBtn} AutoInput={AutoInput} Lbl={Lbl} Card={Card} inp={inp} sel={sel} openEdit={openEdit}
+        Sec={Sec} onAddLead={() => setShowLeadModal(true)} mkBtn={mkBtn} AutoInput={AutoInput} Lbl={Lbl} Card={Card} inp={inp} sel={sel} openEdit={openEdit} deleteQuote={deleteQuote}
       />
     </div>
   );
