@@ -187,7 +187,7 @@ const CustomerCRMBoard = (props) => {
       <Header siteCount={props.globalSitesCount} leadCount={leads ? leads.length : 0} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       
       {showCustModal ? (
-        <CustomerModal custName={showCustModal} jobs={jobs.filter(q=>q.customer_name===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)}/>
+        <CustomerModal custName={showCustModal} jobs={jobs.filter(q=>q.customer_name===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)} statusList={props.statusList} profileUser={props.profileUser} />
       ) : (
       <div className="crm-main-container" style={{ padding:"14px", maxWidth: 1600, margin:"0 auto", width:"100%" }}>
         
@@ -290,8 +290,8 @@ const CustomerCRMBoard = (props) => {
                       <tr>
                         <SortTh style={{ ...thS, width: "15%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Cust #" sortKey="custNum" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                         <SortTh style={{ ...thS, width: "25%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Location" sortKey="city" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                         <SortTh style={{ ...thS, width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Email" sortKey="email" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh style={{ ...thS, width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Phone" sortKey="phone" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                         <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center", width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Master Jobs" sortKey="jobs" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                       </tr>
                     </thead>
@@ -299,7 +299,6 @@ const CustomerCRMBoard = (props) => {
                       {sortedCustomers.map(c => {
                         const custContacts = custData[c.name]?.contacts || [];
                         const emailsMatch = Array.from(new Set(custContacts.map(con => con.email).filter(Boolean))).join(', ');
-                        const phonesMatch = Array.from(new Set(custContacts.map(con => con.phone || con.mobile).filter(Boolean))).join(', ');
                         const custJobs = c.quotes || []; 
                         const isSel = selC === c.name;
                         return (
@@ -310,6 +309,7 @@ const CustomerCRMBoard = (props) => {
                             <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 140, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.name}>
                               {c.name}
                             </td>
+                            <td style={{ ...tdS, color:C.txtS, fontSize:12, maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.city}>{c.city || "—"}</td>
                             <td style={{ ...tdS, color:C.txtS, fontSize:12, maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={emailsMatch || ""}>{emailsMatch || "—"}</td>
                             <td style={{ ...tdS, color:C.txtS, fontSize:12, maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={phonesMatch || ""}>{phonesMatch || "—"}</td>
                             <td className="mobile-hidden" style={{ ...tdS, textAlign:"center", fontWeight:700, fontSize:14 }}>{custJobs.length}</td>
@@ -335,6 +335,9 @@ const CustomerCRMBoard = (props) => {
                             {c.name}
                           </div>
                           {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>CUSTOMER</span>}
+                        </div>
+                        <div style={{ fontSize:13, color:C.txtM, marginBottom:12, minHeight: 20 }}>
+                          {c.city ? `${c.city}${c.state ? `, ${c.state}` : ''}` : (c.street || 'No Location')}
                         </div>
                         <div style={{ fontSize:18, fontWeight:900, color:C.acc, marginBottom:10 }}>{fmt(tot)}</div>
                         <div style={{ display:"flex", gap:15, borderTop:`1px solid ${C.bdr}`, paddingTop:10 }}>

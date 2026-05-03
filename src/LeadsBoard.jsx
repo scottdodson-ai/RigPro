@@ -1,8 +1,37 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useAppStore } from './store';
+import { getLeadTimeInfo } from './timeUtils';
+
+/**
+ * Custom hook to persist state in localStorage
+ */
+function usePersistentState(key, initialValue) {
+  const [state, setState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved !== null) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn(`Error loading state for key "${key}" from localStorage:`, e);
+    }
+    return initialValue;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(state));
+    } catch (e) {
+      console.warn(`Error saving state for key "${key}" to localStorage:`, e);
+    }
+  }, [key, state]);
+
+  return [state, setState];
+}
 
 function useTableSort(items) {
-  const [sortKey, setSortKey] = useState("create_date");
-  const [sortDir, setSortDir] = useState(-1);
+  const [sortKey, setSortKey] = usePersistentState("rigpro_leads_sort_key", "create_date");
+  const [sortDir, setSortDir] = usePersistentState("rigpro_leads_sort_dir", -1);
   const requestSort = (key) => {
     if (sortKey === key) setSortDir(-sortDir);
     else { setSortKey(key); setSortDir(1); }
@@ -32,40 +61,79 @@ function SortTh({ label, sortKey, currentSort, currentDir, requestSort, style, c
 }
 
 const LeadsBoard = (props) => {
-  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, setJobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount } = props;
-  const [search, setSearch] = useState("");
-  const [leadView, setLeadView] = useState("list");
-  const [selLead, setSelLead] = useState(null);
+  const { C, fmt, thS, tdS, leads, setLeads, reqs, jobs, setJobs, actBtns, Header, token, setToken, role, setRole, view, setView, appUsers, profileUser, statusList, custData, Sec, onAddLead, mkBtn, AutoInput, Lbl, Card, inp, sel, globalSitesCount, openEdit, deleteQuote } = props;
+  const leadsSearch = useAppStore(state => state.leadsSearch);
+  const setLeadsSearch = useAppStore(state => state.setLeadsSearch);
+  const leadsView = useAppStore(state => state.leadsView);
+  const setLeadsView = useAppStore(state => state.setLeadsView);
+  const selLead = useAppStore(state => state.selLead);
+  const setSelLead = useAppStore(state => state.setSelLead);
 
   const isEstimator = (u) => u.role === "estimator" || (u.roles || []).includes("estimator");
   const allEstimators = (appUsers || []).filter(isEstimator);
-  const amIEstimator = profileUser && isEstimator(profileUser);
+  const isAdmin = role === "admin" || (profileUser && (profileUser.role === "admin" || (profileUser.roles || []).includes("admin")));
+  const amIEstimator = profileUser && (isEstimator(profileUser) || isAdmin);
   const otherEstimators = allEstimators.filter(u => profileUser && u.username !== profileUser.username);
 
-  const handleAssign = async (usernameTarget) => {
+  const grabLead = (lead) => {
+    if (!openEdit) return;
+    const inProgStatus = (statusList || []).find(s => s.name === "In Progress")?.id || "In Progress"; 
+    const pName = profileUser ? (profileUser.username || profileUser.first_name || "") : ""; 
+    openEdit({ ...lead, status: inProgStatus, client: lead.client || lead.customer_name || lead.company, salesAssoc: pName, sales_assoc: pName, estimator: pName, estimator_id: pName });
+  };
+
+  const getLeadSlaColor = (l) => {
+    if (l.estimator_id) return { bg: "#ffffff", blink: false };
+    const { bDays } = getLeadTimeInfo(l.create_date);
+    if (bDays === 0) return { bg: "#dcfce7", blink: false }; // light green
+    if (bDays === 1) return { bg: "#fef08a", blink: false }; // yellow
+    if (bDays === 2) return { bg: "#fee2e2", blink: false }; // light red
+    return { bg: "#fee2e2", blink: true }; // >2 days: blinking light red
+  };
+
+  const handleAssign = async (usernameTarget, targetLead = selLead) => {
+    if (!targetLead || !usernameTarget) return;
+
+    if (!targetLead.estimator_id || String(targetLead.estimator_id).trim() === "") {
+      if (!openEdit) return;
+      const inProgStatus = (statusList || []).find(s => s.name === "In Progress")?.id || "In Progress"; 
+      openEdit({ 
+        ...targetLead, 
+        status: inProgStatus, 
+        client: targetLead.client || targetLead.customer_name || targetLead.company, 
+        salesAssoc: usernameTarget, 
+        sales_assoc: usernameTarget, 
+        estimator: usernameTarget, 
+        estimator_id: usernameTarget 
+      });
+      return;
+    }
+
     try {
       // Map estimator update payload to quotes schema
       const payload = { sales_assoc: usernameTarget, status: 2 }; // status 2 is Quote Requested / In Progress
-      const res = await fetch(`${fmt.api || "/api"}/admin/tables/quotes/${selLead.id}`, {
+      const res = await fetch(`${fmt.api || "/api"}/admin/tables/quotes/${targetLead.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error("Failed to assign lead to estimator. You might lack permissions.");
       
-      const updated = { ...selLead, estimator_id: usernameTarget, sales_assoc: usernameTarget };
+      const updated = { ...targetLead, estimator_id: usernameTarget, sales_assoc: usernameTarget };
       if (usernameTarget) updated.status_number = 2; // Server backend inherently trips it to 'In Progress' Quote Mode
       
       if (setLeads) {
-        setLeads((prev) => prev.filter(l => l.id !== selLead.id));
+        setLeads((prev) => prev.filter(l => l.id !== targetLead.id));
       }
       if (setJobs) {
         setJobs(prev => {
-          if (prev.find(q => q.id === selLead.id)) return prev.map(q => q.id === selLead.id ? updated : q);
+          if (prev.find(q => q.id === targetLead.id)) return prev.map(q => q.id === targetLead.id ? updated : q);
           return [updated, ...prev];
         });
       }
-      setSelLead(null);
+      if (selLead && selLead.id === targetLead.id) {
+        setSelLead(null);
+      }
     } catch (e) {
       console.error(e);
       alert("Error assigning lead: " + e.message);
@@ -108,23 +176,24 @@ const LeadsBoard = (props) => {
 
   const toggleView = (v) => {
     if (v === "card") setSelLead(null);
-    setLeadView(v);
+    setLeadsView(v);
   };
 
   const filteredLeads = useMemo(() => {
     return (leads || []).filter(l => {
-      if (!search) return true;
-      const s = search.toLowerCase();
+      if (!leadsSearch) return true;
+      const s = leadsSearch.toLowerCase();
       return (
         (l.first_name || "").toLowerCase().includes(s) ||
         (l.last_name || "").toLowerCase().includes(s) ||
         (l.customer_name || "").toLowerCase().includes(s) ||
-        (l.description || "").toLowerCase().includes(s)
+        (l.description || l.desc || l.jobDesc || "").toLowerCase().includes(s)
       );
     });
-  }, [leads, search]);
+  }, [leads, leadsSearch]);
 
   const { sortedItems, requestSort, sortKey, sortDir } = useTableSort(filteredLeads);
+
 
 
   const formatAssocName = (username) => {
@@ -160,10 +229,10 @@ const LeadsBoard = (props) => {
                  <input 
                    style={{ width:"100%", minHeight:42, border:`2px solid ${C.acc}`, borderRadius:10, padding:"0 15px", paddingRight: 35, boxSizing:"border-box", fontSize:14 }} 
                    placeholder="Search by name, company, or description..." 
-                   value={search} 
-                   onChange={e=>setSearch(e.target.value)}
+                   value={leadsSearch} 
+                   onChange={e=>setLeadsSearch(e.target.value)}
                  />
-                 {search && <span onClick={() => setSearch("")} style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
+                 {leadsSearch && <span onClick={() => setLeadsSearch("")} style={{position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:"#aaa", fontWeight:800, fontSize:15, padding:5}}>✕</span>}
                </div>
             </div>
             <div style={{ display:"flex", flexDirection:"column" }}>
@@ -171,13 +240,13 @@ const LeadsBoard = (props) => {
               <div style={{ display:"flex", background:C.bg, borderRadius:10, padding:4, border:`1px solid ${C.bdr}` }}>
                 <button 
                   onClick={() => toggleView("card")} 
-                  style={{ background: leadView === "card" ? "#fff" : "transparent", color: leadView === "card" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: leadView === "card" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
+                  style={{ background: leadsView === "card" ? "#fff" : "transparent", color: leadsView === "card" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: leadsView === "card" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
                 >
                   <span style={{ marginRight:6 }}>🗂️</span> Grid
                 </button>
                 <button 
                   onClick={() => toggleView("list")} 
-                  style={{ background: leadView === "list" ? "#fff" : "transparent", color: leadView === "list" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: leadView === "list" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
+                  style={{ background: leadsView === "list" ? "#fff" : "transparent", color: leadsView === "list" ? C.acc : C.txtM, border:"none", borderRadius:6, padding:"8px 16px", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow: leadsView === "list" ? "0 2px 5px rgba(0,0,0,0.05)" : "none", transition:"all 0.2s" }}
                 >
                   <span style={{ marginRight:6 }}>📋</span> List
                 </button>
@@ -193,28 +262,56 @@ const LeadsBoard = (props) => {
 
         {/* DATA TABLE */}
         {/* VIEW MODE RENDERER: SPLIT SCREEN OR FULL GRID */}
-        <div className={leadView === "list" ? "app-split-layout" : ""} style={{ display: leadView === "list" ? "grid" : "block", gridTemplateColumns: leadView === "list" ? "420px 1fr" : "none", gap:30, marginTop: 15, alignItems:"flex-start" }}>
+        <div className={leadsView === "list" ? "app-split-layout" : ""} style={{ display: leadsView === "list" ? "grid" : "block", gridTemplateColumns: leadsView === "list" ? "420px 1fr" : "none", gap:30, marginTop: 15, alignItems:"flex-start" }}>
           
           {/* LEFT: LIST VIEW / CARDS */}
-          {(!selLead || leadView === "list") && (
-          <div className="leads-left-col" style={{ background: leadView === "list" ? "#fff" : "transparent", border: leadView === "list" ? `1px solid ${C.bdrL}` : "none", borderRadius:20, overflow:"hidden", display:"flex", flexDirection:"column", height: leadView === "list" ? "calc(100vh - 160px)" : "auto" }}>
-            <div style={{ overflow:"auto", flex:1, padding: leadView === "list" ? 15 : 0 }}>
-              {leadView === "list" ? (
+          {(!selLead || leadsView === "list") && (
+          <div className="leads-left-col" style={{ background: leadsView === "list" ? "#fff" : "transparent", border: leadsView === "list" ? `1px solid ${C.bdrL}` : "none", borderRadius:20, overflow:"hidden", display:"flex", flexDirection:"column", height: leadsView === "list" ? "calc(100vh - 160px)" : "auto" }}>
+            <div style={{ overflow:"auto", flex:1, padding: leadsView === "list" ? 15 : 0 }}>
+              {leadsView === "list" ? (
                   <table style={{ width:"100%", borderCollapse:"collapse" }}>
                     <thead>
                       <tr>
-                        <SortTh style={{ ...thS, width: "45%" }} label="Customer" sortKey="customer_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh style={{ ...thS, width: "55%" }} label="Contact" sortKey="last_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "30%" }} label="Customer" sortKey="customer_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "25%" }} label="Contact" sortKey="last_name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "30%" }} label="Timing" sortKey="create_date" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <th style={{ ...thS, width: "15%" }}></th>
                       </tr>
                     </thead>
                     <tbody>
                       {sortedItems.map(l => {
                         const isSel = selLead && selLead.id === l.id;
+                        const sla = getLeadSlaColor(l);
+                        const tInfo = getLeadTimeInfo(l.create_date);
                         return (
-                          <tr key={l.id} style={{ background: isSel ? C.accL : "transparent", cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
-                            <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 180, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={l.customer_name || ""}>{l.customer_name || "—"}</td>
-                            <td style={{ ...tdS, color:C.txtM, fontSize:13, maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.customer_name || `Lead #${l.id}`}
+                          <tr key={l.id} className={!isSel && sla.blink ? "bg-blink-red" : ""} style={{ background: isSel ? C.accL : (sla.blink ? undefined : sla.bg), cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
+                            <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 160, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              <div title={l.customer_name || ""}>{l.customer_name || "—"}</div>
+                            </td>
+                            <td style={{ ...tdS, color:C.txtM, fontSize:13, maxWidth: 160, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : `Lead #${l.id}`}
+                            </td>
+                            <td style={{ ...tdS, color:C.txtM, fontSize:12, maxWidth: 180, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              <div style={{ color: C.txtS, fontWeight: 500 }}>Created: {l.create_date ? new Date(l.create_date).toLocaleString() : "Unknown"}</div>
+                              <div style={{ color: C.acc, fontWeight: 700, marginTop: 4 }}>Time Elapsed: {tInfo.formatted}</div>
+                            </td>
+                            <td style={{ ...tdS, width: 120, textAlign: "right" }}>
+                              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                {isAdmin && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); deleteQuote(l.id); }}
+                                    style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(239,68,68,0.2)" }}>
+                                    Delete
+                                  </button>
+                                )}
+                                {l.estimator_id !== (profileUser ? profileUser.username : null) && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); grabLead(l); }}
+                                    style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(59,130,246,0.2)" }}>
+                                    Grab this lead
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -228,21 +325,56 @@ const LeadsBoard = (props) => {
                   </table>
               ) : (
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:15 }}>
-                  {sortedItems.map(l => (
-                    <div key={l.id} style={{ cursor:"pointer", padding:20, borderRadius:16, transition:"0.2s", background: "#fff", border: `1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
+                  {sortedItems.map(l => {
+                    const sla = getLeadSlaColor(l);
+                    const tInfo = getLeadTimeInfo(l.create_date);
+                    return (
+                    <div key={l.id} className={sla.blink ? "bg-blink-red" : ""} style={{ cursor:"pointer", padding:20, borderRadius:16, transition:"0.2s", background: sla.blink ? undefined : sla.bg, border: `1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
                         <div style={{ fontWeight:900, fontSize:16, color: C.txt }}>
                           {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : l.customer_name || `Lead #${l.id}`}
                         </div>
                         <span style={{ background:C.accL, color:C.acc, borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>{formatStatusName(l.status_number)}</span>
                       </div>
-                      <div style={{ fontSize:14, fontWeight:600, color:C.txtM, marginBottom:10 }}>{l.customer_name || "—"}</div>
+                      <div style={{ fontSize:14, fontWeight:600, color:C.txtM, marginBottom:4 }}>{l.customer_name || "—"}</div>
+                      <div style={{ fontSize: 11, color: C.txtS, marginBottom: 10 }}>Created: {l.create_date ? new Date(l.create_date).toLocaleString() : "Unknown"}</div>
                       <div style={{ display:"flex", gap:15, borderTop:`1px solid ${C.bdr}`, paddingTop:10, fontSize: 12, color: C.txtS }}>
-                        <div>{l.city ? `${l.city}${l.state ? `, ${l.state}` : ""}` : "No Location"}</div>
-                        <div style={{marginLeft:"auto"}}>{new Date(l.create_date).toLocaleDateString()}</div>
+                        <div>
+                          {(() => {
+                            const locs = custData && custData[l.customer_name] && custData[l.customer_name].locations;
+                            if (locs && locs.length > 0) {
+                              return locs.slice(0, 2).map((loc, i) => (
+                                <div key={i}>{loc.name ? `${loc.name}: ` : ''}{loc.address}{loc.city ? `, ${loc.city}` : ''}</div>
+                              )).concat(locs.length > 2 ? <div key="more" style={{ color: C.acc, fontSize: 10 }}>+{locs.length - 2} more sites</div> : []);
+                            }
+                            return l.city ? `${l.city}${l.state ? `, ${l.state}` : ""}` : (l.jobSite || "No Location");
+                          })()}
+                        </div>
+                        <div style={{marginLeft:"auto", textAlign: "right"}}>
+                           <div style={{fontWeight: 700, color: C.txtM}}>{tInfo.formatted} elapsed</div>
+                        </div>
                       </div>
+                      {(l.estimator_id !== (profileUser ? profileUser.username : null) || isAdmin) && (
+                        <div style={{ borderTop: `1px solid ${C.bdr}`, paddingTop: 10, marginTop: 10, display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteQuote(l.id); }}
+                              style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 5, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(239,68,68,0.2)" }}>
+                              Delete
+                            </button>
+                          )}
+                          {l.estimator_id !== (profileUser ? profileUser.username : null) && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); grabLead(l); }}
+                              style={{ background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 4px rgba(59,130,246,0.2)" }}>
+                              Grab this lead
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -250,48 +382,51 @@ const LeadsBoard = (props) => {
           )}
 
           {/* RIGHT: DETAILS VIEW */}
-          {(selLead || leadView === "list") && (
+          {(selLead || leadsView === "list") && (
           <div className="leads-right-col" style={{ background:"#fff", borderRadius:20, boxShadow:"0 5px 25px rgba(0,0,0,0.03)", border:`1px solid ${C.bdrL}`, height:"calc(100vh - 160px)", overflowY:"auto" }}>
             {selLead ? (
-               <div style={{ flex:1, padding:"30px 40px", background:"#fff" }}>
-                 {(leadView === "card" || leadView === "list") && (
-                   <div className={leadView === "list" ? "mobile-only-return-btn" : ""} style={{ marginBottom: 20 }}>
+              !leads.some(l => l.id === selLead.id) ? (
+                <div style={{ padding: 40, textAlign: "center", color: C.txtS, fontStyle: "italic", height: 400, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  This lead has been claimed or deleted.
+                </div>
+              ) : (
+                <div style={{ flex:1, padding:"30px 40px", background:"#fff" }}>
+                 {(leadsView === "card" || leadsView === "list") && (
+                   <div className={leadsView === "list" ? "mobile-only-return-btn" : ""} style={{ marginBottom: 20 }}>
                      <button style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, border: `1px solid ${C.bdr}`, color: C.txtM, background: "#fff", cursor:"pointer" }} onClick={() => setSelLead(null)}>
-                       ← Back to {leadView === "list" ? "List" : "Grid"}
+                       ← Back to {leadsView === "list" ? "List" : "Grid"}
                      </button>
                    </div>
                  )}
                  <div style={{ maxWidth:950, margin:"0 auto" }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:50, borderBottom:`4px solid ${C.accL}`, paddingBottom:35 }}>
                     <div style={{ display:"flex", gap:15, alignItems:"center", justifyContent:"flex-end", flexWrap: "wrap" }}>
-                       {(role || []).includes('admin') && (
-                         <select 
-                           style={{ padding:"5px 10px", borderRadius:6, border:`1px solid ${C.bdr}`, cursor:"pointer", color:C.txt, outline:"none", fontSize:12, background:"#f8fafc", fontWeight:600 }}
-                           value={selLead.status_number || 1}
-                           onChange={e => handleStatusChange(e.target.value)}
-                         >
-                           {statusList && statusList.filter(s => s.type === 'quote').map(s => (
-                             <option key={s.id} value={s.id}>{s.name}</option>
-                           ))}
-                         </select>
-                       )}
+
                        {selLead.estimator_id && <span style={{ background:C.accL, padding:"6px 12px", borderRadius:6, color:C.acc, fontWeight:800 }}>Est: {formatAssocName(selLead.estimator_id)}</span>}
                        <select 
                          style={{ padding:"5px 10px", borderRadius:6, border:`1px solid ${C.bdr}`, cursor:"pointer", color:C.txtM, outline:"none", fontSize:12, background:"#fff" }}
                          value={selLead.estimator_id || ""}
                          onChange={e => handleAssign(e.target.value)}
                        >
-                         <option value="">-- Assign Other Estimator --</option>
+                         <option value="">-- Assign Estimator --</option>
                          {otherEstimators.map(u => (
                            <option key={u.id} value={u.username}>{u.first_name} {u.last_name||""}</option>
                          ))}
                        </select>
-                       {amIEstimator && selLead.estimator_id !== (profileUser ? profileUser.username : null) && (
+                       {isAdmin && (
                          <button 
-                           onClick={() => handleAssign(profileUser.username)}
-                           style={{ background:C.blu, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontWeight:800, cursor:"pointer", fontSize:12, boxShadow:"0 2px 4px rgba(59,130,246,0.2)" }}
+                           onClick={() => { if (selLead) deleteQuote(selLead.id); }}
+                           style={{ background:"#ef4444", color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontWeight:800, cursor:"pointer", fontSize:12, boxShadow:"0 2px 4px rgba(239,68,68,0.2)" }}
                          >
-                           ASSIGN TO ME
+                           DELETE
+                         </button>
+                       )}
+                       {selLead.estimator_id !== (profileUser ? profileUser.username : null) && (
+                         <button 
+                           onClick={() => grabLead(selLead)}
+                           style={{ background:C.blue, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", fontWeight:800, cursor:"pointer", fontSize:12, boxShadow:"0 2px 4px rgba(37,99,235,0.2)" }}
+                         >
+                           GRAB THIS LEAD
                          </button>
                        )}
                     </div>
@@ -314,23 +449,42 @@ const LeadsBoard = (props) => {
                       <div>
                         <div style={{ fontSize:16, fontWeight:900, color:C.txt, marginBottom:10, textTransform:"uppercase", letterSpacing:1 }}>Location</div>
                         <div style={{ background:C.bg, padding:30, borderRadius:20, marginTop:15, fontSize:15, fontWeight:600, color:C.txt, lineHeight:1.7, border:`1px solid ${C.bdrL}`, boxShadow:"inset 0 2px 4px rgba(0,0,0,0.02)" }}>
-                          {!selLead.address1 && !selLead.city && !selLead.state && !selLead.zip ? (
-                            <div style={{ color:C.txtS, fontStyle:"italic" }}>No address entered</div>
-                          ) : (
-                            <div style={{display:"flex", flexDirection:"column", gap:8}}>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{selLead.street || "—"}</span></div>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>City:</span><span>{selLead.city || "—"}</span></div>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>State:</span><span>{selLead.state || "—"}</span></div>
-                              <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{selLead.zipcode || "—"}</span></div>
-                            </div>
-                          )}
+                          {(() => {
+                            const locs = custData && custData[selLead.customer_name] && custData[selLead.customer_name].locations;
+                            if (locs && locs.length > 0) {
+                              return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+                                  {locs.map((loc, idx) => (
+                                    <div key={idx} style={{ paddingBottom: idx < locs.length - 1 ? 15 : 0, borderBottom: idx < locs.length - 1 ? `1px solid ${C.bdr}` : 'none' }}>
+                                      <div style={{ fontWeight: 800, color: C.acc, marginBottom: 4 }}>{loc.name || `Site ${idx+1}`}</div>
+                                      <div style={{ display:"flex", gap:10 }}><span style={{color:C.txtS, width:75}}>Street:</span><span>{loc.address || "—"}</span></div>
+                                      <div style={{ display:"flex", gap:10 }}><span style={{color:C.txtS, width:75}}>City:</span><span>{loc.city || "—"}</span></div>
+                                      <div style={{ display:"flex", gap:10 }}><span style={{color:C.txtS, width:75}}>State:</span><span>{loc.state || "—"}</span></div>
+                                      <div style={{ display:"flex", gap:10 }}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{loc.zip || "—"}</span></div>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return (!(selLead.address1 || selLead.street) && !selLead.city && !selLead.state && !(selLead.zip || selLead.zipcode) && !selLead.jobSite) ? (
+                              <div style={{ color:C.txtS, fontStyle:"italic" }}>No address entered</div>
+                            ) : (
+                              <div style={{display:"flex", flexDirection:"column", gap:8}}>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Location:</span><span>{selLead.jobSite || "—"}</span></div>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Street:</span><span>{selLead.address1 || selLead.street || "—"}</span></div>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>City:</span><span>{selLead.city || "—"}</span></div>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>State:</span><span>{selLead.state || "—"}</span></div>
+                                <div style={{display:"flex", gap:10}}><span style={{color:C.txtS, width:75}}>Zip:</span><span>{selLead.zip || selLead.zipcode || "—"}</span></div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
 
                     <div>
                       <div style={{ fontSize:16, fontWeight:900, color:C.txt, marginBottom:10, textTransform:"uppercase", letterSpacing:1 }}>Lead Description</div>
-                      <div style={{ background:"#fffbeb", padding:30, borderRadius:20, border:`1px solid #fef3c7`, fontSize:16, color:C.txtM, lineHeight:1.8, minHeight:200, whiteSpace:"pre-wrap" }}>{selLead.description || "No description provided."}</div>
+                      <div style={{ background:"#fffbeb", padding:30, borderRadius:20, border:`1px solid #fef3c7`, fontSize:16, color:C.txtM, lineHeight:1.8, minHeight:200, whiteSpace:"pre-wrap" }}>{selLead.desc || selLead.description || selLead.jobDesc || "No description provided."}</div>
 
                       <div style={{ marginTop: 45 }}>
                         <Sec c="Authorized Personnel Directory"/>
@@ -368,6 +522,7 @@ const LeadsBoard = (props) => {
                   </div>
                  </div>
                </div>
+              )
             ) : (
                <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", height:"100%", color:C.txtM, fontSize:15, flexDirection:"column", gap:10, padding:40, textAlign:"center" }}>
                  <div style={{ fontSize:40 }}>👤</div>
