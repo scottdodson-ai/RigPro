@@ -675,11 +675,22 @@ app.post('/api/logout', authenticateToken, async (req, res) => {
 // USER MANAGEMENT ENDPOINTS (Admin Only)
 const authenticateAdmin = (req, res, next) => {
   const r = req.user.roles || [];
-  if (!r.includes('admin') && !r.includes('1')) {
-    console.log('[AUTH] Denying admin access. Roles:', r, 'User:', req.user.username);
-    return res.status(403).json({ error: 'Admin access required' });
+  if (r.includes('admin') || r.includes('1')) {
+    return next();
   }
-  next();
+
+  const safeTables = ['sites', 'site_types', 'customers', 'status', 'estimators', 'equipment', 'base_labor'];
+  const isSafeTableReq = safeTables.some(t => 
+    req.path === `/api/admin/tables/${t}` || 
+    req.path.startsWith(`/api/admin/tables/${t}/`)
+  );
+
+  if (isSafeTableReq) {
+    return next();
+  }
+
+  console.log('[AUTH] Denying admin access. Roles:', r, 'User:', req.user.username, 'Path:', req.path);
+  return res.status(403).json({ error: 'Admin access required' });
 };
 
 app.get('/api/users', authenticateToken, authenticateAdmin, async (req, res) => {
