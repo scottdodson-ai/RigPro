@@ -287,6 +287,11 @@ const LeadsBoard = (props) => {
                           <tr key={l.id} className={!isSel && sla.blink ? "bg-blink-red" : ""} style={{ background: isSel ? C.accL : (sla.blink ? undefined : sla.bg), cursor:"pointer", transition:"0.2s", borderBottom:`1px solid ${C.bdr}` }} onClick={()=>{ setSelLead(l); }}>
                             <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 160, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               <div title={l.customer_name || ""}>{l.customer_name || "—"}</div>
+                              {l.referring_customer_name && (
+                                <div style={{ fontSize: 11, color: C.txtM, fontWeight: 600, display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                                  🤝 Ref: {l.referring_customer_name}
+                                </div>
+                              )}
                             </td>
                             <td style={{ ...tdS, color:C.txtM, fontSize:13, maxWidth: 160, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {l.first_name || l.last_name ? `${l.first_name||""} ${l.last_name||""}` : `Lead #${l.id}`}
@@ -336,7 +341,14 @@ const LeadsBoard = (props) => {
                         </div>
                         <span style={{ background:C.accL, color:C.acc, borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>{formatStatusName(l.status_number)}</span>
                       </div>
-                      <div style={{ fontSize:14, fontWeight:600, color:C.txtM, marginBottom:4 }}>{l.customer_name || "—"}</div>
+                      <div style={{ fontSize:14, fontWeight:600, color:C.txtM, marginBottom:4 }}>
+                        {l.customer_name || "—"}
+                        {l.referring_customer_name && (
+                          <div style={{ fontSize: 11, color: C.txtM, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 8, background: C.bg, padding: "2px 6px", borderRadius: 4, border: `1px solid ${C.bdr}` }}>
+                            🤝 Ref: {l.referring_customer_name}
+                          </div>
+                        )}
+                      </div>
                       <div style={{ fontSize: 11, color: C.txtS, marginBottom: 10 }}>Created: {l.create_date ? new Date(l.create_date).toLocaleString() : "Unknown"}</div>
                       <div style={{ display:"flex", gap:15, borderTop:`1px solid ${C.bdr}`, paddingTop:10, fontSize: 12, color: C.txtS }}>
                         <div>
@@ -433,6 +445,11 @@ const LeadsBoard = (props) => {
 
                     <div>
                       <div style={{ fontSize:44, fontWeight:900, color:C.txt, letterSpacing:"-1px", lineHeight:1 }}>{selLead.customer_name || `Lead #${selLead.id}`}</div>
+                      {selLead.referring_customer_name && (
+                        <div style={{ fontSize: 14, color: C.txtM, fontWeight: 700, marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 16 }}>🤝</span> Referred by: {selLead.referring_customer_name}
+                        </div>
+                      )}
                       <div style={{ display:"flex", gap:20, marginTop:18 }}>
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>Contact: {selLead.first_name || selLead.last_name ? `${selLead.first_name||""} ${selLead.last_name||""}` : 'N/A'}</div>
                         {(selLead.contact_phone || selLead.contact_email) && (

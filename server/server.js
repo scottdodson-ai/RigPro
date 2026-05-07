@@ -414,10 +414,13 @@ app.get('/api/data', authenticateToken, async (req, res) => {
                 q.is_locked as locked,
                 q.notes,
                 q.quote_data,
-                q.creator_id as creator
+                q.creator_id as creator,
+                q.referred_by_id,
+                rc.name as referring_customer_name
            FROM quotes q
            LEFT JOIN status s ON q.status = s.id
-           LEFT JOIN customers c ON q.customer_id = c.id`);
+           LEFT JOIN customers c ON q.customer_id = c.id
+           LEFT JOIN customers rc ON q.referred_by_id = rc.id`);
 
     const mappedQuotes = quotesRows.map((row) => {
       let json = {};
@@ -467,6 +470,8 @@ app.get('/api/data', authenticateToken, async (req, res) => {
         hauling: parseFloat(find(['hauling'])),
         travel: parseFloat(find(['travel'])),
         creator: find(['creator', 'creator_id']) || null,
+        referred_by_id: find(['referred_by_id', 'referredById']) || null,
+        referring_customer_name: find(['referring_customer_name', 'referringCustomerName']) || null,
       };
     });
 
@@ -996,7 +1001,7 @@ app.post('/api/admin/tables/:table', authenticateToken, authenticateAdmin, async
       if (typeof val === 'object' && val !== null) {
         return JSON.stringify(val);
       }
-      const numFields = ['labor', 'equip', 'hauling', 'travel', 'materials', 'total', 'markup', 'is_locked', 'customer_number'];
+      const numFields = ['labor', 'equip', 'hauling', 'travel', 'materials', 'total', 'markup', 'is_locked', 'customer_number', 'sort_order'];
       if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update' || k.endsWith('_id') || numFields.includes(k))) {
         return null;
       }
@@ -1087,7 +1092,7 @@ app.put('/api/admin/tables/:table/:id', authenticateToken, (req, res, next) => {
       if (typeof val === 'object' && val !== null) {
         return JSON.stringify(val);
       }
-      const numFields = ['labor', 'equip', 'hauling', 'travel', 'materials', 'total', 'markup', 'is_locked', 'customer_number'];
+      const numFields = ['labor', 'equip', 'hauling', 'travel', 'materials', 'total', 'markup', 'is_locked', 'customer_number', 'sort_order'];
       if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update' || k.endsWith('_id') || numFields.includes(k))) {
         return null;
       }
@@ -1189,7 +1194,7 @@ app.put('/api/admin/tables/:table/batch', authenticateToken, authenticateAdmin, 
       if (typeof val === 'object' && val !== null) {
         return JSON.stringify(val);
       }
-      const numFields = ['labor', 'equip', 'hauling', 'travel', 'materials', 'total', 'markup', 'is_locked', 'customer_number'];
+      const numFields = ['labor', 'equip', 'hauling', 'travel', 'materials', 'total', 'markup', 'is_locked', 'customer_number', 'sort_order'];
       if (val === '' && (k.includes('date') || k.includes('expires') || k.includes('time') || k === 'create' || k === 'update' || k.endsWith('_id') || numFields.includes(k))) {
         return null;
       }
@@ -1737,7 +1742,7 @@ app.patch('/api/tasks/my/:id', authenticateToken, async (req, res) => {
 // CUSTOMER MANAGEMENT ENDPOINTS
 // Get all customers
 app.post('/api/customers/quick', authenticateToken, async (req, res) => {
-  const { name, contact_name, contact_phone, contact_email } = req.body;
+  const { name, contact_name, contact_phone, contact_email, company_type } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: 'Customer name is required' });
 
   const connection = await db.getConnection();
@@ -1747,8 +1752,8 @@ app.post('/api/customers/quick', authenticateToken, async (req, res) => {
 
     if (!custId) {
       const [insRes] = await connection.query(
-        'INSERT INTO customers (name, notes) VALUES (?, ?)',
-        [name.trim(), 'Added via RFQ Modal']
+        'INSERT INTO customers (name, notes, company_type) VALUES (?, ?, ?)',
+        [name.trim(), 'Added via RFQ Modal', company_type || 'direct']
       );
       custId = insRes.insertId;
     }
@@ -1786,7 +1791,7 @@ app.get('/api/admin/customers', authenticateToken, authenticateAdmin, async (req
 
 // Add a new customer
 app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (req, res) => {
-  const { name, notes, address1, street, city, state, zip, website, industry, payment_terms, account_num } = req.body;
+  const { name, notes, address1, street, city, state, zip, website, industry, payment_terms, account_num, company_type } = req.body;
   const streetVal = street || address1 || '';
   
   if (!name || !name.trim()) {
@@ -1795,8 +1800,8 @@ app.post('/api/admin/customers', authenticateToken, authenticateAdmin, async (re
 
   try {
     const [result] = await db.query(
-      'INSERT INTO customers (name, notes, website, industry, payment_terms, account_num) VALUES (?, ?, ?, ?, ?, ?)',
-      [name.trim(), notes || '', website || '', industry || '', payment_terms || '', account_num || '']
+      'INSERT INTO customers (name, notes, website, industry, payment_terms, account_num, company_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name.trim(), notes || '', website || '', industry || '', payment_terms || '', account_num || '', company_type || 'direct']
     );
     const custId = result.insertId;
 
@@ -2426,13 +2431,14 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       quote.locked ? 1 : 0,
       quote.notes || '',
       JSON.stringify(quoteDataToSave),
-      req.user ? (req.user.id || req.user.userId || null) : null
+      req.user ? (req.user.id || req.user.userId || null) : null,
+      quote.referred_by_id || null
     ];
 
     let savedId = targetId;
     if (targetId) {
       await connection.query(
-        'UPDATE quotes SET quote_number=?, customer_id=?, site_id=?, job_site=?, description=?, create_date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=?, creator_id=COALESCE(creator_id, ?) WHERE id=?',
+        'UPDATE quotes SET quote_number=?, customer_id=?, site_id=?, job_site=?, description=?, create_date=?, status=?, quote_type=?, labor=?, equip=?, hauling=?, travel=?, materials=?, total=?, markup=?, sales_assoc=?, job_num=?, start_date=?, comp_date=?, is_locked=?, notes=?, quote_data=?, creator_id=COALESCE(creator_id, ?), referred_by_id=? WHERE id=?',
         [...rowValues, targetId]
       );
       if (oldStatus !== (quote.status || 'Draft')) {
@@ -2477,8 +2483,8 @@ app.post('/api/quotes/:id', authenticateToken, async (req, res) => {
       const [insertResult] = await connection.query(
         `INSERT INTO quotes (
           quote_number, customer_id, site_id, job_site, description, create_date, status, quote_type,
-          labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data, creator_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          labor, equip, hauling, travel, materials, total, markup, sales_assoc, job_num, start_date, comp_date, is_locked, notes, quote_data, creator_id, referred_by_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         rowValues
       );
       savedId = insertResult.insertId;

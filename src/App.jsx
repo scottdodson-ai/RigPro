@@ -441,6 +441,102 @@ function AutoInput({ val, on, list, ph }) {
   );
 }
 
+function ReferredByInput({ val, on, list, ph, onNewAuctionCustomer, C, inp, sel }) {
+  const allOptions = [...new Set([...list, val])].filter(Boolean);
+  return (
+    <select
+      style={{ ...sel, width: "100%", boxSizing: "border-box" }}
+      value={val || ""}
+      onChange={e => {
+        if (e.target.value === "ADD_NEW") {
+          onNewAuctionCustomer("");
+        } else {
+          on(e.target.value);
+        }
+      }}
+    >
+      <option value="">None</option>
+      <option value="ADD_NEW">Choose... (Add New Auction Co.)</option>
+      {allOptions.map(c => (
+        <option key={c} value={c}>{c}</option>
+      ))}
+    </select>
+  );
+}
+
+function NewAuctionCustomerModal({ onClose, onSave, initialName = "", token, C, mkBtn, inp, setCustData }) {
+  const [name, setName] = useState(initialName);
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zip, setZip] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    const payload = {
+      name,
+      address1: address,
+      city,
+      state,
+      zip,
+      industry: "Industrial",
+      company_type: "auction"
+    };
+    try {
+      const res = await fetch("/api/admin/tables/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("Failed to create auction customer");
+      const created = await res.json();
+      if (setCustData) {
+        setCustData(prev => ({ 
+          ...prev, 
+          [name]: { ...payload, id: created.id, contacts: [], locations: [], notes: [], quotes: [] } 
+        }));
+      }
+      onSave(name, created.id);
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, backdropFilter: "blur(4px)" }}>
+      <div style={{ background: "#fff", width: "100%", maxWidth: 500, borderRadius: 20, padding: 32, boxShadow: "0 20px 50px rgba(0,0,0,0.2)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: C.acc }}>New Auction Customer</div>
+          <button type="button" onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#aaa" }}>×</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: C.txtS, marginBottom: 4 }}>COMPANY NAME *</div>
+            <input style={{...inp, width: "100%", boxSizing: "border-box"}} value={name} onChange={e => setName(e.target.value)} required />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: C.txtS, marginBottom: 4 }}>PRIMARY ADDRESS</div>
+            <input style={{...inp, width: "100%", boxSizing: "border-box", marginBottom: 8}} value={address} onChange={e => setAddress(e.target.value)} placeholder="Street" />
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8 }}>
+              <input style={{...inp, width: "100%", boxSizing: "border-box"}} value={city} onChange={e => setCity(e.target.value)} placeholder="City" />
+              <input style={{...inp, width: "100%", boxSizing: "border-box"}} value={state} onChange={e => setState(e.target.value)} placeholder="ST" maxLength={2} />
+              <input style={{...inp, width: "100%", boxSizing: "border-box"}} value={zip} onChange={e => setZip(e.target.value)} placeholder="ZIP" maxLength={10} />
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 10 }}>
+            <button type="button" style={{ ...mkBtn("ghost"), color: C.txtM }} onClick={onClose}>Cancel</button>
+            <button type="submit" disabled={isSaving} style={mkBtn("primary")}>{isSaving ? "Saving..." : "Create Customer"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── HEADER ────────────────────────────────────────────────────────────────────
 function Header({ view, setView, extra, crumb, role, token, setToken, setRole, profileUser, setProfileUser, customerCount, reqCount, quoteCount, jobCount, leadCount, siteCount }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1682,7 +1778,14 @@ function ReportDrillDownModal({ ref: rawRef, jobs, reqs, jobFolders, globalCheck
                       onMouseEnter={e => e.currentTarget.style.background = C.accL}
                       onMouseLeave={e => e.currentTarget.style.background = ""}>
                       <td style={{ ...tdS, padding: "8px 10px", color: C.acc, fontWeight: 700 }}>{q.job_num}</td>
-                      <td style={{ ...tdS, padding: "8px 10px", fontWeight: 600 }}>{q.client}</td>
+                      <td style={{ ...tdS, padding: "8px 10px", fontWeight: 600 }}>
+                        <div title={q.client || ""}>{q.client || "—"}</div>
+                        {q.referring_customer_name && (
+                          <div style={{ fontSize: 10, color: C.txtM, fontWeight: 600, display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                            🤝 Ref: {q.referring_customer_name}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ ...tdS, padding: "8px 10px", color: C.txtM, maxWidth: 180 }}>{(q.job_description || "").slice(0, 50)}</td>
                       <td style={{ ...tdS, padding: "8px 10px", color: C.txtS, whiteSpace: "nowrap" }}>{q.start_date}</td>
                       <td style={{ ...tdS, padding: "8px 10px" }}><Badge status={q.status} /></td>
@@ -4059,6 +4162,8 @@ function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {},
     status_number: 1,
     create_date: new Date().toISOString().split('T')[0]
   });
+  const [showAuctionModal, setShowAuctionModal] = useState(false);
+  const [newAuctionName, setNewAuctionName] = useState("");
 
   const u = (f, v) => {
     if (f === "customer_name") {
@@ -4098,7 +4203,9 @@ function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {},
         desc: lead.description,
         salesAssoc: lead.estimator_id,
         date: lead.create_date,
-        status: "Lead"
+        status: "Lead",
+        referred_by_id: lead.referred_by_id,
+        referring_customer_name: lead.referring_customer_name
       };
 
       const res = await fetch("/api/quotes/new", {
@@ -4121,7 +4228,9 @@ function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {},
         estimator_id: created.sales_assoc || lead.estimator_id,
         salesAssoc: created.sales_assoc || lead.estimator_id,
         description: created.description || created.desc || lead.description,
-        desc: lead.description
+        desc: lead.description,
+        referred_by_id: created.referred_by_id || lead.referred_by_id,
+        referring_customer_name: created.referring_customer_name || lead.referring_customer_name
       };
       onSave(mappedLead);
       onClose();
@@ -4152,6 +4261,32 @@ function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {},
                       on={v => u("customer_name", v)}
                       list={[...new Set([...CUSTOMERS, ...Object.keys(custData || {}), ...jobs.map(q => q.client).filter(Boolean)])].sort()}
                       ph="Customer name"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Lbl c="REFERRED BY / AUCTION CO. (OPTIONAL)" />
+                  <div style={{ width: "100%" }}>
+                    <ReferredByInput
+                      val={lead.referring_customer_name || ""}
+                      on={v => {
+                         u("referring_customer_name", v);
+                         const rc = custData && custData[v];
+                         if (rc) {
+                           u("referred_by_id", rc.id);
+                         } else {
+                           u("referred_by_id", null);
+                         }
+                      }}
+                      onNewAuctionCustomer={name => {
+                        setNewAuctionName(name);
+                        setShowAuctionModal(true);
+                      }}
+                      list={[...new Set(Object.keys(custData || {}).filter(k => custData[k]?.company_type === 'auction' || custData[k]?.company_type === 'broker'))].sort()}
+                      ph="Auction company or referral source"
+                      C={C}
+                      inp={inp}
+                      sel={sel}
                     />
                   </div>
                 </div>
@@ -4206,6 +4341,22 @@ function LeadRecordModal({ onClose, onSave, token, appUsers = [], custData = {},
             </div>
           </div>
         </form>
+        {showAuctionModal && (
+          <NewAuctionCustomerModal 
+            onClose={() => setShowAuctionModal(false)}
+            onSave={(name, id) => {
+              u("referring_customer_name", name);
+              u("referred_by_id", id);
+              setShowAuctionModal(false);
+            }}
+            initialName={newAuctionName}
+            token={token}
+            C={C}
+            mkBtn={mkBtn}
+            inp={inp}
+            setCustData={null}
+          />
+        )}
       </div>
     </div>
   );
@@ -10460,6 +10611,8 @@ function SitesMapModal({ token, onClose }) {
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [showSitesMap, setShowSitesMap] = useState(false);
+  const [showNewAuctionModal, setShowNewAuctionModal] = useState(false);
+  const [newAuctionName, setNewAuctionName] = useState("");
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [role, setRole] = useState(() => { try { return JSON.parse(localStorage.getItem("role")) || []; } catch (e) { return []; } });
 
@@ -11840,6 +11993,38 @@ export default function App() {
               </div>
 
               <div>
+                <Lbl c="REFERRED BY / AUCTION CO. (OPTIONAL)" />
+                <div style={{ width: "100%" }}>
+                  <ReferredByInput
+                    val={active.referring_customer_name || ""}
+                    on={v => {
+                       u("referring_customer_name", v);
+                       const rc = custData && custData[v];
+                       if (rc) {
+                         u("referred_by_id", rc.id);
+                       } else {
+                         u("referred_by_id", null);
+                       }
+                    }}
+                    onNewAuctionCustomer={name => {
+                      setNewAuctionName(name);
+                      setShowNewAuctionModal(true);
+                    }}
+                    list={[...new Set(Object.keys(custData || {}).filter(k => custData[k]?.company_type === 'auction' || custData[k]?.company_type === 'broker'))].sort()}
+                    ph="Auction company or referral source"
+                    C={C}
+                    inp={inp}
+                    sel={sel}
+                  />
+                </div>
+                {(!active.locked && active.referring_customer_name && !active.referred_by_id) && (
+                  <div style={{ fontSize: 11, color: C.txtM, marginTop: 4 }}>
+                    ⚠️ Note: This name will not be linked to a customer record unless it matches an existing company exactly.
+                  </div>
+                )}
+              </div>
+
+              <div>
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}>
                     <Lbl c={active.status === "Lead" ? "PRIMARY ADDRESS" : "STREET ADDRESS"} />
@@ -12335,6 +12520,22 @@ export default function App() {
               .mobile-only-return-btn { display: none !important; }
             }
           `}</style>
+          {showNewAuctionModal && (
+            <NewAuctionCustomerModal 
+              onClose={() => setShowNewAuctionModal(false)}
+              onSave={(name, id) => {
+                u("referring_customer_name", name);
+                u("referred_by_id", id);
+                setShowNewAuctionModal(false);
+              }}
+              initialName={newAuctionName}
+              token={token}
+              C={C}
+              mkBtn={mkBtn}
+              inp={inp}
+              setCustData={setCustData}
+            />
+          )}
           <Footer />
         </div>
       </div>

@@ -141,6 +141,7 @@ const CustomerCRMBoard = (props) => {
       website: formData.get("website") || "",
       customer_num: formData.get("customer_num") || "",
       industry: formData.get("industry") || "Industrial",
+      company_type: formData.get("company_type") || "direct",
       isProspect: 1
     };
 
@@ -242,7 +243,7 @@ const CustomerCRMBoard = (props) => {
                     <Lbl c="LEGAL COMPANY NAME" />
                     <input name="name" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} required placeholder="e.g. Acme Corp Industries" />
                  </div>
-                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
                     <div>
                       <Lbl c="CUSTOMER NUMBER" />
                       <input name="customer_num" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="e.g. CUST-001" />
@@ -250,6 +251,14 @@ const CustomerCRMBoard = (props) => {
                     <div>
                       <Lbl c="INDUSTRY" />
                       <input name="industry" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="e.g. Construction" />
+                    </div>
+                    <div>
+                      <Lbl c="COMPANY TYPE" />
+                      <select name="company_type" style={{ ...sel, width:"100%", padding:"10px", fontSize:14 }} defaultValue="direct">
+                        <option value="direct">Direct</option>
+                        <option value="auction">Auction</option>
+                        <option value="broker">Broker</option>
+                      </select>
                     </div>
                  </div>
                  <div>
@@ -299,6 +308,7 @@ const CustomerCRMBoard = (props) => {
                       {sortedCustomers.map(c => {
                         const custContacts = custData[c.name]?.contacts || [];
                         const emailsMatch = Array.from(new Set(custContacts.map(con => con.email).filter(Boolean))).join(', ');
+                        const phonesMatch = Array.from(new Set(custContacts.map(con => con.phone || con.mobile).filter(Boolean))).join(', ');
                         const custJobs = c.quotes || []; 
                         const isSel = selC === c.name;
                         return (
@@ -400,6 +410,9 @@ const CustomerCRMBoard = (props) => {
                       <div style={{ display:"flex", gap:20, marginTop:18, flexWrap:"wrap" }}>
                         <div style={{ fontSize:13, color:C.acc, fontWeight:800, textTransform:"uppercase", background:C.accL, padding:"5px 12px", borderRadius:8 }}>ID: {currentSelectionData?.customer_num || currentSelectionData?.accountNum || currentSelectionData?.id || "N/A"}</div>
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>{currentSelectionData?.industry || "Industrial Sector"}</div>
+                        {currentSelectionData?.company_type && currentSelectionData?.company_type !== 'direct' && (
+                          <div style={{ fontSize:13, color:C.blu, fontWeight:800, textTransform:"uppercase", background:C.bluL, padding:"5px 12px", borderRadius:8 }}>{currentSelectionData.company_type === 'auction' ? 'Auction Company' : 'Broker / Agency'}</div>
+                        )}
                         <div style={{ fontSize:13, color:C.ora, fontWeight:800, background:"#fff7ed", padding:"5px 12px", borderRadius:8 }}>PAYMENT TERMS: {currentSelectionData?.paymentTerms || "Net 30"}</div>
                       </div>
                     </div>
