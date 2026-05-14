@@ -83,8 +83,12 @@ const LeadsBoard = (props) => {
   };
 
   const getLeadSlaColor = (l) => {
+    const { bDays, ms } = getLeadTimeInfo(l.create_date);
+    const diffDays = Math.floor(ms / (1000 * 60 * 60 * 24));
+
+    if (diffDays >= 13) return { bg: "#fca5a5", blink: false };
+
     if (l.estimator_id) return { bg: "#ffffff", blink: false };
-    const { bDays } = getLeadTimeInfo(l.create_date);
     if (bDays === 0) return { bg: "#dcfce7", blink: false }; // light green
     if (bDays === 1) return { bg: "#fef08a", blink: false }; // yellow
     if (bDays === 2) return { bg: "#fee2e2", blink: false }; // light red

@@ -2897,7 +2897,7 @@ function LeadDashCard({ reqs, jobs, jobFolders, setJobFolders, setShowJFM, openN
           const isExp = expandedLead === r.id;
 
           return (
-            <div key={listKey("lead-row", r, i)} style={{ background: C.bg, borderRadius: 8, border: `1px solid ${isExp ? C.accB : C.bdr}`, overflow: "hidden", transition: "border .15s" }}>
+            <div key={listKey("lead-row", r, i)} style={{ background: daysLead >= 13 ? "#fca5a5" : C.bg, borderRadius: 8, border: `1px solid ${isExp ? C.accB : (daysLead >= 13 ? "#f87171" : C.bdr)}`, overflow: "hidden", transition: "border .15s" }}>
               {/* Collapsed row */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer", flexWrap: "wrap" }} onClick={() => setExpandedLead(isExp ? null : r.id)}>
                 <div style={{ width: 22, height: 22, borderRadius: "50%", background: isExp ? C.acc : C.bdr, color: isExp ? "#fff" : C.txtM, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, transition: "all .15s" }}>{isExp ? "▾" : "▸"}</div>
@@ -3070,11 +3070,15 @@ function LeadListView({ reqs, jobs, setReqs, openNew, setShowJFM, setEditR, setS
           </Card>
         )}
         {filtered.map((r, i) => {
+          const leadDate = new Date(r.date || Date.now());
+          const todayD = new Date();
+          const daysLead = Math.floor((todayD - leadDate) / 86400000);
+
           const isDead = r.status === "Dead";
           const isQuoted = r.status === "Quoted";
           const linkedQ = jobs.find(q => q.fromReqId === r.id);
-          const bg = r.active ? "#f0fdf4" : (isDead ? "#111318" : C.sur);
-          const bdr = r.active ? `1px solid ${C.bdr}` : (isDead ? `1px solid #374151` : `1px solid ${C.bdr}`);
+          const bg = daysLead >= 13 && !isDead && !isQuoted ? "#fca5a5" : (r.active ? "#f0fdf4" : (isDead ? "#111318" : C.sur));
+          const bdr = daysLead >= 13 && !isDead && !isQuoted ? `1px solid #f87171` : (r.active ? `1px solid ${C.bdr}` : (isDead ? `1px solid #374151` : `1px solid ${C.bdr}`));
           return (
             <Card key={listKey("lead-card", r, i)} style={{ marginBottom: 0, opacity: (!r.active && isDead) ? 0.75 : 1, background: bg, border: bdr, display: "flex", flexDirection: "column", height: "100%" }}>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: layoutMode === "card" ? "stretch" : "flex-start", flex: 1, flexDirection: layoutMode === "card" ? "column" : "row" }}>
@@ -11397,6 +11401,10 @@ export default function App() {
     const quoteStages = Array.from(new Set((statusList || []).filter(s => s.type === 'quote' && (s.name || '').toLowerCase() !== 'lead').map(s => s.name)));
     const jbFilterFn = q => quoteStages.includes(q.status_name || (statusList || []).find(s => String(s.id) === String(q.status))?.name);
     const dashLeadsCount = leads.length;
+    const hasOldLeads = leads.some(l => {
+      const leadDate = new Date(l.date || l.create_date || Date.now());
+      return Math.floor((new Date() - leadDate) / 86400000) >= 13;
+    });
     const dashMyJbCount = profileUser ? jobs.filter(q => (q.salesAssoc === profileUser.username || q.estimator === profileUser.username || q.salesAssoc === profileUser.first_name || q.estimator === profileUser.first_name) && jbFilterFn(q)).length : 0;
     const dashGlbJbCount = jobs.filter(jbFilterFn).length;
 
@@ -11467,7 +11475,16 @@ export default function App() {
 
 
         <AccordionCard
-          title={`📝 Leads (${dashLeadsCount})`}
+          title={
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span>📝 Leads ({dashLeadsCount})</span>
+              {hasOldLeads && (
+                <span style={{ color: "#ef4444", fontSize: 12, textTransform: "none", background: "#fee2e2", padding: "2px 8px", borderRadius: 12, border: "1px solid #fca5a5" }}>
+                  ⚠️ Some leads need attention.
+                </span>
+              )}
+            </div>
+          }
           isOpen={dashAcc === "leads"}
           onToggle={open => setDashAcc(open ? "leads" : null)}
         >
