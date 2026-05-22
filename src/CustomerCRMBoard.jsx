@@ -141,6 +141,7 @@ const CustomerCRMBoard = (props) => {
       website: formData.get("website") || "",
       customer_num: formData.get("customer_num") || "",
       industry: formData.get("industry") || "Industrial",
+      company_type: formData.get("company_type") || "direct",
       isProspect: 1
     };
 
@@ -187,7 +188,7 @@ const CustomerCRMBoard = (props) => {
       <Header siteCount={props.globalSitesCount} leadCount={leads ? leads.length : 0} customerCount={customers.length} reqCount={reqs.length} quoteCount={jobs.filter(q => q.quote_data || q.status === "Pending" || q.quote_number).length} jobCount={jobs.filter(q => q.is_master_job).length} token={token} role={role} view={view} setView={setView} setToken={setToken} setRole={setRole} extra={actBtns}/>
       
       {showCustModal ? (
-        <CustomerModal custName={showCustModal} jobs={jobs.filter(q=>q.customer_name===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)}/>
+        <CustomerModal custName={showCustModal} jobs={jobs.filter(q=>q.customer_name===showCustModal)} reqs={reqs} jobFolders={jobFolders} custData={custData} setCustData={setCustData} profileTemplate={profileTemplate} onOpenQuote={q=>{openEdit(q);}} onOpenJobFolder={r=>setShowJFM(r)} onClose={()=>setShowCustModal(false)} statusList={props.statusList} profileUser={props.profileUser} />
       ) : (
       <div className="crm-main-container" style={{ padding:"14px", maxWidth: 1600, margin:"0 auto", width:"100%" }}>
         
@@ -242,7 +243,7 @@ const CustomerCRMBoard = (props) => {
                     <Lbl c="LEGAL COMPANY NAME" />
                     <input name="name" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} required placeholder="e.g. Acme Corp Industries" />
                  </div>
-                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
                     <div>
                       <Lbl c="CUSTOMER NUMBER" />
                       <input name="customer_num" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="e.g. CUST-001" />
@@ -250,6 +251,14 @@ const CustomerCRMBoard = (props) => {
                     <div>
                       <Lbl c="INDUSTRY" />
                       <input name="industry" style={{ ...inp, width:"100%", padding:"10px", fontSize:14 }} placeholder="e.g. Construction" />
+                    </div>
+                    <div>
+                      <Lbl c="COMPANY TYPE" />
+                      <select name="company_type" style={{ ...sel, width:"100%", padding:"10px", fontSize:14 }} defaultValue="direct">
+                        <option value="direct">Direct</option>
+                        <option value="auction">Auction</option>
+                        <option value="broker">Broker</option>
+                      </select>
                     </div>
                  </div>
                  <div>
@@ -290,8 +299,8 @@ const CustomerCRMBoard = (props) => {
                       <tr>
                         <SortTh style={{ ...thS, width: "15%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Cust #" sortKey="custNum" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                         <SortTh style={{ ...thS, width: "25%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Customer Name" sortKey="name" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
+                        <SortTh style={{ ...thS, width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Location" sortKey="city" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                         <SortTh style={{ ...thS, width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Email" sortKey="email" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
-                        <SortTh style={{ ...thS, width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Phone" sortKey="phone" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                         <SortTh className="mobile-hidden" style={{ ...thS, textAlign:"center", width: "20%", position:"sticky", top:0, background:"#fff", zIndex:5, borderBottom:`2px solid ${C.bdr}`, padding:"10px 5px" }} label="Master Jobs" sortKey="jobs" currentSort={sortKey} currentDir={sortDir} requestSort={requestSort} />
                       </tr>
                     </thead>
@@ -310,6 +319,7 @@ const CustomerCRMBoard = (props) => {
                             <td style={{ ...tdS, fontWeight:800, fontSize:15, color:C.txt, paddingTop:12, paddingBottom:12, maxWidth: 140, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.name}>
                               {c.name}
                             </td>
+                            <td style={{ ...tdS, color:C.txtS, fontSize:12, maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.city}>{c.city || "—"}</td>
                             <td style={{ ...tdS, color:C.txtS, fontSize:12, maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={emailsMatch || ""}>{emailsMatch || "—"}</td>
                             <td style={{ ...tdS, color:C.txtS, fontSize:12, maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={phonesMatch || ""}>{phonesMatch || "—"}</td>
                             <td className="mobile-hidden" style={{ ...tdS, textAlign:"center", fontWeight:700, fontSize:14 }}>{custJobs.length}</td>
@@ -335,6 +345,9 @@ const CustomerCRMBoard = (props) => {
                             {c.name}
                           </div>
                           {c.isProspect ? <span style={{ background:"#fffbeb", color:"#b45309", border:"1px solid #fde68a", borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>PROSPECT</span> : <span style={{ background:C.grnB, color:C.grn, border:`1px solid ${C.grnBdr}`, borderRadius:6, padding:"2px 6px", fontSize:10, fontWeight:800 }}>CUSTOMER</span>}
+                        </div>
+                        <div style={{ fontSize:13, color:C.txtM, marginBottom:12, minHeight: 20 }}>
+                          {c.city ? `${c.city}${c.state ? `, ${c.state}` : ''}` : (c.street || 'No Location')}
                         </div>
                         <div style={{ fontSize:18, fontWeight:900, color:C.acc, marginBottom:10 }}>{fmt(tot)}</div>
                         <div style={{ display:"flex", gap:15, borderTop:`1px solid ${C.bdr}`, paddingTop:10 }}>
@@ -397,6 +410,9 @@ const CustomerCRMBoard = (props) => {
                       <div style={{ display:"flex", gap:20, marginTop:18, flexWrap:"wrap" }}>
                         <div style={{ fontSize:13, color:C.acc, fontWeight:800, textTransform:"uppercase", background:C.accL, padding:"5px 12px", borderRadius:8 }}>ID: {currentSelectionData?.customer_num || currentSelectionData?.accountNum || currentSelectionData?.id || "N/A"}</div>
                         <div style={{ fontSize:13, color:C.txtS, fontWeight:800, textTransform:"uppercase", background:C.bg, padding:"5px 12px", borderRadius:8 }}>{currentSelectionData?.industry || "Industrial Sector"}</div>
+                        {currentSelectionData?.company_type && currentSelectionData?.company_type !== 'direct' && (
+                          <div style={{ fontSize:13, color:C.blu, fontWeight:800, textTransform:"uppercase", background:C.bluL, padding:"5px 12px", borderRadius:8 }}>{currentSelectionData.company_type === 'auction' ? 'Auction Company' : 'Broker / Agency'}</div>
+                        )}
                         <div style={{ fontSize:13, color:C.ora, fontWeight:800, background:"#fff7ed", padding:"5px 12px", borderRadius:8 }}>PAYMENT TERMS: {currentSelectionData?.paymentTerms || "Net 30"}</div>
                       </div>
                     </div>

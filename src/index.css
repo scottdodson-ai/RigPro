@@ -245,3 +245,13 @@ table thead tr {
     font-size: 16px !important;
   }
 }
+
+@keyframes blink-red {
+  0% { background-color: #fee2e2; }
+  50% { background-color: #fca5a5; }
+  100% { background-color: #fee2e2; }
+}
+
+.bg-blink-red {
+  animation: blink-red 1.5s infinite;
+}

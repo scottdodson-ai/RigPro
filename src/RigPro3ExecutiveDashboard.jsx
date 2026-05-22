@@ -26,25 +26,39 @@ export default function RigPro3ExecutiveDashboard({ jobs, reqs, token }) {
     let totalRespTimeHrs = 0, respTimeCount = 0;
 
     // Filter to current year
-    const ytdJobs = jobs.filter(q => q.status === "Won" && (!q.date || new Date(q.date).getFullYear() === now.getFullYear()));
+    const isWon = q => q.status === "Won" || q.status === 5 || String(q.status) === "5" || (q.status_name || "").toLowerCase() === "accepted";
+    const isLost = q => q.status === "Lost" || q.status === 8 || String(q.status) === "8" || (q.status_name || "").toLowerCase() === "lost";
+    const isPending = q => {
+        const str = String(q.status).toLowerCase();
+        const nm = (q.status_name || "").toLowerCase();
+        return ["in progress", "in review", "approved", "adjustments needed", "submitted"].includes(str) ||
+               ["in progress", "in review", "approved", "adjustments needed", "submitted", "modification required"].includes(nm) ||
+               [2, 4, 6, 7].includes(Number(q.status));
+    };
+
+    const ytdJobs = jobs.filter(q => isWon(q) && (!q.date || new Date(q.date).getFullYear() === now.getFullYear()));
     revYTD = ytdJobs.reduce((sum, q) => sum + (q.total || 0), 0);
 
-    const pending = jobs.filter(q => ["In Progress","In Review","Approved","Adjustments Needed","Submitted"].includes(q.status));
+    const pending = jobs.filter(q => isPending(q));
     pipelineVal = pending.reduce((sum, q) => sum + (q.total || 0), 0);
     pendingQuotes = pending.length;
     
     // Win rate rolling 90 days
     const recentJobs = jobs.filter(q => q.date && new Date(q.date) >= ninetyDaysAgo);
     recentJobs.forEach(q => {
-      if (q.status === "Won") winCount++;
-      if (q.status === "Lost") lossCount++;
+      if (isWon(q)) winCount++;
+      if (isLost(q)) lossCount++;
     });
 
-    const activeLeads = reqs.filter(r => r.status !== "Dead" && r.status !== "Completed");
+    const activeLeads = reqs.filter(r => {
+      const s = String(r.status).toLowerCase();
+      const sn = (r.status_name || "").toLowerCase();
+      return s !== "dead" && s !== "completed" && sn !== "dead" && sn !== "completed" && r.status !== 8;
+    });
     leadCount = activeLeads.length;
 
     // Averages
-    const wonJobs = jobs.filter(q => q.status === "Won");
+    const wonJobs = jobs.filter(q => isWon(q));
     wonJobs.forEach(q => {
       const rev = q.total || 0;
       const cost = Math.round((q.labor||0)*0.6 + (q.equip||0)*0.7 + (q.hauling||0)*0.85 + (q.mats||0)*0.85 + (q.travel||0));
